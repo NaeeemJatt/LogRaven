@@ -32,7 +32,7 @@ SECRET_SALT = "lograven-salt-embedded-in-binary-2026"
 def get_machine_fingerprint() -> str:
     """Generate a unique fingerprint for the current machine."""
     mac = hex(uuid.getnode())
-    hostname = os.uname().nodename
+    hostname = os.environ.get("COMPUTERNAME") or os.environ.get("HOSTNAME") or "unknown"
     return hashlib.sha256(f"{mac}:{hostname}".encode()).hexdigest()[:32]
 
 

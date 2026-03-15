@@ -14,6 +14,10 @@
 
 from pydantic_settings import BaseSettings
 from typing import Literal
+from pathlib import Path
+
+# .env lives at project root: LogRaven/.env (two levels above backend/app/config.py)
+_ENV_FILE = Path(__file__).resolve().parent.parent.parent / ".env"
 
 
 class Settings(BaseSettings):
@@ -58,7 +62,7 @@ class Settings(BaseSettings):
     AI_CEILING_TEAM: int = 50000
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE)
         case_sensitive = True
 
 
