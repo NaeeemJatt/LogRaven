@@ -1,0 +1,28 @@
+/*
+LogRaven — PDF Report Stylesheet
+Used by WeasyPrint via pdf_generator.py
+
+SECTIONS TO STYLE:
+  @page rules — margins, headers, footers
+  .cover-page — LogRaven branding, investigation name, severity badge
+  .executive-summary — highlighted summary box
+  .correlated-finding — cross-source finding card (prominent styling)
+  .finding-table — individual findings table
+  .severity-badge — color-coded: critical=red, high=orange, medium=yellow, low=blue
+  .mitre-matrix — tactic coverage grid
+  .ioc-table — extracted IOCs reference
+
+BRAND COLORS:
+  Primary:   #3B82F6 (electric blue)
+  Dark:      #0D0F14 (raven black)
+  Accent:    #7C3AED (raven purple)
+
+TODO Month 4 Week 1: Design and implement this stylesheet.
+*/
+
+body {
+    font-family: Arial, sans-serif;
+    color: #0F172A;
+}
+
+/* TODO: Implement full LogRaven report styling */

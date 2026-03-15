@@ -1,0 +1,18 @@
+# LogRaven — Cursor AI Rules
+# Read memory-bank/ files at the start of every session.
+
+PROJECT=LogRaven
+STACK=FastAPI + Python 3.11 + SQLAlchemy 2.0 + Celery + Redis + PostgreSQL + React 18 + TypeScript
+
+RULES:
+- SQLAlchemy 2.0 select() ONLY — never session.query()
+- Pydantic v2 syntax everywhere
+- Always async/await in FastAPI routes
+- Never load full log file into memory — stream always
+- Rule engine FIRST, AI SECOND — AI writes narrative, not detections
+- Storage: always use app/utils/storage.py abstraction — never direct file ops
+- License validated at main.py startup BEFORE anything else initializes
+- pyevtx-rs (pip install evtx) — NOT python-evtx (440x slower)
+- mitreattack-python loaded ONCE at module startup — not per request
+- Never put business logic in route handlers — use services layer
+- JWT access tokens: 15 min expiry. Refresh tokens: 7 days

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+LogRaven — PDF Report Template
+Rendered by WeasyPrint via pdf_generator.py
+
+TEMPLATE CONTEXT VARIABLES:
+  report.summary          — executive summary paragraph
+  report.severity_counts  — {critical, high, medium, low, informational}
+  correlated_findings     — list of cross-source chain findings (shown first)
+  single_source_findings  — list of individual file findings
+  mitre_matrix            — {tactic: {name, techniques: [{id, name, triggered}]}}
+  investigation.name      — investigation name
+  investigation.created_at — date of analysis
+  client_license_id       — embedded in footer for watermarking
+
+TODO Month 4 Week 1: Design and implement this template.
+-->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LogRaven Security Report</title>
+    <link rel="stylesheet" href="lograven_report.css">
+</head>
+<body>
+    <header>
+        <h1>LogRaven</h1>
+        <p>Watch your logs. Find the threat.</p>
+    </header>
+
+    <!-- TODO: Cover page -->
+    <!-- TODO: Executive summary section -->
+    <!-- TODO: Correlated findings section (shown first) -->
+    <!-- TODO: Individual findings table -->
+    <!-- TODO: MITRE ATT&CK coverage matrix -->
+    <!-- TODO: IOC reference table -->
+    <!-- TODO: Recommended actions -->
+
+    <footer>
+        <!-- Client license ID watermark -->
+    </footer>
+</body>
+</html>
