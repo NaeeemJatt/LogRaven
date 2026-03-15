@@ -16,10 +16,16 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
+    from app.models.investigation_file import InvestigationFile
+    from app.models.report import Report
 
 
 class Investigation(Base):
@@ -35,5 +41,6 @@ class Investigation(Base):
     created_at:          Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow)
     completed_at:        Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
 
-    # TODO: Add files relationship (one-to-many InvestigationFile)
-    # TODO: Add report relationship (one-to-one)
+    user:   Mapped["User"]                       = relationship("User",              back_populates="investigations")
+    files:  Mapped[list["InvestigationFile"]]    = relationship("InvestigationFile", back_populates="investigation", cascade="all, delete-orphan")
+    report: Mapped["Report | None"]             = relationship("Report",            back_populates="investigation", uselist=False)

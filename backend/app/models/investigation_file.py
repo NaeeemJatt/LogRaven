@@ -18,10 +18,14 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime, Integer, ForeignKey, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.investigation import Investigation
 
 
 class InvestigationFile(Base):
@@ -38,3 +42,5 @@ class InvestigationFile(Base):
     error_message:    Mapped[str | None]      = mapped_column(Text, nullable=True)
     uploaded_at:      Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
     parsed_at:        Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+    investigation: Mapped["Investigation"] = relationship("Investigation", back_populates="files")
