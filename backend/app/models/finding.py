@@ -17,10 +17,14 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime, Text, Float, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.report import Report
 
 
 class Finding(Base):
@@ -40,3 +44,5 @@ class Finding(Base):
     finding_type:         Mapped[str]         = mapped_column(String(20), nullable=False, default="single")
     confidence:           Mapped[float]       = mapped_column(Float, default=0.8)
     created_at:           Mapped[datetime]    = mapped_column(DateTime, default=datetime.utcnow)
+
+    report: Mapped["Report"] = relationship("Report", back_populates="findings")

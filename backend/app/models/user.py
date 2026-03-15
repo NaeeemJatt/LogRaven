@@ -15,10 +15,15 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, Enum
+from typing import TYPE_CHECKING
+from sqlalchemy import String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.investigation import Investigation
+    from app.models.audit import AuditLog
 
 
 class User(Base):
@@ -31,6 +36,5 @@ class User(Base):
     created_at:    Mapped[datetime]   = mapped_column(DateTime, default=datetime.utcnow)
     updated_at:    Mapped[datetime]   = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationships
-    # TODO: Add investigations relationship
-    # TODO: Add audit_log relationship
+    investigations: Mapped[list["Investigation"]] = relationship("Investigation", back_populates="user", lazy="select")
+    audit_logs:     Mapped[list["AuditLog"]]      = relationship("AuditLog",      back_populates="user", lazy="select")

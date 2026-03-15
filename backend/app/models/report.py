@@ -15,10 +15,15 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime, Text, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.investigation import Investigation
+    from app.models.finding import Finding
 
 
 class Report(Base):
@@ -34,3 +39,6 @@ class Report(Base):
     mitre_techniques:        Mapped[list]         = mapped_column(JSONB, default=list)
     pdf_storage_key:         Mapped[str | None]   = mapped_column(String(500), nullable=True)
     created_at:              Mapped[datetime]     = mapped_column(DateTime, default=datetime.utcnow)
+
+    investigation: Mapped["Investigation"]    = relationship("Investigation", back_populates="report")
+    findings:      Mapped[list["Finding"]]    = relationship("Finding", back_populates="report", cascade="all, delete-orphan")

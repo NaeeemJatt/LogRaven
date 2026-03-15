@@ -16,10 +16,14 @@
 
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 from sqlalchemy import String, DateTime, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class AuditLog(Base):
@@ -32,3 +36,5 @@ class AuditLog(Base):
     user_agent: Mapped[str | None]      = mapped_column(String(500), nullable=True)
     metadata_:  Mapped[dict]            = mapped_column("metadata", JSONB, default=dict)
     created_at: Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
+
+    user: Mapped["User | None"] = relationship("User", back_populates="audit_logs")
