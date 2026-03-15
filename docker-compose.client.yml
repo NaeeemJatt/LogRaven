@@ -1,0 +1,56 @@
+# LogRaven — Client Delivery Docker Compose
+# This is the file you send to clients alongside .env template
+
+version: '3.9'
+
+services:
+  lograven:
+    image: lograven:v1.0
+    container_name: lograven-app
+    ports:
+      - "8000:8000"
+    environment:
+      - LICENSE_KEY=${LICENSE_KEY}
+      - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
+      - REDIS_URL=redis://lograven-redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - STORAGE_BACKEND=local
+    volumes:
+      - ./data/uploads:/app/local/uploads
+      - ./data/reports:/app/local/reports
+    depends_on:
+      - lograven-db
+      - lograven-redis
+
+  lograven-worker:
+    image: lograven:v1.0
+    container_name: lograven-worker
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    environment:
+      - LICENSE_KEY=${LICENSE_KEY}
+      - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
+      - REDIS_URL=redis://lograven-redis:6379
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - STORAGE_BACKEND=local
+    volumes:
+      - ./data/uploads:/app/local/uploads
+      - ./data/reports:/app/local/reports
+    depends_on:
+      - lograven-db
+      - lograven-redis
+
+  lograven-db:
+    image: postgres:15-alpine
+    container_name: lograven-db
+    environment:
+      - POSTGRES_PASSWORD=lgrpass
+      - POSTGRES_DB=lograven
+    volumes:
+      - lograven_data:/var/lib/postgresql/data
+
+  lograven-redis:
+    image: redis:7-alpine
+    container_name: lograven-redis
+
+volumes:
+  lograven_data:

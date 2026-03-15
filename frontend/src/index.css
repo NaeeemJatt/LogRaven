@@ -1,0 +1,16 @@
+/* LogRaven — Global Styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --lograven-blue: #3B82F6;
+  --lograven-black: #0D0F14;
+  --lograven-purple: #7C3AED;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background-color: #F8FAFC;
+  color: #0F172A;
+}

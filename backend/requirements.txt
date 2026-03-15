@@ -1,0 +1,56 @@
+# LogRaven — Backend Dependencies (Development)
+# NOTE: boto3 is NOT included — add to requirements.prod.txt for S3
+
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+
+# Database
+sqlalchemy==2.0.31
+alembic==1.13.2
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Validation
+pydantic==2.8.2
+pydantic-settings==2.3.4
+email-validator==2.2.0
+
+# Auth
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.3
+python-multipart==0.0.9
+
+# Task queue
+celery==5.3.6
+redis==5.0.7
+kombu==5.3.4
+
+# EVTX parsing (pyevtx-rs bindings — 440x faster than python-evtx)
+evtx==0.8.9
+
+# MITRE ATT&CK
+mitreattack-python==5.4.0
+
+# AI
+anthropic==0.28.0
+openai==1.35.0
+
+# PDF generation
+weasyprint==62.3
+jinja2==3.1.4
+
+# File I/O
+aiofiles==23.2.1
+
+# HTTP client (for health checks)
+httpx==0.27.0
+
+# Testing
+pytest==8.2.2
+pytest-asyncio==0.23.7
+httpx==0.27.0
+
+# Logging
+structlog==24.2.0

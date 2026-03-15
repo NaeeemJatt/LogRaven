@@ -1,0 +1,8 @@
+# LogRaven — Production Additional Dependencies
+# Include everything from requirements.txt PLUS these:
+
+# AWS S3 (production storage)
+boto3==1.34.131
+
+# Code obfuscation (build only)
+pyarmor==8.5.9
