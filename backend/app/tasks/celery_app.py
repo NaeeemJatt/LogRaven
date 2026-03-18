@@ -1,20 +1,4 @@
 # LogRaven — Celery Application Configuration
-#
-# PURPOSE:
-#   Creates and configures the Celery application instance.
-#   Redis is used as both broker and result backend.
-#
-# KEY CONFIGURATION:
-#   task_serializer = "json"          — human-readable task payloads
-#   worker_max_tasks_per_child = 100  — prevent memory leaks in long-running workers
-#   task_acks_late = True             — tasks acknowledged AFTER completion, not before
-#   task_reject_on_worker_lost = True — re-queue tasks if worker crashes mid-processing
-#
-# QUEUES:
-#   default  — standard investigations
-#   priority — team tier investigations (processed first)
-#
-# TODO Month 1 Week 3: Implement this file.
 
 from celery import Celery
 import os
@@ -32,6 +16,11 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_max_tasks_per_child=100,
+    # Run tasks synchronously without a broker — safe for development/testing on Windows.
+    # Set to False in production with Redis.
+    task_always_eager=True,
+    task_eager_propagates=True,
 )
 
-# TODO: Import and register process_investigation task
+# Tasks are registered by importing process_investigation from process_investigation.py.
+# Do NOT import here — celery_app is imported by process_investigation, circular otherwise.

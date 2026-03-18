@@ -1,54 +1,139 @@
 # LogRaven — Main Investigation Processing Task
-#
-# PURPOSE:
-#   The core Celery task that orchestrates the complete LogRaven pipeline.
-#   This is the most important file in the backend.
-#
-# CALLED BY:
-#   investigation_service.start_analysis() via process_investigation.delay(investigation_id)
-#
-# PIPELINE (in order):
-#   1.  Update investigation status to "processing"
-#   2.  For each InvestigationFile in investigation:
-#       a. Download file from local storage to temp path
-#       b. Run detector.detect(temp_path) to identify log type
-#       c. Update file log_type in DB
-#       d. Run appropriate parser (pyevtx-rs / syslog / cloudtrail / nginx)
-#       e. Update file status=parsed, event_count in DB
-#       f. Update investigation progress_stage in Redis for frontend polling
-#   3.  Run rule engine across all normalized events
-#   4.  Run correlation engine with events grouped by source_type
-#   5.  Apply cost_limiter.enforce_ceiling() per user tier
-#   6.  Run AI analysis via ai/router.py
-#   7.  Run report builder to create Report and Finding records
-#   8.  Generate PDF via pdf_generator.generate_pdf()
-#   9.  Upload PDF to storage via uploader.upload_report()
-#   10. Update investigation status to "complete", set completed_at
-#   11. Send notification if job took > 30 seconds
-#
-# ERROR HANDLING:
-#   Any exception at any step:
-#   - Sets investigation status to "failed"
-#   - Sets error_message on the failed InvestigationFile (if file-specific)
-#   - Logs full traceback
-#   - Temp files always deleted in finally block
-#
-# PROGRESS TRACKING:
-#   After each major step, store current stage in Redis:
-#   redis.set(f"lograven:progress:{investigation_id}", stage_name, ex=3600)
-#   Frontend polls /api/v1/investigations/{id}/status which reads from Redis.
-#
-# TODO Month 2 Week 1: Implement scaffold. Month 3+: Full implementation.
+
+import asyncio
+import traceback
+from datetime import datetime
+
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.tasks.celery_app import celery_app
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 @celery_app.task(name="process_investigation", bind=True, max_retries=0)
 def process_investigation(self, investigation_id: str):
     """
     LogRaven main processing pipeline.
-    Orchestrates parsing -> rule engine -> correlation -> AI -> report -> PDF.
+    Runs synchronously via asyncio.run() because SQLAlchemy sessions are async.
     """
-    # TODO: Implement full pipeline
-    print(f"[LogRaven] Processing investigation {investigation_id}")
-    # Stub implementation — will be expanded in later months
+    asyncio.run(_run_pipeline(investigation_id))
+
+
+async def _run_pipeline(investigation_id: str) -> None:
+    # Imports deferred to avoid circular imports at module load time
+    from app.dependencies import AsyncSessionLocal
+    from app.models.investigation import Investigation
+    from app.models.investigation_file import InvestigationFile
+    from app.parsers import detector
+    from app.parsers.windows_event import WindowsEventParser
+    from app.parsers.syslog import SyslogParser
+    from app.parsers.cloudtrail import CloudTrailParser
+    from app.parsers.nginx import NginxParser
+    from app.utils.storage import LocalStorageBackend
+    from app.config import settings
+
+    storage = LocalStorageBackend(base_path=settings.LOCAL_STORAGE_PATH)
+
+    async with AsyncSessionLocal() as db:
+        try:
+            # 1. Fetch investigation with all files eagerly
+            result = await db.execute(
+                select(Investigation)
+                .options(selectinload(Investigation.files))
+                .where(Investigation.id == investigation_id)
+            )
+            investigation = result.scalar_one_or_none()
+            if investigation is None:
+                logger.error("LogRaven: investigation %s not found", investigation_id)
+                return
+
+            # 2. Mark as processing
+            investigation.status = "processing"
+            await db.commit()
+
+            all_events = []
+
+            # 3. Parse each file
+            for inv_file in investigation.files:
+                try:
+                    file_path = await storage.get_file_path(inv_file.storage_key)
+                    file_path_str = str(file_path)
+
+                    # Detect log type
+                    log_type = detector.detect(file_path_str)
+                    inv_file.log_type = log_type
+                    await db.commit()
+
+                    # Select parser
+                    parser_map = {
+                        "windows_event": WindowsEventParser,
+                        "syslog":        SyslogParser,
+                        "cloudtrail":    CloudTrailParser,
+                        "nginx":         NginxParser,
+                    }
+                    parser_cls = parser_map.get(log_type)
+                    if parser_cls is None:
+                        inv_file.status = "failed"
+                        inv_file.error_message = f"No parser for log_type: {log_type}"
+                        await db.commit()
+                        continue
+
+                    events = parser_cls().parse(file_path_str)
+
+                    # Tag events with the source_type from the DB record
+                    for ev in events:
+                        ev.source_type = inv_file.source_type
+
+                    inv_file.status = "parsed"
+                    inv_file.event_count = len(events)
+                    inv_file.parsed_at = datetime.utcnow()
+                    await db.commit()
+
+                    all_events.extend(events)
+
+                except Exception as file_exc:
+                    logger.error(
+                        "LogRaven: error parsing file %s: %s\n%s",
+                        inv_file.filename,
+                        file_exc,
+                        traceback.format_exc(),
+                    )
+                    inv_file.status = "failed"
+                    inv_file.error_message = str(file_exc)[:500]
+                    await db.commit()
+
+            logger.info(
+                "LogRaven: parsed %d total events from %d files",
+                len(all_events),
+                len(investigation.files),
+            )
+
+            # 4. Mark investigation complete
+            investigation.status = "complete"
+            investigation.completed_at = datetime.utcnow()
+            await db.commit()
+
+            logger.info("LogRaven: investigation %s complete", investigation_id)
+
+        except Exception as exc:
+            logger.error(
+                "LogRaven: pipeline failed for %s: %s\n%s",
+                investigation_id,
+                exc,
+                traceback.format_exc(),
+            )
+            try:
+                # Re-fetch to avoid stale state
+                result = await db.execute(
+                    select(Investigation).where(Investigation.id == investigation_id)
+                )
+                investigation = result.scalar_one_or_none()
+                if investigation:
+                    investigation.status = "failed"
+                    await db.commit()
+            except Exception:
+                pass
+            raise
