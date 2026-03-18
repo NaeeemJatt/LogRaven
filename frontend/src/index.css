@@ -1,16 +1,55 @@
-/* LogRaven — Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --lograven-blue: #3B82F6;
-  --lograven-black: #0D0F14;
-  --lograven-purple: #7C3AED;
+  --raven-950: #05070D;
+  --raven-900: #0D0F14;
+  --raven-800: #111827;
+  --raven-700: #1F2937;
+  --electric-500: #3B82F6;
+}
+
+html {
+  background-color: var(--raven-900);
 }
 
 body {
-  font-family: 'Arial', sans-serif;
-  background-color: #F8FAFC;
-  color: #0F172A;
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--raven-900);
+  color: #E5E7EB;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Thin dark scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--raven-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--raven-700);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4B5563;
+}
+
+/* Selection highlight */
+::selection {
+  background-color: var(--electric-500);
+  color: #fff;
+}
+
+/* Remove autofill yellow flash */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--raven-900) inset !important;
+  -webkit-text-fill-color: #E5E7EB !important;
+  caret-color: #E5E7EB;
 }

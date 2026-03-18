@@ -1,42 +1,247 @@
 <!DOCTYPE html>
-<!--
-LogRaven — PDF Report Template
-Rendered by WeasyPrint via pdf_generator.py
-
-TEMPLATE CONTEXT VARIABLES:
-  report.summary          — executive summary paragraph
-  report.severity_counts  — {critical, high, medium, low, informational}
-  correlated_findings     — list of cross-source chain findings (shown first)
-  single_source_findings  — list of individual file findings
-  mitre_matrix            — {tactic: {name, techniques: [{id, name, triggered}]}}
-  investigation.name      — investigation name
-  investigation.created_at — date of analysis
-  client_license_id       — embedded in footer for watermarking
-
-TODO Month 4 Week 1: Design and implement this template.
--->
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>LogRaven Security Report</title>
     <link rel="stylesheet" href="lograven_report.css">
 </head>
 <body>
-    <header>
-        <h1>LogRaven</h1>
-        <p>Watch your logs. Find the threat.</p>
-    </header>
 
-    <!-- TODO: Cover page -->
-    <!-- TODO: Executive summary section -->
-    <!-- TODO: Correlated findings section (shown first) -->
-    <!-- TODO: Individual findings table -->
-    <!-- TODO: MITRE ATT&CK coverage matrix -->
-    <!-- TODO: IOC reference table -->
-    <!-- TODO: Recommended actions -->
+<!-- ══════════════════════════════════════════════════════════════════
+     COVER PAGE
+══════════════════════════════════════════════════════════════════ -->
+<div class="cover">
+    <div class="cover-logo">LOG<span>RAVEN</span></div>
+    <div class="cover-subtitle">Security Investigation Report</div>
+    <div class="cover-tagline">Watch your logs. Find the threat.</div>
 
-    <footer>
-        <!-- Client license ID watermark -->
-    </footer>
+    <div class="cover-divider"></div>
+
+    <div class="cover-meta"><strong>Investigation ID:</strong> {{ investigation_id }}</div>
+    <div class="cover-meta"><strong>Report ID:</strong> {{ report_id }}</div>
+    <div class="cover-meta"><strong>Generated:</strong> {{ generated_at }}</div>
+
+    {% if total_findings > 0 %}
+    <div class="severity-strip">
+        {% if severity_counts.get('critical', 0) > 0 %}
+        <div class="severity-box sev-critical">
+            <span class="sev-count">{{ severity_counts.get('critical', 0) }}</span>
+            <span class="sev-label">Critical</span>
+        </div>
+        {% endif %}
+        {% if severity_counts.get('high', 0) > 0 %}
+        <div class="severity-box sev-high">
+            <span class="sev-count">{{ severity_counts.get('high', 0) }}</span>
+            <span class="sev-label">High</span>
+        </div>
+        {% endif %}
+        {% if severity_counts.get('medium', 0) > 0 %}
+        <div class="severity-box sev-medium">
+            <span class="sev-count">{{ severity_counts.get('medium', 0) }}</span>
+            <span class="sev-label">Medium</span>
+        </div>
+        {% endif %}
+        {% if severity_counts.get('low', 0) > 0 %}
+        <div class="severity-box sev-low">
+            <span class="sev-count">{{ severity_counts.get('low', 0) }}</span>
+            <span class="sev-label">Low</span>
+        </div>
+        {% endif %}
+        {% if severity_counts.get('informational', 0) > 0 %}
+        <div class="severity-box sev-informational">
+            <span class="sev-count">{{ severity_counts.get('informational', 0) }}</span>
+            <span class="sev-label">Info</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     EXECUTIVE SUMMARY
+══════════════════════════════════════════════════════════════════ -->
+<h2>Executive Summary</h2>
+
+<p>{{ summary }}</p>
+
+<table class="summary-table">
+    <thead>
+        <tr>
+            <th>Total Findings</th>
+            <th>Critical</th>
+            <th>High</th>
+            <th>Correlated</th>
+            <th>Report Generated</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>{{ total_findings }}</strong></td>
+            <td><strong style="color:#dc2626;">{{ severity_counts.get('critical', 0) }}</strong></td>
+            <td><strong style="color:#d97706;">{{ severity_counts.get('high', 0) }}</strong></td>
+            <td><strong style="color:#7c3aed;">{{ correlated_findings | length }}</strong></td>
+            <td>{{ generated_at }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     CORRELATED FINDINGS  (only if present)
+══════════════════════════════════════════════════════════════════ -->
+{% if correlated_findings %}
+<h2>Correlated Findings</h2>
+<div class="section-note">
+    These findings span multiple log sources and represent the highest-confidence attack
+    indicators. Each finding was identified by correlating events across different data
+    sources sharing a common entity (IP address, username, or hostname).
+</div>
+
+{% for f in correlated_findings %}
+<div class="finding-card sev-{{ f.severity }} sev-correlated">
+    <div class="finding-header">
+        <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+        <span class="badge correlated-badge">Correlated</span>
+        <span class="finding-title">{{ f.title }}</span>
+        {% if f.mitre_technique_id %}
+        <span class="finding-mitre">{{ f.mitre_technique_id }}</span>
+        {% endif %}
+    </div>
+    <p class="finding-description">{{ f.description }}</p>
+    {% if f.iocs %}
+    <div class="finding-iocs">
+        <span class="ioc-label">IOCs: </span>
+        {% for ioc in f.iocs %}<span class="ioc-tag">{{ ioc }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if f.remediation %}
+    <div class="finding-remediation">
+        <div class="rem-label">Recommended Action</div>
+        {{ f.remediation }}
+    </div>
+    {% endif %}
+    {% if f.mitre_technique_name %}
+    <div class="finding-mitre-detail">
+        ATT&amp;CK: <strong>{{ f.mitre_tactic | title if f.mitre_tactic else '' }}</strong>
+        &rarr; {{ f.mitre_technique_name }} ({{ f.mitre_technique_id }})
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+
+<div class="page-break"></div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════════
+     INDIVIDUAL FINDINGS
+══════════════════════════════════════════════════════════════════ -->
+{% if single_findings %}
+<h2>Individual Findings</h2>
+
+{% for f in single_findings %}
+<div class="finding-card sev-{{ f.severity }}">
+    <div class="finding-header">
+        <span class="badge badge-{{ f.severity }}">{{ f.severity }}</span>
+        <span class="finding-title">{{ f.title }}</span>
+        {% if f.mitre_technique_id %}
+        <span class="finding-mitre">{{ f.mitre_technique_id }}</span>
+        {% endif %}
+    </div>
+    <p class="finding-description">{{ f.description }}</p>
+    {% if f.iocs %}
+    <div class="finding-iocs">
+        <span class="ioc-label">IOCs: </span>
+        {% for ioc in f.iocs %}<span class="ioc-tag">{{ ioc }}</span>{% endfor %}
+    </div>
+    {% endif %}
+    {% if f.remediation %}
+    <div class="finding-remediation">
+        <div class="rem-label">Recommended Action</div>
+        {{ f.remediation }}
+    </div>
+    {% endif %}
+    {% if f.mitre_technique_name %}
+    <div class="finding-mitre-detail">
+        ATT&amp;CK: <strong>{{ f.mitre_tactic | title if f.mitre_tactic else '' }}</strong>
+        &rarr; {{ f.mitre_technique_name }} ({{ f.mitre_technique_id }})
+    </div>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════════
+     MITRE ATT&CK COVERAGE  (only if techniques present)
+══════════════════════════════════════════════════════════════════ -->
+{% if mitre_techniques %}
+<div class="page-break"></div>
+<h2>MITRE ATT&amp;CK Coverage</h2>
+<div class="section-note">
+    Techniques identified in this investigation mapped to the MITRE ATT&amp;CK Enterprise framework.
+</div>
+
+<table class="mitre-table">
+    <thead>
+        <tr>
+            <th style="width:40%">Tactic</th>
+            <th>Technique IDs Triggered</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for finding in all_findings %}
+        {% if finding.mitre_technique_id %}
+        <tr>
+            <td>{{ finding.mitre_tactic | title if finding.mitre_tactic else '—' }}</td>
+            <td>
+                <span class="mitre-id">{{ finding.mitre_technique_id }}</span>
+                {% if finding.mitre_technique_name %}
+                {{ finding.mitre_technique_name }}
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════════
+     IOC REFERENCE  (only if IOCs present)
+══════════════════════════════════════════════════════════════════ -->
+{% if ioc_list %}
+<div class="page-break"></div>
+<h2>IOC Reference</h2>
+<div class="section-note">
+    All indicators of compromise extracted from findings in this investigation.
+</div>
+
+<table class="ioc-table">
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>IOC Value</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for ioc in ioc_list %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ ioc }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if not total_findings %}
+<div class="page-break"></div>
+<div style="text-align:center; padding: 60px 0; color: #94a3b8;">
+    <p style="font-size:14pt;">No findings were generated for this investigation.</p>
+    <p>This may indicate the log file contained no suspicious activity,
+    or the AI analysis was skipped due to a missing API key.</p>
+</div>
+{% endif %}
+
 </body>
 </html>

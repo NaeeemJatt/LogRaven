@@ -80,6 +80,14 @@ class LocalStorageBackend(StorageBackend):
         if path.exists():
             path.unlink()
 
+    async def save_file_from_bytes(self, key: str, data: bytes) -> str:
+        """Save raw bytes directly (used by report uploader)."""
+        dest = self.base / key
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        async with aiofiles.open(dest, "wb") as f:
+            await f.write(data)
+        return key
+
 
 class S3StorageBackend(StorageBackend):
     """

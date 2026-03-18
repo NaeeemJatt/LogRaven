@@ -1,4 +1,3 @@
-// LogRaven — Tailwind CSS Configuration
 import type { Config } from 'tailwindcss'
 
 export default {
@@ -6,21 +5,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        // LogRaven brand colors
         raven: {
-          50:  '#f0f4ff',
-          100: '#e0e9ff',
-          500: '#3B82F6',  // electric blue
-          600: '#2563EB',
-          700: '#1d4ed8',
-          900: '#0D0F14',  // raven black
+          950: '#05070D',
+          900: '#0D0F14',
+          800: '#111827',
+          700: '#1F2937',
+          600: '#374151',
+          400: '#9CA3AF',
+          200: '#E5E7EB',
         },
-        violet: {
-          500: '#7C3AED',  // raven purple
-          600: '#6d28d9',
-        }
-      }
-    }
+        electric: {
+          500: '#3B82F6',
+          400: '#60A5FA',
+          900: '#1E3A5F',
+        },
+        severity: {
+          critical: '#EF4444',
+          high:     '#F97316',
+          medium:   '#EAB308',
+          low:      '#3B82F6',
+          info:     '#6B7280',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['"Courier New"', 'Courier', 'monospace'],
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 } satisfies Config

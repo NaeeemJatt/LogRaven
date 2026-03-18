@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // LogRaven — React Application Entry Point
 import React from 'react'
 import ReactDOM from 'react-dom/client'

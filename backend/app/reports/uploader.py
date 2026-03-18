@@ -1,16 +1,37 @@
 # LogRaven — Report Uploader
-#
-# PURPOSE:
-#   Moves the generated PDF from temp storage to permanent report storage.
-#   Uses the StorageBackend abstraction — same code works local and S3.
-#
-# MAIN FUNCTION:
-#   upload_report(temp_path, investigation_id) -> str (storage_key)
-#
-# STORAGE KEY FORMAT:
-#   reports/{investigation_id}/lograven-report-{uuid}.pdf
-#
-# After upload: temp file is deleted.
-# The storage_key is saved to the Report.pdf_storage_key column.
-#
-# TODO Month 4 Week 1: Implement this file.
+
+import os
+
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+async def upload_report(pdf_path: str, investigation_id, storage) -> str:
+    """
+    Move a generated PDF from local temp storage to permanent report storage.
+
+    Args:
+        pdf_path:         Absolute local path to the PDF file.
+        investigation_id: UUID of the investigation.
+        storage:          StorageBackend instance.
+
+    Returns:
+        Storage key (e.g. "reports/{id}/lograven-report-abcd1234.pdf").
+    """
+    filename = os.path.basename(pdf_path)
+    key = f"reports/{investigation_id}/{filename}"
+
+    with open(pdf_path, "rb") as fh:
+        pdf_bytes = fh.read()
+
+    await storage.save_file_from_bytes(key, pdf_bytes)
+    logger.info("LogRaven uploader: stored PDF at key=%s", key)
+
+    # Clean up temp file after successful upload
+    try:
+        os.remove(pdf_path)
+    except OSError as e:
+        logger.warning("LogRaven uploader: could not delete temp PDF %s: %s", pdf_path, e)
+
+    return key

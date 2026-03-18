@@ -1,28 +1,340 @@
 /*
-LogRaven — PDF Report Stylesheet
-Used by WeasyPrint via pdf_generator.py
+ * LogRaven — PDF Report Stylesheet
+ * Rendered by WeasyPrint — no external resources, no JavaScript.
+ */
 
-SECTIONS TO STYLE:
-  @page rules — margins, headers, footers
-  .cover-page — LogRaven branding, investigation name, severity badge
-  .executive-summary — highlighted summary box
-  .correlated-finding — cross-source finding card (prominent styling)
-  .finding-table — individual findings table
-  .severity-badge — color-coded: critical=red, high=orange, medium=yellow, low=blue
-  .mitre-matrix — tactic coverage grid
-  .ioc-table — extracted IOCs reference
+/* ── Page setup ─────────────────────────────────────────────────────────── */
+@page {
+    size: A4;
+    margin: 2cm 2cm 2.5cm 2cm;
+}
 
-BRAND COLORS:
-  Primary:   #3B82F6 (electric blue)
-  Dark:      #0D0F14 (raven black)
-  Accent:    #7C3AED (raven purple)
+@page {
+    @bottom-left  { content: "LogRaven Security Report"; font-size: 8pt; color: #64748b; font-family: Arial, sans-serif; }
+    @bottom-right { content: "Confidential"; font-size: 8pt; color: #64748b; font-family: Arial, sans-serif; }
+    @bottom-center { content: "Page " counter(page) " of " counter(pages); font-size: 8pt; color: #94a3b8; font-family: Arial, sans-serif; }
+}
 
-TODO Month 4 Week 1: Design and implement this stylesheet.
-*/
+/* ── Base ────────────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
     font-family: Arial, sans-serif;
-    color: #0F172A;
+    font-size: 10pt;
+    color: #0f172a;
+    line-height: 1.5;
 }
 
-/* TODO: Implement full LogRaven report styling */
+h1 { font-size: 28pt; font-weight: bold; }
+h2 { font-size: 14pt; font-weight: bold; color: #0d0f14; margin-bottom: 10px; margin-top: 24px; border-bottom: 2px solid #3b82f6; padding-bottom: 4px; }
+h3 { font-size: 11pt; font-weight: bold; color: #1e293b; margin-bottom: 6px; }
+p  { margin-bottom: 8px; }
+
+/* ── Page breaks ─────────────────────────────────────────────────────────── */
+.page-break { page-break-after: always; }
+
+/* ── Cover page ──────────────────────────────────────────────────────────── */
+.cover {
+    page-break-after: always;
+    padding: 60px 0 40px 0;
+    text-align: center;
+}
+
+.cover-logo {
+    font-size: 48pt;
+    font-weight: bold;
+    color: #0d0f14;
+    letter-spacing: 6px;
+    margin-bottom: 6px;
+}
+
+.cover-logo span {
+    color: #3b82f6;
+}
+
+.cover-subtitle {
+    font-size: 16pt;
+    color: #334155;
+    margin-bottom: 4px;
+    font-weight: normal;
+}
+
+.cover-tagline {
+    font-size: 10pt;
+    color: #7c3aed;
+    font-style: italic;
+    margin-bottom: 40px;
+}
+
+.cover-meta {
+    font-size: 10pt;
+    color: #475569;
+    margin-bottom: 6px;
+}
+
+.cover-meta strong {
+    color: #0f172a;
+}
+
+.cover-divider {
+    width: 80px;
+    height: 3px;
+    background: #3b82f6;
+    margin: 30px auto;
+}
+
+/* Severity summary strip on cover */
+.severity-strip {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+}
+
+.severity-box {
+    padding: 10px 18px;
+    border-radius: 4px;
+    text-align: center;
+    min-width: 80px;
+}
+
+.severity-box .sev-count {
+    font-size: 22pt;
+    font-weight: bold;
+    display: block;
+    color: #fff;
+}
+
+.severity-box .sev-label {
+    font-size: 7pt;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255,255,255,0.85);
+}
+
+/* ── Severity badges (inline) ─────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 7.5pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+}
+
+.badge-critical     { background: #dc2626; }
+.badge-high         { background: #d97706; }
+.badge-medium       { background: #ca8a04; }
+.badge-low          { background: #2563eb; }
+.badge-informational{ background: #6b7280; }
+
+/* Severity box backgrounds (cover) */
+.sev-critical     { background: #dc2626; }
+.sev-high         { background: #d97706; }
+.sev-medium       { background: #ca8a04; }
+.sev-low          { background: #2563eb; }
+.sev-informational{ background: #6b7280; }
+
+/* ── Section intro note ───────────────────────────────────────────────────── */
+.section-note {
+    background: #f1f5f9;
+    border-left: 4px solid #7c3aed;
+    padding: 8px 12px;
+    font-size: 9pt;
+    color: #475569;
+    margin-bottom: 16px;
+}
+
+/* ── Finding cards ────────────────────────────────────────────────────────── */
+.finding-card {
+    border-left: 4px solid #94a3b8;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    page-break-inside: avoid;
+    background: #f8fafc;
+}
+
+.finding-card.sev-critical     { border-left-color: #dc2626; }
+.finding-card.sev-high         { border-left-color: #d97706; }
+.finding-card.sev-medium       { border-left-color: #ca8a04; }
+.finding-card.sev-low          { border-left-color: #2563eb; }
+.finding-card.sev-informational{ border-left-color: #6b7280; }
+.finding-card.sev-correlated   { border-left-color: #7c3aed; background: #faf5ff; }
+
+.finding-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.finding-title {
+    font-size: 10.5pt;
+    font-weight: bold;
+    color: #0f172a;
+    flex: 1;
+}
+
+.finding-mitre {
+    font-size: 8pt;
+    color: #7c3aed;
+    font-family: monospace;
+    background: #ede9fe;
+    padding: 1px 5px;
+    border-radius: 2px;
+}
+
+.finding-description {
+    font-size: 9.5pt;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.finding-iocs {
+    margin-bottom: 6px;
+}
+
+.finding-iocs .ioc-label {
+    font-size: 8pt;
+    font-weight: bold;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ioc-tag {
+    display: inline-block;
+    background: #e2e8f0;
+    color: #334155;
+    font-family: monospace;
+    font-size: 8pt;
+    padding: 1px 5px;
+    border-radius: 2px;
+    margin: 2px 2px 2px 0;
+}
+
+.finding-remediation {
+    background: #f0fdf4;
+    border-left: 3px solid #16a34a;
+    padding: 6px 10px;
+    font-size: 9pt;
+    color: #166534;
+    margin-top: 6px;
+}
+
+.finding-remediation .rem-label {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 7.5pt;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.finding-mitre-detail {
+    font-size: 8pt;
+    color: #7c3aed;
+    margin-top: 6px;
+}
+
+/* ── Summary table ────────────────────────────────────────────────────────── */
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 0 0;
+    font-size: 9.5pt;
+}
+
+.summary-table th {
+    background: #0d0f14;
+    color: #fff;
+    padding: 7px 10px;
+    text-align: left;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.summary-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-table tr:nth-child(even) td { background: #f8fafc; }
+
+/* ── IOC reference table ──────────────────────────────────────────────────── */
+.ioc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-top: 10px;
+}
+
+.ioc-table th {
+    background: #1e293b;
+    color: #fff;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 8pt;
+}
+
+.ioc-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    font-family: monospace;
+    font-size: 8.5pt;
+}
+
+.ioc-table tr:nth-child(even) td { background: #f8fafc; }
+
+/* ── MITRE coverage table ─────────────────────────────────────────────────── */
+.mitre-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-top: 10px;
+}
+
+.mitre-table th {
+    background: #7c3aed;
+    color: #fff;
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 8pt;
+    text-transform: uppercase;
+}
+
+.mitre-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+}
+
+.mitre-table tr:nth-child(even) td { background: #faf5ff; }
+
+.mitre-id {
+    font-family: monospace;
+    font-size: 8pt;
+    background: #ede9fe;
+    color: #7c3aed;
+    padding: 1px 4px;
+    border-radius: 2px;
+    margin: 2px;
+    display: inline-block;
+}
+
+/* ── Correlated badge ────────────────────────────────────────────────────── */
+.correlated-badge {
+    display: inline-block;
+    background: #7c3aed;
+    color: #fff;
+    font-size: 7pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-left: 4px;
+}

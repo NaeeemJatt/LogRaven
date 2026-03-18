@@ -249,7 +249,32 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 report.id, len(all_findings),
             )
 
-            # ── Step 5j: Mark complete ────────────────────────────────────────
+            # ── Step 5j: Generate PDF ─────────────────────────────────────────
+            # Fetch the just-saved Finding rows so the PDF has ORM objects
+            findings_result = await db.execute(
+                select(Finding).where(Finding.report_id == report.id)
+            )
+            all_db_findings = findings_result.scalars().all()
+
+            import os
+            from app.reports.pdf_generator import generate_pdf
+            from app.reports.uploader import upload_report
+
+            temp_dir = os.path.join("local", "temp", str(investigation.id))
+            os.makedirs(temp_dir, exist_ok=True)
+
+            try:
+                pdf_path = generate_pdf(report, all_db_findings, temp_dir)
+                pdf_storage = LocalStorageBackend(base_path=settings.LOCAL_STORAGE_PATH)
+                pdf_key = await upload_report(pdf_path, investigation.id, pdf_storage)
+                report.pdf_storage_key = pdf_key
+                await db.commit()
+                logger.info("LogRaven: PDF saved at %s", pdf_key)
+            except Exception as pdf_exc:
+                logger.error("LogRaven: PDF generation failed: %s", pdf_exc)
+                logger.info("LogRaven: pipeline will complete without PDF")
+
+            # ── Step 5k: Mark complete ────────────────────────────────────────
             investigation.status = "complete"
             investigation.completed_at = datetime.utcnow()
             await db.commit()

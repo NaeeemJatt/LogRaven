@@ -1,33 +1,50 @@
 // LogRaven — Root Application Component
-// Sets up React Router with all LogRaven routes.
-// Protected routes require authentication (JWT in authStore).
-//
-// ROUTES:
-//   /              — Landing page (public)
-//   /login         — Login page (public)
-//   /register      — Register page (public)
-//   /dashboard     — Investigation list (protected)
-//   /new           — Create investigation (protected)
-//   /investigation/:id  — Investigation detail + file upload (protected)
-//   /status/:id    — Job status polling page (protected)
-//   /report/:id    — Full LogRaven report view (protected)
-//
-// TODO Month 1 Week 3: Implement this file.
-
 import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuthStore } from './store/authStore'
+
+import Login           from './pages/Auth/Login'
+import Register        from './pages/Auth/Register'
+import Dashboard       from './pages/Dashboard'
+import NewInvestigation from './pages/NewInvestigation'
+import Investigation   from './pages/Investigation'
+import JobStatus       from './pages/JobStatus'
+import Report          from './pages/Report'
+
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <h1 className="text-3xl font-bold text-center pt-20 text-blue-600">
-        LogRaven
-      </h1>
-      <p className="text-center text-gray-500 mt-2">
-        Watch your logs. Find the threat.
-      </p>
-      <p className="text-center text-gray-400 mt-4 text-sm">
-        Frontend scaffold ready. Implement App.tsx in Month 1 Week 3.
-      </p>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        {/* Public */}
+        <Route path="/login"    element={<Login />} />
+        <Route path="/register" element={<Register />} />
+
+        {/* Protected */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute><Dashboard /></ProtectedRoute>
+        } />
+        <Route path="/investigations/new" element={
+          <ProtectedRoute><NewInvestigation /></ProtectedRoute>
+        } />
+        <Route path="/investigations/:id" element={
+          <ProtectedRoute><Investigation /></ProtectedRoute>
+        } />
+        <Route path="/investigations/:id/status" element={
+          <ProtectedRoute><JobStatus /></ProtectedRoute>
+        } />
+        <Route path="/investigations/:id/report" element={
+          <ProtectedRoute><Report /></ProtectedRoute>
+        } />
+
+        {/* Default */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </BrowserRouter>
   )
 }

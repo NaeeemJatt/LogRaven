@@ -120,52 +120,95 @@ Completed: 2026-03-18
 ---
 
 ## Month 3 — Correlation + AI
-Status: IN PROGRESS — Week 1–2 complete, AI integration pending
+Status: COMPLETE
+Completed: 2026-03-18
 
 ### Done
 - [x] rules/engine.py: run_rules()
-      Rule 1: critical severity if brute_force_candidate + >20 auth_failure events
-      Rule 2: high severity if lateral_movement_candidate
-      Rule 3: high severity if sensitive_action (CloudTrail)
-      Rule 4: deduplication within 5-second window (flag + severity="deduplicated")
+      Rule 1: severity_hint="critical" if brute_force_candidate + >20 auth_failure events
+      Rule 2: severity_hint="high" if lateral_movement_candidate
+      Rule 3: severity_hint="high" if sensitive_action (CloudTrail)
+      Rule 4: deduplication within 5-second window (flag + severity_hint="deduplicated")
 - [x] correlation/entity_extractor.py: extract_entities()
-      Returns {ips, users, hosts} sets, normalized via normalize_entity()
+      Returns {ips, users, hosts} normalized via normalize_entity()
 - [x] correlation/chain_builder.py: build_chains()
       5-minute sliding window, same IP or username across different source_types
-      Cross-source only (2+ source_types required), sorted by event_count desc
+      Cross-source only chains, sorted by event_count desc
 - [x] correlation/engine.py: correlate()
-      Orchestrates entity_extractor + chain_builder
       Returns {entities, chains, chain_count, top_entity}
 - [x] ai/cost_limiter.py: enforce_ceiling(events, tier) -> (list, bool)
       free=2000, pro=10000, team=50000 events
       Priority: critical > high > medium > informational > deduplicated
-- [x] tasks/process_investigation.py: pipeline extended
-      queued -> processing -> parse -> run_rules -> correlate -> enforce_ceiling -> complete
-
-### Not Done Yet
-- [ ] ai/prompts/base_prompt.py: SYSTEM_PROMPT + build_prompt()
-- [ ] ai/prompts/windows_prompt.py, syslog_prompt.py,
-      cloudtrail_prompt.py, nginx_prompt.py, correlation_prompt.py
-- [ ] ai/chunker.py: split_events(), merge_findings()
-- [ ] ai/cloud/engine.py: Gemini API calls (google-genai, NOT anthropic)
-- [ ] ai/router.py: route_analysis() dispatcher
-- [ ] reports/mitre_mapper.py: enrich_finding(), enrich_all()
-- [ ] Save Report and Finding rows to DB after AI analysis
-- [ ] GET /api/v1/investigations/{id}/report endpoint
+- [x] ai/prompts/base_prompt.py: SYSTEM_PROMPT, _serialize_events(), build_prompt()
+- [x] ai/prompts/windows_prompt.py: build_windows_prompt() -> (system, user)
+- [x] ai/prompts/syslog_prompt.py: build_syslog_prompt()
+- [x] ai/prompts/cloudtrail_prompt.py: build_cloudtrail_prompt()
+- [x] ai/prompts/nginx_prompt.py: build_nginx_prompt()
+- [x] ai/prompts/correlation_prompt.py: build_correlation_prompt()
+      Serializes NormalizedEvent dataclasses to JSON-safe dicts
+- [x] ai/chunker.py: split_events() with 50-event overlap, merge_findings() dedup by title
+- [x] ai/cloud/engine.py: Gemini 2.5 Flash via google-genai (NOT anthropic)
+      analyze_events(): chunked with 3-attempt exponential backoff
+      analyze_chains(): single call for correlation chains
+      Graceful skip if GEMINI_API_KEY missing or google-genai not installed
+- [x] ai/router.py: route_analysis() — dispatches to correct prompt builder by log_type
+- [x] reports/mitre_mapper.py: enrich_finding(), enrich_all(), get_coverage_matrix()
+      Lazy-loads enterprise-attack.json (35.7 MB, downloaded to backend/app/data/)
+      Graceful skip if file missing or mitreattack-python not installed
+- [x] tasks/process_investigation.py: full end-to-end pipeline wired
+      parse → run_rules → correlate → enforce_ceiling →
+      route_analysis (Gemini) → enrich_all (MITRE) →
+      save Report + Finding rows → investigation.status = "complete"
+- [x] api/investigations/routes.py: GET /{id}/report endpoint
+      Returns {report fields, findings: [all Finding rows]}
+- [x] config.py: GEMINI_API_KEY field added
+- [x] requirements.txt: google-genai>=1.0.0 added and installed
 
 ---
 
-## Month 4 — Reports + License
-Status: NOT STARTED
+## Month 4 — Reports + PDF + Frontend
+Status: COMPLETE
+Completed: 2026-03-18
 
-### Goals
-- [ ] reports/builder.py: compile findings into Report row
-- [ ] reports/mitre_mapper.py: mitreattack-python enrichment
-- [ ] reports/pdf_generator.py: WeasyPrint lograven_report.html
-- [ ] schemas/report.py: all report schemas
-- [ ] api/reports/routes.py: get report, download PDF
-- [ ] license.py: full HMAC validation with machine fingerprint
-- [ ] lograven-license-generator.py: complete implementation
+### Done
+- [x] reports/builder.py: build_report_context(report, findings) -> dict
+      Splits correlated/single, sorts by severity, deduplicates IOCs
+- [x] reports/templates/lograven_report.html: full Jinja2/WeasyPrint PDF template
+      Cover page, executive summary, correlated findings, individual findings,
+      MITRE ATT&CK table, IOC reference table, @page footers
+- [x] reports/templates/lograven_report.css: complete brand styling
+      LogRaven colors (#3B82F6, #0D0F14, #7C3AED), severity badges,
+      finding cards with left-border severity color, @page footer rules
+- [x] reports/pdf_generator.py: generate_pdf(report, findings, output_dir) -> str
+      Jinja2 renders HTML, WeasyPrint converts to PDF bytes
+      Raises ImportError with clear message if WeasyPrint/Jinja2 missing
+- [x] reports/uploader.py: upload_report(pdf_path, investigation_id, storage) -> str
+      Reads bytes, stores via save_file_from_bytes(), deletes temp file
+- [x] utils/storage.py: save_file_from_bytes(key, data) added to LocalStorageBackend
+- [x] tasks/process_investigation.py: Step 5j PDF generation wired
+      Non-critical: PDF failure logged but investigation still marked complete
+- [x] api/investigations/routes.py: GET /{id}/report/download
+      Returns {download_url, filename, expires_in}
+- [x] WeasyPrint 68.x + Jinja2 3.1.6 installed and working
+
+### Frontend (all 16 tasks complete)
+- [x] api/client.ts: Axios with JWT interceptor + 401 auto-refresh flow
+- [x] store/authStore.ts: Zustand (setTokens, setUser, logout)
+- [x] api/auth.ts: register, login, refresh, me
+- [x] api/investigations.ts: full API surface (CRUD + upload + analyze + report)
+- [x] hooks/useAuth.ts: login/register/logout with useNavigate
+- [x] hooks/useJobStatus.ts: React Query 3s polling, stops on complete/failed
+- [x] App.tsx: BrowserRouter, ProtectedRoute, all 7 routes
+- [x] pages/Auth/Login.tsx: form, loading state, error display
+- [x] pages/Auth/Register.tsx: passwords-match validation, error display
+- [x] pages/Dashboard.tsx: investigation table, status badges, delete, report link
+- [x] pages/NewInvestigation.tsx: name form → navigate to investigation
+- [x] pages/Investigation.tsx: drag-drop upload, source type selector, analyze
+- [x] pages/JobStatus.tsx: stepped progress bar, auto-navigate on complete
+- [x] pages/Report.tsx: findings display, correlated section, IOCs, PDF download
+- [x] components/reports/FindingCard.tsx: severity badges, IOCs, remediation, MITRE
+- [x] components/ui/Badge.tsx: soft + solid severity badge variants
+- [x] TypeScript: tsc --noEmit exits 0, zero errors
 
 ---
 
