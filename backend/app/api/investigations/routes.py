@@ -295,3 +295,38 @@ async def get_report(
         "findings": findings_out,
         "created_at": report.created_at.isoformat(),
     }
+
+
+# ── GET /api/v1/investigations/{id}/report/download ──────────────────────────
+
+@router.get("/{investigation_id}/report/download")
+async def download_report_pdf(
+    investigation_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.utils.storage import LocalStorageBackend
+
+    await _get_investigation_or_404(investigation_id, current_user, db)
+
+    result = await db.execute(
+        select(Report).where(Report.investigation_id == investigation_id)
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not ready yet. Run /analyze first.")
+
+    if not report.pdf_storage_key:
+        raise HTTPException(
+            status_code=404,
+            detail="PDF not generated yet. Try again or re-run analysis.",
+        )
+
+    storage = LocalStorageBackend()
+    download_url = storage.get_download_url(report.pdf_storage_key)
+
+    return {
+        "download_url": download_url,
+        "filename": f"lograven-report-{str(report.id)[:8]}.pdf",
+        "expires_in": 86400,
+    }

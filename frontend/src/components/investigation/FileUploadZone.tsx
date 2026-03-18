@@ -18,7 +18,7 @@
 //
 // TODO Month 1 Week 3: Implement this component.
 
-export default function FileUploadZone({ disabled = false }: { disabled?: boolean }) {
+export default function FileUploadZone({ disabled: _disabled = false }: { disabled?: boolean }) {
   return (
     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
       <p className="text-gray-500">Drop log files here</p>

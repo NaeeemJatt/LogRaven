@@ -10,7 +10,7 @@
 //
 // TODO Month 4 Week 1: Implement.
 
-export default function DownloadButton({ reportId }: { reportId: string }) {
+export default function DownloadButton({ reportId: _reportId }: { reportId: string }) {
   return (
     <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
       Download PDF Report

@@ -1,19 +1,37 @@
-// LogRaven — Severity Badge Component
-// Color-coded severity indicator.
-// critical=red, high=orange, medium=yellow, low=blue, informational=gray
-// TODO Month 1 Week 3: Implement.
+// LogRaven — Severity / Status Badge
 
-export default function Badge({ severity }: { severity: string }) {
-  const colors: Record<string, string> = {
-    critical: 'bg-red-100 text-red-800',
-    high:     'bg-orange-100 text-orange-800',
-    medium:   'bg-yellow-100 text-yellow-800',
-    low:      'bg-blue-100 text-blue-800',
-    informational: 'bg-gray-100 text-gray-800',
-  }
+interface BadgeProps {
+  value: string
+  variant?: 'severity' | 'status'
+}
+
+const SEVERITY: Record<string, string> = {
+  critical:      'bg-red-950 text-red-400 border border-red-800',
+  high:          'bg-orange-950 text-orange-400 border border-orange-800',
+  medium:        'bg-yellow-950 text-yellow-400 border border-yellow-800',
+  low:           'bg-blue-950 text-blue-400 border border-blue-800',
+  informational: 'bg-raven-800 text-raven-400 border border-raven-600',
+}
+
+const STATUS: Record<string, string> = {
+  draft:      'bg-raven-800 text-raven-400 border border-raven-600',
+  queued:     'bg-yellow-950 text-yellow-400 border border-yellow-800',
+  processing: 'bg-blue-950 text-blue-400 border border-blue-800',
+  complete:   'bg-green-950 text-green-400 border border-green-800',
+  failed:     'bg-red-950 text-red-400 border border-red-800',
+}
+
+export default function Badge({ value, variant = 'severity' }: BadgeProps) {
+  const map    = variant === 'status' ? STATUS : SEVERITY
+  const cls    = map[value] ?? (variant === 'status' ? STATUS.draft : SEVERITY.informational)
+  const isProc = variant === 'status' && value === 'processing'
+
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[severity] || colors.informational}`}>
-      {severity.toUpperCase()}
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-none text-xs font-mono font-medium uppercase tracking-wider ${cls}`}>
+      {isProc && (
+        <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse inline-block" />
+      )}
+      {value}
     </span>
   )
 }
