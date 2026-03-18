@@ -37,14 +37,21 @@ Completed: 2026-03-15
 ---
 
 ## Month 1 Week 2 — Authentication
-Status: NOT STARTED
+Status: COMPLETE
+Completed: 2026-03-18
 
-### Goals
-- [ ] schemas/user.py: UserCreate, UserResponse, UserLogin, TokenResponse
-- [ ] auth_service.py: register, login (with audit log), refresh
-- [ ] api/auth/routes.py: register, login, refresh, me
-- [ ] api/router.py: register auth router
-- [ ] Write auth integration test
+### Done
+- [x] utils/security.py: hash_password (bcrypt 4.2.1), verify_password,
+      create_access_token (15min), create_refresh_token (7d), decode_token
+- [x] services/auth_service.py: register_user, login_user, refresh_token
+      All write audit_log. Failed logins write failed_login audit entry.
+- [x] api/auth/routes.py: POST /auth/register (201), POST /auth/login (200),
+      POST /auth/refresh (200), GET /auth/me (200)
+- [x] api/auth/helpers.py: create_token_pair, verify_token_or_raise
+- [x] api/router.py: auth router registered at /auth prefix
+- [x] email-validator installed (pydantic[email])
+- [x] bcrypt pinned to 4.2.1 (passlib 1.7.4 incompatible with bcrypt 5.x)
+- [x] All 6 auth scenarios verified live against running server
 
 ---
 
@@ -53,12 +60,12 @@ Status: NOT STARTED
 
 ### Goals
 - [ ] schemas/investigation.py: all schemas
-- [ ] services/investigation_service.py: create, list, get, delete
-- [ ] api/investigations/routes.py: CRUD + file upload
+- [ ] services/investigation_service.py: create, list, get, delete, upload_file
+- [ ] api/investigations/routes.py: CRUD + POST /{id}/files multipart upload
 - [ ] api/investigations/validators.py: file type + size checks
 - [ ] File size limits: free=5MB, pro=50MB, team=200MB
-- [ ] Upload stored via LocalStorageBackend
-- [ ] InvestigationFile row created per upload
+- [ ] Upload stored via LocalStorageBackend (key: uploads/{inv_id}/{uuid}_{name})
+- [ ] InvestigationFile row created per upload with source_type
 
 ---
 
