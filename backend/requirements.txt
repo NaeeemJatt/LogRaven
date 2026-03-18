@@ -34,6 +34,7 @@ evtx==0.8.9
 mitreattack-python==5.4.0
 
 # AI
+google-genai>=1.0.0
 anthropic==0.28.0
 openai==1.35.0
 
