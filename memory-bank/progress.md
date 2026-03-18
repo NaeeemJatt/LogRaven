@@ -120,17 +120,38 @@ Completed: 2026-03-18
 ---
 
 ## Month 3 — Correlation + AI
-Status: NOT STARTED
+Status: IN PROGRESS — Week 1–2 complete, AI integration pending
 
-### Goals
-- [ ] rules/engine.py: deterministic pre-filter before AI (severity, dedup)
-- [ ] correlation/entity_extractor.py: IP, user, host normalization
-- [ ] correlation/chain_builder.py: 5-min sliding window cross-source chains
-- [ ] correlation/engine.py: orchestration of entity_extractor + chain_builder
-- [ ] ai/cost_limiter.py: enforce free/pro/team event ceilings
-- [ ] ai/cloud/engine.py: Claude claude-sonnet-4-6 integration
-- [ ] ai/prompts/: per-log-type prompt templates
-- [ ] Wire rules + correlation into process_investigation.py pipeline
+### Done
+- [x] rules/engine.py: run_rules()
+      Rule 1: critical severity if brute_force_candidate + >20 auth_failure events
+      Rule 2: high severity if lateral_movement_candidate
+      Rule 3: high severity if sensitive_action (CloudTrail)
+      Rule 4: deduplication within 5-second window (flag + severity="deduplicated")
+- [x] correlation/entity_extractor.py: extract_entities()
+      Returns {ips, users, hosts} sets, normalized via normalize_entity()
+- [x] correlation/chain_builder.py: build_chains()
+      5-minute sliding window, same IP or username across different source_types
+      Cross-source only (2+ source_types required), sorted by event_count desc
+- [x] correlation/engine.py: correlate()
+      Orchestrates entity_extractor + chain_builder
+      Returns {entities, chains, chain_count, top_entity}
+- [x] ai/cost_limiter.py: enforce_ceiling(events, tier) -> (list, bool)
+      free=2000, pro=10000, team=50000 events
+      Priority: critical > high > medium > informational > deduplicated
+- [x] tasks/process_investigation.py: pipeline extended
+      queued -> processing -> parse -> run_rules -> correlate -> enforce_ceiling -> complete
+
+### Not Done Yet
+- [ ] ai/prompts/base_prompt.py: SYSTEM_PROMPT + build_prompt()
+- [ ] ai/prompts/windows_prompt.py, syslog_prompt.py,
+      cloudtrail_prompt.py, nginx_prompt.py, correlation_prompt.py
+- [ ] ai/chunker.py: split_events(), merge_findings()
+- [ ] ai/cloud/engine.py: Gemini API calls (google-genai, NOT anthropic)
+- [ ] ai/router.py: route_analysis() dispatcher
+- [ ] reports/mitre_mapper.py: enrich_finding(), enrich_all()
+- [ ] Save Report and Finding rows to DB after AI analysis
+- [ ] GET /api/v1/investigations/{id}/report endpoint
 
 ---
 

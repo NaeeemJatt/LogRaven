@@ -17,6 +17,8 @@ from app.schemas.investigation import (
     InvestigationResponse,
     InvestigationStatusResponse,
 )
+from app.models.finding import Finding
+from app.models.report import Report
 from app.utils.storage import StorageBackend
 
 router = APIRouter()
@@ -243,3 +245,53 @@ async def get_investigation_status(
             for f in inv.files
         ],
     )
+
+
+# ── GET /api/v1/investigations/{id}/report ────────────────────────────────────
+
+@router.get("/{investigation_id}/report")
+async def get_report(
+    investigation_id: uuid.UUID,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Verify ownership
+    await _get_investigation_or_404(investigation_id, current_user, db)
+
+    result = await db.execute(
+        select(Report)
+        .options(selectinload(Report.findings))
+        .where(Report.investigation_id == investigation_id)
+    )
+    report = result.scalar_one_or_none()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not ready yet. Run /analyze first.")
+
+    findings_out = [
+        {
+            "id": str(f.id),
+            "severity": f.severity,
+            "title": f.title,
+            "description": f.description,
+            "mitre_technique_id": f.mitre_technique_id,
+            "mitre_technique_name": f.mitre_technique_name,
+            "mitre_tactic": f.mitre_tactic,
+            "iocs": f.iocs,
+            "remediation": f.remediation,
+            "finding_type": f.finding_type,
+            "confidence": f.confidence,
+        }
+        for f in report.findings
+    ]
+
+    return {
+        "id": str(report.id),
+        "investigation_id": str(report.investigation_id),
+        "summary": report.summary,
+        "severity_counts": report.severity_counts,
+        "mitre_techniques": report.mitre_techniques,
+        "correlated_findings": report.correlated_findings,
+        "single_source_findings": report.single_source_findings,
+        "findings": findings_out,
+        "created_at": report.created_at.isoformat(),
+    }

@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     LOCAL_STORAGE_PATH: str = "./local"
 
     # AI
+    GEMINI_API_KEY: str = ""
     ANTHROPIC_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
 
