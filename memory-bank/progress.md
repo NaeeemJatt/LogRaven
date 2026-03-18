@@ -55,31 +55,67 @@ Completed: 2026-03-18
 
 ---
 
-## Month 1 Week 3 — File Upload Pipeline
-Status: NOT STARTED
+## Month 1 Week 3 — File Upload Pipeline + Investigation CRUD
+Status: COMPLETE
+Completed: 2026-03-18
 
-### Goals
-- [ ] schemas/investigation.py: all schemas
-- [ ] services/investigation_service.py: create, list, get, delete, upload_file
-- [ ] api/investigations/routes.py: CRUD + POST /{id}/files multipart upload
-- [ ] api/investigations/validators.py: file type + size checks
-- [ ] File size limits: free=5MB, pro=50MB, team=200MB
-- [ ] Upload stored via LocalStorageBackend (key: uploads/{inv_id}/{uuid}_{name})
-- [ ] InvestigationFile row created per upload with source_type
+### Done
+- [x] schemas/investigation.py: InvestigationCreate, InvestigationResponse,
+      InvestigationFileResponse, InvestigationStatusResponse
+- [x] api/investigations/routes.py: ALL endpoints implemented inline
+      POST /api/v1/investigations (create, 201)
+      GET  /api/v1/investigations (list, paginated)
+      GET  /api/v1/investigations/{id}
+      DELETE /api/v1/investigations/{id} (204)
+      POST /api/v1/investigations/{id}/files (multipart upload, 201)
+      DELETE /api/v1/investigations/{id}/files/{file_id} (204)
+      POST /api/v1/investigations/{id}/analyze (queue pipeline)
+      GET  /api/v1/investigations/{id}/status (polling endpoint)
+- [x] api/investigations/validators.py: ALLOWED_EXTENSIONS, TIER_SIZE_LIMITS,
+      VALID_SOURCE_TYPES constants used by routes
+- [x] api/router.py: investigations router registered at /api/v1/investigations
+- [x] Upload stored via LocalStorageBackend (key: uploads/{inv_id}/{uuid}_{name})
+- [x] InvestigationFile row created per upload with source_type
 
 ---
 
-## Month 2 — Log Parsers
-Status: NOT STARTED
+## Month 2 — Log Parsers + Celery Pipeline Scaffold
+Status: COMPLETE
+Completed: 2026-03-18
 
-### Goals
-- [ ] parsers/detector.py: auto-detect evtx/syslog/cloudtrail/nginx
-- [ ] parsers/windows_event.py: pyevtx-rs parsing
-- [ ] parsers/syslog.py: Linux auth.log / syslog
-- [ ] parsers/cloudtrail.py: AWS CloudTrail JSON
-- [ ] parsers/nginx.py: access log regex parsing
-- [ ] parsers/normalizer.py: unified NormalizedEvent format
-- [ ] parsers/base.py: BaseParser ABC
+### Done
+- [x] parsers/base.py: BaseParser ABC
+      _stream_lines: UTF-8 with latin-1 fallback, true streaming
+      _safe_parse_timestamp: 4 format attempts, returns None on failure
+      _log_skip: DEBUG level via structured logger
+- [x] parsers/normalizer.py: NormalizedEvent dataclass
+      + normalize_entity() utility for correlation
+- [x] parsers/detector.py: two-phase detection
+      Phase 1: extension hint (.evtx/.json/.csv)
+      Phase 2: content scan first 50 lines (always overrides Phase 1)
+      Raises UnknownLogTypeError if nothing matches
+- [x] parsers/windows_event.py: WindowsEventParser
+      evtx via PyEvtxParser (graceful ImportError fallback to CSV)
+      CSV DictReader fallback for CSV exports
+      EVENT_TYPE_MAP: 8 Windows Security event IDs
+      _detect_patterns: brute_force_candidate (5+ failures/60s same IP),
+      lateral_movement_candidate (auth_success/explicit_cred to 3+ hosts)
+- [x] parsers/syslog.py: SyslogParser
+      5 pattern candidates, best match selected from first 200 lines
+      Username extraction: 3 regex patterns
+      Source IP extraction from message body
+      _detect_patterns: brute_force, privilege_escalation, account_modification
+- [x] parsers/cloudtrail.py: CloudTrailParser
+      Handles {"Records":[...]} and single-event JSON
+      11 SENSITIVE_ACTIONS flagged, errorCode -> failed_api_call + auth_failure
+- [x] parsers/nginx.py: NginxParser
+      Combined log regex parsing
+      injection_attempt: SQL keywords, path traversal in URL
+      _detect_patterns: scanning (50+/60s), 4xx_spike (20+ 4xx per IP)
+- [x] tasks/celery_app.py: Celery with task_always_eager=True (dev, no Redis needed)
+- [x] tasks/process_investigation.py: async pipeline via asyncio.run()
+      Status flow: queued -> processing -> per-file detect+parse -> complete/failed
+      Per-file: detector.detect() -> parser selection -> parse() -> DB update
 
 ---
 
@@ -87,14 +123,14 @@ Status: NOT STARTED
 Status: NOT STARTED
 
 ### Goals
-- [ ] correlation/entity_extractor.py: IP, user, host extraction
-- [ ] correlation/chain_builder.py: 5-min window cross-source chains
-- [ ] correlation/engine.py: orchestration
+- [ ] rules/engine.py: deterministic pre-filter before AI (severity, dedup)
+- [ ] correlation/entity_extractor.py: IP, user, host normalization
+- [ ] correlation/chain_builder.py: 5-min sliding window cross-source chains
+- [ ] correlation/engine.py: orchestration of entity_extractor + chain_builder
 - [ ] ai/cost_limiter.py: enforce free/pro/team event ceilings
 - [ ] ai/cloud/engine.py: Claude claude-sonnet-4-6 integration
 - [ ] ai/prompts/: per-log-type prompt templates
-- [ ] Rule engine: pre-filter events before AI (60-80% reduction)
-- [ ] Celery task: tasks/process_investigation.py pipeline
+- [ ] Wire rules + correlation into process_investigation.py pipeline
 
 ---
 

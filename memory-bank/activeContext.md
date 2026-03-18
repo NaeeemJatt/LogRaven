@@ -1,40 +1,60 @@
 # LogRaven — Active Context
 
 ## Current Session Goal
-Month 1 Week 3 — File upload pipeline (investigations + file upload)
+Month 1 Week 3 + Month 2 — Investigation CRUD, File Upload, Parser Pipeline, Celery scaffold
 
 ## Status
-Auth system complete. Server running with all auth endpoints verified.
+Parser pipeline complete. Investigation routes complete. All files compile clean.
 
 ## Environment (Windows, No Docker)
 - OS: Windows 10, PowerShell
 - Python: 3.14 at backend/venv/
 - PostgreSQL: localhost:5432/lograven (password: root)
-- Redis: localhost:6379 (not yet used)
+- Redis: localhost:6379 (not needed — Celery runs TASK_ALWAYS_EAGER=True for dev)
 - Start server: cd backend && uvicorn app.main:app --reload --port 8000
 - Dev setup script: .\scripts\windows_setup.ps1
 - DB utility: python scripts/db.py check|tables|migrations|drop
 - NOTE: bcrypt pinned to 4.2.1 (passlib incompatible with bcrypt 5.x)
 
-## What Was Completed (Month 1 Week 2 — Auth)
-- utils/security.py: hash_password, verify_password (bcrypt 4.2.1),
-  create_access_token, create_refresh_token, decode_token (raises HTTP 401)
-- services/auth_service.py: register_user, login_user, refresh_token
-  All write audit_log entries. Failed logins write failed_login audit.
-- api/auth/routes.py: POST /auth/register (201), POST /auth/login (200),
-  POST /auth/refresh (200), GET /auth/me (200)
-- api/auth/helpers.py: create_token_pair, verify_token_or_raise
-- api/router.py: auth router registered at /auth prefix
-- email-validator installed (required for Pydantic EmailStr)
-- bcrypt downgraded to 4.2.1 (passlib 1.7.4 incompatible with 5.x)
+## What Was Completed This Session
 
-## All Auth Endpoints Verified Live
-- POST /auth/register  -> 201 TokenResponse (access + refresh tokens)
-- POST /auth/login     -> 200 TokenResponse
-- POST /auth/refresh   -> 200 {access_token, token_type}
-- GET  /auth/me        -> 200 UserResponse {id, email, tier, created_at}
-- Wrong password       -> 401 {"detail": "Invalid credentials"}
-- Duplicate email      -> 400 {"detail": "Email already registered"}
+### Month 1 Week 3 — Investigation CRUD + File Upload
+- api/investigations/routes.py: ALL endpoints implemented
+  POST /api/v1/investigations (create)
+  GET  /api/v1/investigations (list, paginated)
+  GET  /api/v1/investigations/{id}
+  DELETE /api/v1/investigations/{id}
+  POST /api/v1/investigations/{id}/files (multipart upload)
+  DELETE /api/v1/investigations/{id}/files/{file_id}
+  POST /api/v1/investigations/{id}/analyze (queues pipeline)
+  GET  /api/v1/investigations/{id}/status (polling)
+- api/router.py: investigations router registered at /api/v1/investigations
+
+### Month 2 — Parsers + Celery Pipeline Scaffold
+- parsers/base.py: BaseParser ABC with _stream_lines (UTF-8/latin-1 fallback),
+  _safe_parse_timestamp (4 format attempts), _log_skip
+- parsers/normalizer.py: NormalizedEvent dataclass + normalize_entity() utility
+- parsers/detector.py: two-phase detection (extension + content scan)
+  returns: windows_event | syslog | cloudtrail | nginx
+  raises: UnknownLogTypeError if nothing matches
+- parsers/windows_event.py: WindowsEventParser
+  evtx via PyEvtxParser (try/except if not installed), CSV fallback
+  EVENT_TYPE_MAP for 8 Windows event IDs
+  _detect_patterns: brute_force_candidate, lateral_movement_candidate
+- parsers/syslog.py: SyslogParser
+  5 pattern auto-selection from first 200 lines (best match wins)
+  username/IP extraction from message, event_type classification
+  _detect_patterns: brute_force_candidate, privilege_escalation_candidate, account_modification
+- parsers/cloudtrail.py: CloudTrailParser
+  Handles {"Records":[...]} and single-event JSON
+  11 sensitive actions flagged, errorCode -> failed_api_call flag
+- parsers/nginx.py: NginxParser
+  Combined log regex, injection_attempt detection
+  _detect_patterns: scanning (50+ req/60s), 4xx_spike (20+ 4xx)
+- tasks/celery_app.py: Celery configured with task_always_eager=True (dev)
+- tasks/process_investigation.py: full async pipeline
+  status: processing -> per-file: detect+parse -> complete/failed
+  asyncio.run(_run_pipeline()) wraps async SQLAlchemy in sync Celery task
 
 ## All Decisions Locked
 - Name: LogRaven / lograven.io / Docker: lograven:v1.0
@@ -45,66 +65,82 @@ Auth system complete. Server running with all auth endpoints verified.
 - No admin panel in v1
 - Cloud AI only (Claude claude-sonnet-4-6) for v1
 - bcrypt pinned to 4.2.1 — do not upgrade until passlib is replaced
+- Celery task_always_eager=True for dev (no Redis needed to test pipeline)
 - Project folder: lograven/
 
-## Next Session — Start With This Prompt
-Paste this exactly at the start of the next session:
+## Next Session — Month 3 (Correlation + AI)
 
 ```
 @memory-bank/projectbrief.md
 @memory-bank/techContext.md
 @memory-bank/systemPatterns.md
 @memory-bank/activeContext.md
-@backend/app/schemas/investigation.py
+@backend/app/parsers/normalizer.py
 @backend/app/models/investigation.py
 @backend/app/models/investigation_file.py
-@backend/app/services/investigation_service.py
-@backend/app/api/investigations/routes.py
-@backend/app/api/investigations/validators.py
-@backend/app/api/router.py
-@backend/app/dependencies.py
+@backend/app/models/report.py
+@backend/app/models/finding.py
+@backend/app/tasks/process_investigation.py
 
-Implement the complete investigation + file upload system.
+Read all memory bank files first.
 
-TASK 1 — backend/app/schemas/investigation.py
-  InvestigationCreate: name (str, 1-200 chars)
-  InvestigationResponse: id, name, status, correlation_enabled,
-    files (list[InvestigationFileResponse]), created_at
-  InvestigationFileResponse: id, filename, source_type, log_type,
-    status, event_count, uploaded_at
-  InvestigationStatusResponse: id, status, files (list with statuses)
+WHAT IS ALREADY DONE — DO NOT REIMPLEMENT:
+- All 6 DB tables exist and all migrations applied
+- Full JWT auth: register, login, refresh, /auth/me
+- Investigation CRUD: create, list, get, delete
+- File upload: POST /api/v1/investigations/{id}/files
+- Pipeline scaffold: POST /api/v1/investigations/{id}/analyze triggers
+  process_investigation Celery task (TASK_ALWAYS_EAGER=True)
+- All 4 parsers working: windows_event, syslog, cloudtrail, nginx
+- NormalizedEvent dataclass and normalize_entity() utility
 
-TASK 2 — backend/app/services/investigation_service.py
-  create_investigation(name, user_id, db) -> Investigation
-  list_investigations(user_id, db) -> list[Investigation]
-  get_investigation(inv_id, user_id, db) -> Investigation
-    Raise 404 if not found or not owned by user
-  delete_investigation(inv_id, user_id, db) -> None
-    Raise 404 if not found, raise 403 if not owned
-  upload_file(inv_id, user_id, file, source_type, db, storage)
-    -> InvestigationFile
-    Enforce file size limits: free=5MB, pro=50MB, team=200MB
-    Detect source_type from parameter
-    Save via storage.save_file()
-    Create InvestigationFile row
-    key format: uploads/{inv_id}/{uuid}_{filename}
+TODAY: Implement the rule engine and correlation engine scaffolds,
+then wire them into the pipeline.
 
-TASK 3 — backend/app/api/investigations/routes.py
-  POST   /api/v1/investigations          -> InvestigationResponse (201)
-  GET    /api/v1/investigations          -> list[InvestigationResponse]
-  GET    /api/v1/investigations/{id}     -> InvestigationResponse
-  DELETE /api/v1/investigations/{id}     -> 204
-  POST   /api/v1/investigations/{id}/files -> InvestigationFileResponse
-    Accept: multipart/form-data
-    Fields: file (UploadFile), source_type (str)
+TASK 1 — backend/app/rules/engine.py
+  run_rules(events: list[NormalizedEvent]) -> list[NormalizedEvent]
+  Apply deterministic rules before AI (reduces AI token cost 60-80%):
+  - Mark severity_hint="critical" if brute_force_candidate + >20 events
+  - Mark severity_hint="high" if lateral_movement_candidate
+  - Mark severity_hint="high" if sensitive_action (CloudTrail)
+  - Deduplicate identical raw_messages within 5s windows
+  Return enriched event list.
 
-TASK 4 — Register investigations router in api/router.py
+TASK 2 — backend/app/correlation/entity_extractor.py
+  extract_entities(events: list[NormalizedEvent]) -> dict
+  Returns: {"ips": set, "users": set, "hosts": set}
+  Normalize with normalize_entity() from parsers/normalizer.py
+
+TASK 3 — backend/app/correlation/chain_builder.py
+  build_chains(events: list[NormalizedEvent]) -> list[dict]
+  Group related events into attack chains:
+  - 5-minute sliding window
+  - Same IP or same username across different source_types
+  - Returns list of chain dicts: {entity, events, span_seconds, source_types}
+
+TASK 4 — backend/app/correlation/engine.py
+  correlate(events: list[NormalizedEvent]) -> dict
+  Calls entity_extractor + chain_builder
+  Returns correlation_summary dict for the AI prompt
+
+TASK 5 — Wire into tasks/process_investigation.py
+  After parsing all files, call:
+    from app.rules.engine import run_rules
+    from app.correlation.engine import correlate
+    all_events = run_rules(all_events)
+    correlation_summary = correlate(all_events) if len(investigation.files) > 1 else {}
+  Log summary stats. Store correlation_summary for AI step (next month).
+
+TASK 6 — backend/app/ai/cost_limiter.py
+  enforce_ceiling(events, tier) -> list[NormalizedEvent]
+  Tier ceilings from config: AI_CEILING_FREE/PRO/TEAM
+  Prioritize: critical > high > medium > informational
+  Return top N events by severity.
 
 RULES:
-- All routes require authentication (Depends(get_current_user))
+- Fill existing files only — do not create new files
 - SQLAlchemy 2.0 select() only
-- File size limit enforced before saving
-- Fill existing files only
+- All DB operations async
 ```
 
 ## Open Questions
