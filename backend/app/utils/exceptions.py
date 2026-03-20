@@ -15,6 +15,7 @@ from fastapi import HTTPException
 
 class LogRavenError(Exception):
     """Base exception for all LogRaven errors."""
+    status_code = 500  # default — subclasses override this
     def __init__(self, message: str, code: str = "LOGRAVEN_ERROR"):
         self.message = message
         self.code = code

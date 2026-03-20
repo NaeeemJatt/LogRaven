@@ -55,6 +55,14 @@ class NginxParser(BaseParser):
                 raw_message=line[:500],
                 flags=flags,
                 severity_hint="medium" if "injection_attempt" in flags else "informational",
+                extra_fields={
+                    "method":          method or "",
+                    "request_path":    request_path or "",
+                    "status_code":     status_code or "",
+                    "response_bytes":  _bytes or "",
+                    "user_agent":      (_ua or "")[:200],
+                    "referer":         (_referer or "")[:200],
+                },
             ))
 
         return self._detect_patterns(events)

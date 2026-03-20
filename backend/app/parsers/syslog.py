@@ -134,6 +134,11 @@ class SyslogParser(BaseParser):
             event_type=event_type,
             event_id=process,
             raw_message=line[:500],
+            extra_fields={
+                "process": process or "",
+                "pid":     pid or "",
+                "message": (message or "")[:300],
+            },
         )
 
     def _detect_patterns(self, events: list[NormalizedEvent]) -> list[NormalizedEvent]:

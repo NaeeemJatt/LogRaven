@@ -87,7 +87,7 @@ Full backend pipeline + PDF generation + React frontend operational.
 ## All Decisions Locked
 - Name: LogRaven / lograven.io / Docker: lograven:v1.0
 - Docker delivery model, no hosted SaaS for v1
-- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai
+- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai, NOT ANTHROPIC_API_KEY
 - bcrypt pinned to 4.2.1 — do not upgrade until passlib is replaced
 - Celery task_always_eager=True for dev (no Redis needed)
 - Local storage for dev, S3 backend stubs ready for production
@@ -167,7 +167,7 @@ parse → run_rules → correlate → enforce_ceiling → Gemini AI → MITRE en
 ## All Decisions Locked
 - Name: LogRaven / lograven.io / Docker: lograven:v1.0
 - Docker delivery model, no hosted SaaS for v1
-- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai
+- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai, NOT ANTHROPIC_API_KEY
 - bcrypt pinned to 4.2.1 — do not upgrade until passlib is replaced
 - Celery task_always_eager=True for dev (no Redis needed)
 - Local storage for dev, S3 backend stubs ready for production

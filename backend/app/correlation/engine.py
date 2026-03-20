@@ -41,3 +41,7 @@ def analyze(investigation_id: str, events_by_file: dict) -> list:
 
     # TODO: Implement correlation algorithm
     return []
+
+
+# Alias used by process_investigation.py
+correlate = analyze
