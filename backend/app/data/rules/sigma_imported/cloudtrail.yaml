@@ -1,0 +1,1369 @@
+rules:
+- id: lr-sigma-imported-5524dbf5
+  title: AWS Bucket Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the deletion of S3 buckets in AWS CloudTrail logs. Monitoring
+    the deletion of S3 buckets is critical for security and data integrity, as it
+    may indicate potential data loss or [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: DeleteBucket
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-c7af7428
+  title: AWS ConsoleLogin Failed Authentication
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects failed AWS console login attempts due to authentication failures.
+    Monitoring these events is crucial for identifying potential brute-force attacks
+    or unauthorized access attempts to AWS [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: ConsoleLogin
+    - field: extra.errorMessage
+      op: contains
+      value: Failed authentication
+    condition_logic: and
+  mitre_technique_id: T1110
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-b7e64f19
+  title: AWS Successful Console Login Without MFA
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects successful AWS console logins that were performed without Multi-Factor
+    Authentication (MFA). This alert can be used to identify potential unauthorized
+    access attempts, as logging in [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: ConsoleLogin
+    - field: extra.additionalEventData.MFAUsed
+      op: contains
+      value: 'NO'
+    - field: extra.responseElements.ConsoleLogin
+      op: contains
+      value: Success
+    condition_logic: and
+  mitre_technique_id: T1078.004
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-995de4b0
+  title: AWS CloudTrail Important Change
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects disabling, deleting and updating of a Trail
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: cloudtrail.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - StopLogging
+      - UpdateTrail
+      - DeleteTrail
+    condition_logic: and
+  mitre_technique_id: T1562.008
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-8e797a9d
+  title: AWS GuardDuty Detector Deleted Or Updated
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects successful deletion or disabling of an AWS GuardDuty detector,
+    possibly by an attacker trying to avoid detection of its malicious activities.
+    Upon deletion, GuardDuty stops monitoring [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: guardduty.amazonaws.com
+    condition_logic: and
+  mitre_technique_id: T1562.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-83f6e275
+  title: Malicious Usage Of IMDS Credentials Outside Of AWS Infrastructure
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects when an instance identity has taken an action that isn't inside
+    SSM. This can indicate that a compromised EC2 instance is being used as a pivot
+    point.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.userIdentity.arn
+      op: re
+      value: .+:assumed-role/aws:.+
+    condition_logic: and
+  mitre_technique_id: T1078
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-0081dfa0
+  title: New Network ACL Entry Added
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects that network ACL entries have been added to a route table which
+    could indicate that new attack vectors have been opened up in the AWS account.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateNetworkAclEntry
+    condition_logic: and
+  mitre_technique_id: T1562.007
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-f79866c9
+  title: New Network Route Added
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the addition of a new network route to a route table in AWS.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateRoute
+    condition_logic: and
+  mitre_technique_id: T1562.007
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-9cd6ba69
+  title: PUA - AWS TruffleHog Execution
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the execution of TruffleHog, a popular open-source tool used
+    for scanning repositories for secrets and sensitive information, within an AWS
+    environment. It has been reported to be used [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.userAgent
+      op: contains
+      value: TruffleHog
+    condition_logic: and
+  mitre_technique_id: T1555
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-6662fc0f
+  title: AWS EnableRegion Command Monitoring
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the use of the EnableRegion command in AWS CloudTrail logs.
+    While AWS has 30+ regions, some of them are enabled by default, others must be
+    explicitly enabled in each account separately. [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: EnableRegion
+    - field: extra.eventSource
+      op: contains
+      value: account.amazonaws.com
+    condition_logic: and
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-c18c6a93
+  title: Ingress/Egress Security Group Modification
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when an account makes changes to the ingress or egress rules
+    of a security group. This can indicate that an attacker is attempting to open
+    up new attack vectors in the account, that they [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - AuthorizeSecurityGroupEgress
+      - AuthorizeSecurityGroupIngress
+      - RevokeSecurityGroupEgress
+      - RevokeSecurityGroupIngress
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-48ea981d
+  title: LoadBalancer Security Group Modification
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects changes to the security groups associated with an Elastic Load
+    Balancer (ELB) or Application Load Balancer (ALB). This can indicate that a misconfiguration
+    allowing more traffic into the [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: elasticloadbalancing.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - ApplySecurityGroupsToLoadBalancer
+      - SetSecurityGroups
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-b4a49fd3
+  title: RDS Database Security Group Modification
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects changes to the security group entries for RDS databases. This
+    can indicate that a misconfiguration has occurred which potentially exposes the
+    database to the public internet, a wider [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: rds.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - AuthorizeDBSecurityGroupIngress
+      - CreateDBSecurityGroup
+      - DeleteDBSecurityGroup
+      - RevokeDBSecurityGroupIngress
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-64382838
+  title: Potential Malicious Usage of CloudTrail System Manager
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detect when System Manager successfully executes commands against an
+    instance.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: SendCommand
+    - field: extra.eventSource
+      op: contains
+      value: ssm.amazonaws.com
+    condition_logic: and
+  mitre_technique_id: T1566
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-1f54d035
+  title: AWS VPC Flow Logs Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects the deletion of one or more VPC Flow Logs in AWS Elastic Compute
+    Cloud (EC2) through the DeleteFlowLogs API call. Adversaries may delete flow logs
+    to evade detection or remove evidence [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: DeleteFlowLogs
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-47feca45
+  title: AWS Config Disabling Channel/Recorder
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects AWS Config Service disabling
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: config.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - DeleteDeliveryChannel
+      - StopConfigurationRecorder
+    condition_logic: and
+  mitre_technique_id: T1562.008
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-1aa810df
+  title: AWS Console GetSigninToken Potential Abuse
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects potentially suspicious events involving "GetSigninToken". An
+    adversary using the "aws_consoler" tool can leverage this console API to create
+    temporary federated credential that help [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: signin.amazonaws.com
+    - field: event_id
+      op: contains
+      value: GetSigninToken
+    condition_logic: and
+  mitre_technique_id: T1021.007
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-29181edb
+  title: SES Identity Has Been Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects an instance of an SES identity being deleted via the "DeleteIdentity"
+    event. This may be an indicator of an adversary removing the account that carried
+    out suspicious or malicious activities
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ses.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DeleteIdentity
+    condition_logic: and
+  mitre_technique_id: T1070
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-c3e68450
+  title: AWS SAML Provider Deletion Activity
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the deletion of an AWS SAML provider, potentially indicating
+    malicious intent to disrupt administrative or security team access. An attacker
+    can remove the SAML provider for the [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DeleteSAMLProvider
+    - field: extra.status
+      op: contains
+      value: success
+    condition_logic: and
+  mitre_technique_id: T1078.004
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-84a0274c
+  title: AWS S3 Bucket Versioning Disable
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when S3 bucket versioning is disabled. Threat actors use this
+    technique during AWS ransomware incidents prior to deleting S3 objects.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: s3.amazonaws.com
+    - field: event_id
+      op: contains
+      value: PutBucketVersioning
+    - field: extra.requestParameters
+      op: contains
+      value: Suspended
+    condition_logic: and
+  mitre_technique_id: T1490
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-dd0187a6
+  title: AWS EC2 Disable EBS Encryption
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Identifies disabling of default Amazon Elastic Block Store (EBS) encryption
+    in the current region. Disabling default encryption does not change the encryption
+    status of your existing volumes.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DisableEbsEncryptionByDefault
+    condition_logic: and
+  mitre_technique_id: T1486
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-99aab73b
+  title: AWS Key Pair Import Activity
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the import of SSH key pairs into AWS EC2, which may indicate
+    an attacker attempting to gain unauthorized access to instances. This activity
+    could lead to initial access, persistence, or [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains
+      value: ImportKeyPair
+    condition_logic: and
+  mitre_technique_id: T1078
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-bae1d052
+  title: AWS EC2 Startup Shell Script Change
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects changes to the EC2 instance startup script. The shell script
+    will be executed as root/SYSTEM every time the specific instances are booted up.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: extra.requestParameters.attribute
+      op: contains
+      value: userData
+    - field: event_id
+      op: contains
+      value: ModifyInstanceAttribute
+    condition_logic: and
+  mitre_technique_id: T1059.001
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-a92b293f
+  title: AWS EC2 VM Export Failure
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: An attempt to export an AWS EC2 instance has been detected. A VM Export
+    might indicate an attempt to extract information from an instance.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: event_id
+      op: contains
+      value: CreateInstanceExportTask
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    condition_logic: and
+  mitre_technique_id: T1005
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-5c01a0ce
+  title: AWS ECS Task Definition That Queries The Credential Endpoint
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when an Elastic Container Service (ECS) Task Definition includes
+    a command to query the credential endpoint. This can indicate a potential adversary
+    adding a backdoor to establish [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ecs.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - DescribeTaskDefinition
+      - RegisterTaskDefinition
+      - RunTask
+    - field: extra.requestParameters.containerDefinitions.command
+      op: contains
+      value: $AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
+    condition_logic: and
+  mitre_technique_id: T1525
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-b1ae1daf
+  title: AWS EFS Fileshare Modified or Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when a EFS Fileshare is modified or deleted. You can't delete
+    a file system that is in use. If the file system has any mount targets, the adversary
+    must first delete them, so deletion of [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: elasticfilesystem.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DeleteFileSystem
+    condition_logic: and
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-3a4351f9
+  title: AWS EFS Fileshare Mount Modified or Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when a EFS Fileshare Mount is modified or deleted. An adversary
+    breaking any file system using the mount target that is being deleted, which might
+    disrupt instances or applications using [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: elasticfilesystem.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DeleteMountTarget
+    condition_logic: and
+  mitre_technique_id: T1485
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-3d0f5691
+  title: AWS EKS Cluster Created or Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Identifies when an EKS cluster is created or deleted.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: eks.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - CreateCluster
+      - DeleteCluster
+    condition_logic: and
+  mitre_technique_id: T1485
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-60bed3fb
+  title: AWS ElastiCache Security Group Created
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects when an ElastiCache security group has been created.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: elasticache.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateCacheSecurityGroup
+    condition_logic: and
+  mitre_technique_id: T1136
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-3506dd72
+  title: AWS ElastiCache Security Group Modified or Deleted
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Identifies when an ElastiCache security group has been modified or
+    deleted.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: elasticache.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - DeleteCacheSecurityGroup
+      - AuthorizeCacheSecurityGroupIngress
+      - RevokeCacheSecurityGroupIngress
+      - AuthorizeCacheSecurityGroupEgress
+      - RevokeCacheSecurityGroupEgress
+    condition_logic: and
+  mitre_technique_id: T1531
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-3d9dfd3d
+  title: Potential Bucket Enumeration on AWS
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Looks for potential enumeration of AWS buckets via ListBuckets.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: s3.amazonaws.com
+    - field: event_id
+      op: contains
+      value: ListBuckets
+    - field: extra.userIdentity.type
+      op: contains
+      value: AssumedRole
+      negate: true
+    condition_logic: and
+  mitre_technique_id: T1580
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-0c240195
+  title: AWS GuardDuty Important Change
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects updates of the GuardDuty list of trusted IPs, perhaps to disable
+    security alerts against malicious IPs.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: guardduty.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateIPSet
+    condition_logic: and
+  mitre_technique_id: T1562.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-5d39da48
+  title: AWS IAM Backdoor Users Keys
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects AWS API key creation for a user by another user. Backdoored
+    users can be used to obtain persistence in the AWS environment. Also with this
+    alert, you can detect a flow of AWS keys in your org.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateAccessKey
+    - field: extra.userIdentity.arn
+      op: contains
+      value: responseElements.accessKey.userName
+      negate: true
+    condition_logic: and
+  mitre_technique_id: T1098
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-86224266
+  title: AWS IAM S3Browser LoginProfile Creation
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects S3 Browser utility performing reconnaissance looking for existing
+    IAM Users without a LoginProfile defined then (when found) creating a LoginProfile.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - GetLoginProfile
+      - CreateLoginProfile
+    - field: extra.userAgent
+      op: contains
+      value: S3 Browser
+    condition_logic: and
+  mitre_technique_id: T1059.009
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-c0946bce
+  title: AWS IAM S3Browser Templated S3 Bucket Policy Creation
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects S3 browser utility creating Inline IAM policy containing default
+    S3 bucket name placeholder value of "<YOUR-BUCKET-NAME>".
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains
+      value: PutUserPolicy
+    - field: extra.userAgent
+      op: contains
+      value: S3 Browser
+    - field: extra.requestParameters
+      op: contains_all
+      values:
+      - '"arn:aws:s3:::<YOUR-BUCKET-NAME>/*"'
+      - '"s3:GetObject"'
+      - '"Allow"'
+    condition_logic: and
+  mitre_technique_id: T1059.009
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-ed7ccc65
+  title: AWS IAM S3Browser User or AccessKey Creation
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects S3 Browser utility creating IAM User or AccessKey.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - CreateUser
+      - CreateAccessKey
+    - field: extra.userAgent
+      op: contains
+      value: S3 Browser
+    condition_logic: and
+  mitre_technique_id: T1059.009
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-f282825c
+  title: AWS KMS Imported Key Material Usage
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects the import or deletion of key material in AWS KMS, which can
+    be used as part of ransomware attacks. This activity is uncommon and provides
+    a high certainty signal.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: kms.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - ImportKeyMaterial
+      - DeleteImportedKeyMaterial
+    condition_logic: and
+  mitre_technique_id: T1486
+  mitre_tactic: resource-development
+- id: lr-sigma-imported-6f8f49bf
+  title: New AWS Lambda Function URL Configuration Created
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects when a user creates a Lambda function URL configuration, which
+    could be used to expose the function to the internet and potentially allow unauthorized
+    access to the function's IAM role [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: lambda.amazonaws.com
+    - field: event_id
+      op: contains
+      value: CreateFunctionUrlConfig
+    condition_logic: and
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-fa04083f
+  title: AWS New Lambda Layer Attached
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects when a user attached a Lambda layer to an existing Lambda function.
+    A malicious Lambda layer could execute arbitrary code in the context of the function's
+    IAM role. This would give an [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: lambda.amazonaws.com
+    - field: event_id
+      op: startswith
+      value: UpdateFunctionConfiguration
+    - field: extra.requestParameters.layers
+      op: contains
+      value: '*'
+    condition_logic: and
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-f934da46
+  title: AWS Glue Development Endpoint Activity
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects possible suspicious glue development endpoint activity.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: glue.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - CreateDevEndpoint
+      - DeleteDevEndpoint
+      - UpdateDevEndpoint
+    condition_logic: and
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-3723fd1e
+  title: AWS RDS Master Password Change
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the change of database master password. It may be a part of
+    data exfiltration.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: rds.amazonaws.com
+    - field: extra.responseElements.pendingModifiedValues.masterUserPassword
+      op: contains
+      value: '*'
+    - field: event_id
+      op: contains
+      value: ModifyDBInstance
+    condition_logic: and
+  mitre_technique_id: T1020
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-84ac5b80
+  title: Modification or Deletion of an AWS RDS Cluster
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects modifications to an RDS cluster or its deletion, which may
+    indicate potential data exfiltration attempts, unauthorized access, or exposure
+    of sensitive information.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: rds.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - ModifyDBCluster
+      - DeleteDBCluster
+    condition_logic: and
+  mitre_technique_id: T1020
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-ede3c74d
+  title: Restore Public AWS RDS Instance
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects the recovery of a new public database instance from a snapshot.
+    It may be a part of data exfiltration.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: rds.amazonaws.com
+    - field: extra.responseElements.publiclyAccessible
+      op: contains
+      value: 'true'
+    - field: event_id
+      op: contains
+      value: RestoreDBInstanceFromDBSnapshot
+    condition_logic: and
+  mitre_technique_id: T1020
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-8d17edfb
+  title: AWS Root Credentials
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects AWS root account usage
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.userIdentity.type
+      op: contains
+      value: Root
+    condition_logic: and
+  mitre_technique_id: T1078.004
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-15a7f3d7
+  title: AWS Route 53 Domain Transfer Lock Disabled
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects when a transfer lock was removed from a Route 53 domain. It
+    is recommended to refrain from performing this action unless intending to transfer
+    the domain to a different registrar.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: route53.amazonaws.com
+    - field: event_id
+      op: contains
+      value: DisableDomainTransferLock
+    condition_logic: and
+  mitre_technique_id: T1098
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-07637a7f
+  title: AWS Route 53 Domain Transferred to Another Account
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects when a request has been made to transfer a Route 53 domain
+    to another AWS account.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: route53.amazonaws.com
+    - field: event_id
+      op: contains
+      value: TransferDomainToAnotherAwsAccount
+    condition_logic: and
+  mitre_technique_id: T1098
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-b2d24df0
+  title: AWS S3 Data Management Tampering
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Detects when a user tampers with S3 data management in Amazon Web Services.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: s3.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - PutBucketLogging
+      - PutBucketWebsite
+      - PutEncryptionConfiguration
+      - PutLifecycleConfiguration
+      - PutReplicationConfiguration
+      - ReplicateObject
+      - RestoreObject
+    condition_logic: and
+  mitre_technique_id: T1537
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-072a1eb8
+  title: AWS SecurityHub Findings Evasion
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects the modification of the findings on SecurityHub.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: securityhub.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - BatchUpdateFindings
+      - DeleteInsight
+      - UpdateFindings
+      - UpdateInsight
+    condition_logic: and
+  mitre_technique_id: T1562
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-4252b12b
+  title: AWS Snapshot Backup Exfiltration
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the modification of an EC2 snapshot's permissions to enable
+    access from another account
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: ec2.amazonaws.com
+    - field: event_id
+      op: contains
+      value: ModifySnapshotAttribute
+    condition_logic: and
+  mitre_technique_id: T1537
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-af9684d4
+  title: AWS Identity Center Identity Provider Change
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects a change in the AWS Identity Center (FKA AWS SSO) identity
+    provider. A change in identity provider allows an attacker to establish persistent
+    access or escalate privileges via user [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains_any
+      values:
+      - sso-directory.amazonaws.com
+      - sso.amazonaws.com
+    - field: event_id
+      op: contains_any
+      values:
+      - AssociateDirectory
+      - DisableExternalIdPConfigurationForDirectory
+      - DisassociateDirectory
+      - EnableExternalIdPConfigurationForDirectory
+    condition_logic: and
+  mitre_technique_id: T1556
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-2409eb18
+  title: AWS STS AssumeRole Misuse
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Identifies the suspicious use of AssumeRole. Attackers could move laterally
+    and escalate privileges.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.userIdentity.type
+      op: contains
+      value: AssumedRole
+    - field: extra.userIdentity.sessionContext.sessionIssuer.type
+      op: contains
+      value: Role
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-b97c6ffd
+  title: AWS STS GetCallerIdentity Enumeration Via TruffleHog
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Detects the use of TruffleHog for AWS credential validation by identifying
+    GetCallerIdentity API calls where the userAgent indicates TruffleHog. Threat actors
+    leverage TruffleHog to enumerate [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: sts.amazonaws.com
+    - field: event_id
+      op: contains
+      value: GetCallerIdentity
+    - field: extra.userAgent
+      op: contains
+      value: TruffleHog
+    condition_logic: and
+  mitre_technique_id: T1087.004
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-1b566dc9
+  title: AWS STS GetSessionToken Misuse
+  source: sigma
+  log_type: cloudtrail
+  severity: low
+  description: Identifies the suspicious use of GetSessionToken. Tokens could be created
+    and used by attackers to move laterally and escalate privileges.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: sts.amazonaws.com
+    - field: event_id
+      op: contains
+      value: GetSessionToken
+    - field: extra.userIdentity.type
+      op: contains
+      value: IAMUser
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-8bdf73d9
+  title: AWS Suspicious SAML Activity
+  source: sigma
+  log_type: cloudtrail
+  severity: medium
+  description: Identifies when suspicious SAML activity has occurred in AWS. An adversary
+    could gain backdoor access via SAML.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: sts.amazonaws.com
+    - field: event_id
+      op: contains
+      value: AssumeRoleWithSAML
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains
+      value: UpdateSAMLProvider
+    condition_logic: or
+  mitre_technique_id: T1078
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-7fe0f458
+  title: AWS User Login Profile Was Modified
+  source: sigma
+  log_type: cloudtrail
+  severity: high
+  description: Detects activity when someone is changing passwords on behalf of other
+    users. An attacker with the "iam:UpdateLoginProfile" permission on other users
+    can change the password used to login to the [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: cloudtrail
+    conditions:
+    - field: extra.eventSource
+      op: contains
+      value: iam.amazonaws.com
+    - field: event_id
+      op: contains
+      value: UpdateLoginProfile
+    condition_logic: and
+  mitre_technique_id: T1098
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation

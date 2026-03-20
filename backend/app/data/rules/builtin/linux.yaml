@@ -1,0 +1,191 @@
+rules:
+
+  # ── Brute Force (threshold) ────────────────────────────────────────────────
+
+  - id: lr-builtin-lin-001
+    title: Linux SSH Brute Force (High)
+    source: lograven
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 5+ authentication failures from the same source IP within 60 seconds.
+    match:
+      type: threshold
+      log_type: linux_endpoint
+      event_type: auth_failure
+      group_by: source_ip
+      count: 5
+      window_seconds: 60
+
+  - id: lr-builtin-lin-002
+    title: Linux SSH Brute Force (Critical — High Volume)
+    source: lograven
+    log_type: linux_endpoint
+    severity: critical
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 20+ authentication failures from the same source IP within 5 minutes.
+    match:
+      type: threshold
+      log_type: linux_endpoint
+      event_type: auth_failure
+      group_by: source_ip
+      count: 20
+      window_seconds: 300
+
+  # ── Credential Access ──────────────────────────────────────────────────────
+
+  - id: lr-builtin-lin-003
+    title: Root Account SSH Login
+    source: lograven
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1078.003
+    mitre_tactic: initial-access
+    flag: credential_access
+    description: Successful SSH login as root. Root remote login should be disabled in production.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: username
+          op: eq
+          value: "root"
+        - field: raw_message
+          op: contains_any
+          values: ["Accepted password", "Accepted publickey", "session opened for user root"]
+      condition_logic: and
+
+  - id: lr-builtin-lin-004
+    title: Failed Root Login Attempt
+    source: lograven
+    log_type: linux_endpoint
+    severity: medium
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: Failed authentication attempt targeting the root account.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: event_type
+          op: eq
+          value: auth_failure
+        - field: username
+          op: eq
+          value: "root"
+      condition_logic: and
+
+  - id: lr-builtin-lin-005
+    title: SSH Public Key Authentication
+    source: lograven
+    log_type: linux_endpoint
+    severity: informational
+    mitre_technique_id: T1021.004
+    mitre_tactic: lateral-movement
+    flag: ~
+    description: SSH login using a public key. Informational — log for correlation.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains
+          value: "Accepted publickey"
+
+  - id: lr-builtin-lin-006
+    title: SSH Authorized Keys File Modified
+    source: lograven
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1098.004
+    mitre_tactic: persistence
+    flag: persistence_mechanism
+    description: The authorized_keys file was modified — may indicate a new backdoor SSH key was added.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains
+          value: "authorized_keys"
+
+  # ── Privilege Escalation ───────────────────────────────────────────────────
+
+  - id: lr-builtin-lin-007
+    title: Sudo Command Executed
+    source: lograven
+    log_type: linux_endpoint
+    severity: medium
+    mitre_technique_id: T1548.003
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: A user executed a command via sudo. Informational unless combined with other indicators.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: event_type
+          op: eq
+          value: sudo
+
+  - id: lr-builtin-lin-008
+    title: Session Opened for Root via su
+    source: lograven
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1548
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: A session was opened for the root user, likely via su or sudo -i.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains
+          value: "session opened for user root"
+
+  # ── Persistence ────────────────────────────────────────────────────────────
+
+  - id: lr-builtin-lin-009
+    title: New User Account Created (useradd)
+    source: lograven
+    log_type: linux_endpoint
+    severity: medium
+    mitre_technique_id: T1136.001
+    mitre_tactic: persistence
+    flag: account_creation
+    description: A new user account was created using useradd.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: event_type
+          op: eq
+          value: account_created
+
+  - id: lr-builtin-lin-010
+    title: Cron Job Added or Modified
+    source: lograven
+    log_type: linux_endpoint
+    severity: medium
+    mitre_technique_id: T1053.003
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: A cron job was created or modified. Attackers use cron for persistence.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values: ["new job", "BEGIN EDIT", "REPLACE", "(root) CMD", "crontab"]
+        - field: extra.process
+          op: contains_any
+          values: ["cron", "crond", "crontab"]
+      condition_logic: or

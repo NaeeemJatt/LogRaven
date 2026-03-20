@@ -1,0 +1,544 @@
+rules:
+- id: lr-sigma-imported-042d9787
+  title: Apache Segmentation Fault
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects a segmentation fault error message caused by a crashing apache
+    worker process
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: exit signal Segmentation Fault
+    condition_logic: or
+  mitre_technique_id: T1499.004
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-af76c456
+  title: Apache Threading Error
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: Detects an issue in apache logs that reports threading related errors
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: '__pthread_tpp_change_priority: Assertion `new_prio == -1 || (new_prio
+        >= fifo_min_prio && new_prio <= fifo_max_prio)'
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: lateral-movement
+  flag: lateral_movement_candidate
+- id: lr-sigma-imported-9c8f8e78
+  title: Nginx Core Dump
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects a core dump of a crashing Nginx worker process, which could
+    be a signal of a serious problem or exploitation attempts.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: exited on signal 6 (core dumped)
+    condition_logic: or
+  mitre_technique_id: T1499.004
+  mitre_tactic: impact
+  flag: suspicious_process
+- id: lr-sigma-imported-c597a754
+  title: F5 BIG-IP iControl Rest API Command Execution - Webserver
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: Detects POST requests to the F5 BIG-IP iControl Rest API "bash" endpoint,
+    which allows the execution of commands on the BIG-IP
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.method
+      op: contains
+      value: POST
+    - field: extra.cs-uri-query
+      op: endswith
+      value: /mgmt/tm/util/bash
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-4e497157
+  title: Successful IIS Shortname Fuzzing Scan
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: When IIS uses an old .Net Framework it's possible to enumerate folders
+    with the symbol "~"
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.cs-uri-query
+      op: contains
+      value: ~1
+    - field: extra.cs-uri-query
+      op: endswith
+      value: a.aspx
+    - field: extra.method
+      op: contains_any
+      values:
+      - GET
+      - OPTIONS
+    - field: extra.status_code
+      op: contains_any
+      values:
+      - '200'
+      - '301'
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-21de56ef
+  title: Java Payload Strings
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects possible Java payloads in web access logs
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: '%24%7B%28%23a%3D%40'
+    - field: raw_message
+      op: contains
+      value: ${(#a=@
+    - field: raw_message
+      op: contains
+      value: '%24%7B%40java'
+    - field: raw_message
+      op: contains
+      value: ${@java
+    - field: raw_message
+      op: contains
+      value: u0022java
+    - field: raw_message
+      op: contains
+      value: '%2F%24%7B%23'
+    - field: raw_message
+      op: contains
+      value: /${#
+    - field: raw_message
+      op: contains
+      value: new+java.
+    - field: raw_message
+      op: contains
+      value: getRuntime().exec(
+    - field: raw_message
+      op: contains
+      value: getRuntime%28%29.exec%28
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-940e5031
+  title: JNDIExploit Pattern
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects exploitation attempt using the JNDI-Exploit-Kit
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: /Basic/Command/Base64/
+    - field: raw_message
+      op: contains
+      value: /Basic/ReverseShell/
+    - field: raw_message
+      op: contains
+      value: /Basic/TomcatMemshell
+    - field: raw_message
+      op: contains
+      value: /Basic/JettyMemshell
+    - field: raw_message
+      op: contains
+      value: /Basic/WeblogicMemshell
+    - field: raw_message
+      op: contains
+      value: /Basic/JBossMemshell
+    - field: raw_message
+      op: contains
+      value: /Basic/WebsphereMemshell
+    - field: raw_message
+      op: contains
+      value: /Basic/SpringMemshell
+    - field: raw_message
+      op: contains
+      value: /Deserialization/URLDNS/
+    - field: raw_message
+      op: contains
+      value: /Deserialization/CommonsCollections1/Dnslog/
+    - field: raw_message
+      op: contains
+      value: /Deserialization/CommonsCollections2/Command/Base64/
+    - field: raw_message
+      op: contains
+      value: /Deserialization/CommonsBeanutils1/ReverseShell/
+    - field: raw_message
+      op: contains
+      value: /Deserialization/Jre8u20/TomcatMemshell
+    - field: raw_message
+      op: contains
+      value: /TomcatBypass/Dnslog/
+    - field: raw_message
+      op: contains
+      value: /TomcatBypass/Command/
+    - field: raw_message
+      op: contains
+      value: /TomcatBypass/ReverseShell/
+    - field: raw_message
+      op: contains
+      value: /TomcatBypass/TomcatMemshell
+    - field: raw_message
+      op: contains
+      value: /TomcatBypass/SpringMemshell
+    - field: raw_message
+      op: contains
+      value: /GroovyBypass/Command/
+    - field: raw_message
+      op: contains
+      value: /WebsphereBypass/Upload/
+    condition_logic: or
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-35232479
+  title: Path Traversal Exploitation Attempts
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: Detects path traversal exploitation attempts
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.cs-uri-query
+      op: contains_any
+      values:
+      - ../../../../../lib/password
+      - ../../../../windows/
+      - ../../../etc/
+      - ..%252f..%252f..%252fetc%252f
+      - ..%c0%af..%c0%af..%c0%afetc%c0%af
+      - '%252e%252e%252fetc%252f'
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-d74c8945
+  title: Source Code Enumeration Detection by Keyword
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: Detects source code enumeration that use GET requests by keyword searches
+    in URL strings
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: raw_message
+      op: contains
+      value: .git/
+    condition_logic: or
+  mitre_technique_id: T1083
+  mitre_tactic: discovery
+  flag: recon_candidate
+- id: lr-sigma-imported-9919d169
+  title: SQL Injection Strings In URI
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects potential SQL injection attempts via GET requests in access
+    logs.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.method
+      op: contains
+      value: GET
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-66186044
+  title: Server Side Template Injection Strings
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects SSTI attempts sent via GET requests in access logs
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.method
+      op: contains
+      value: GET
+    condition_logic: and
+  mitre_technique_id: T1221
+  mitre_tactic: defense-evasion
+  flag: log_tampering
+- id: lr-sigma-imported-a3019ae8
+  title: Suspicious User-Agents Related To Recon Tools
+  source: sigma
+  log_type: web_server
+  severity: medium
+  description: Detects known suspicious (default) user-agents related to scanning/recon
+    tools
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.user_agent
+      op: contains_any
+      values:
+      - Wfuzz/
+      - WPScan v
+      - Recon-ng/v
+      - GIS - AppSec Team - Project Vision
+    condition_logic: and
+  mitre_technique_id: T1190
+  mitre_tactic: initial-access
+  flag: injection_attempt
+- id: lr-sigma-imported-85d04b22
+  title: Suspicious Windows Strings In URI
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects suspicious Windows strings in URI which could indicate possible
+    exfiltration or webshell communication
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.cs-uri-query
+      op: contains_any
+      values:
+      - =C:/Users
+      - =C:/Program%20Files
+      - =C:/Windows
+      - =C%3A%5CUsers
+      - =C%3A%5CProgram%20Files
+      - =C%3A%5CWindows
+    condition_logic: and
+  mitre_technique_id: T1505.003
+  mitre_tactic: exfiltration
+  flag: data_exfil_candidate
+- id: lr-sigma-imported-f396ca5f
+  title: Webshell ReGeorg Detection Via Web Logs
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Certain strings in the uri_query field when combined with null referer
+    and null user agent can indicate activity associated with the webshell ReGeorg.
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.cs-uri-query
+      op: contains_any
+      values:
+      - cmd=read
+      - connect&target
+      - cmd=connect
+      - cmd=disconnect
+      - cmd=forward
+    condition_logic: and
+  mitre_technique_id: T1505.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-133402ef
+  title: Windows Webshell Strings
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects common commands used in Windows webshells
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.method
+      op: contains
+      value: GET
+    - field: raw_message
+      op: contains
+      value: =whoami
+    - field: raw_message
+      op: contains
+      value: =net%20user
+    - field: raw_message
+      op: contains
+      value: =net+user
+    - field: raw_message
+      op: contains
+      value: =net%2Buser
+    - field: raw_message
+      op: contains
+      value: =cmd%20/c%
+    - field: raw_message
+      op: contains
+      value: =cmd+/c+
+    - field: raw_message
+      op: contains
+      value: =cmd%2B/c%
+    - field: raw_message
+      op: contains
+      value: =cmd%20/r%
+    - field: raw_message
+      op: contains
+      value: =cmd+/r+
+    - field: raw_message
+      op: contains
+      value: =cmd%2B/r%
+    - field: raw_message
+      op: contains
+      value: =cmd%20/k%
+    - field: raw_message
+      op: contains
+      value: =cmd+/k+
+    - field: raw_message
+      op: contains
+      value: =cmd%2B/k%
+    - field: raw_message
+      op: contains
+      value: =powershell%
+    - field: raw_message
+      op: contains
+      value: =powershell+
+    - field: raw_message
+      op: contains
+      value: =tasklist%
+    - field: raw_message
+      op: contains
+      value: =tasklist+
+    - field: raw_message
+      op: contains
+      value: =wmic%
+    - field: raw_message
+      op: contains
+      value: =wmic+
+    - field: raw_message
+      op: contains
+      value: =ssh%
+    - field: raw_message
+      op: contains
+      value: =ssh+
+    - field: raw_message
+      op: contains
+      value: =python%
+    - field: raw_message
+      op: contains
+      value: =python+
+    - field: raw_message
+      op: contains
+      value: =python3%
+    - field: raw_message
+      op: contains
+      value: =python3+
+    - field: raw_message
+      op: contains
+      value: =ipconfig
+    - field: raw_message
+      op: contains
+      value: =wget%
+    - field: raw_message
+      op: contains
+      value: =wget+
+    - field: raw_message
+      op: contains
+      value: =curl%
+    - field: raw_message
+      op: contains
+      value: =curl+
+    - field: raw_message
+      op: contains
+      value: =certutil
+    - field: raw_message
+      op: contains
+      value: =copy%20%5C%5C
+    - field: raw_message
+      op: contains
+      value: =dsquery%
+    - field: raw_message
+      op: contains
+      value: =dsquery+
+    - field: raw_message
+      op: contains
+      value: =nltest%
+    - field: raw_message
+      op: contains
+      value: =nltest+
+    condition_logic: and
+  mitre_technique_id: T1505.003
+  mitre_tactic: persistence
+  flag: persistence_mechanism
+- id: lr-sigma-imported-33b1aa63
+  title: Cross Site Scripting Strings
+  source: sigma
+  log_type: web_server
+  severity: high
+  description: Detects XSS attempts injected via GET requests in access logs
+  enabled: true
+  requires_sysmon: false
+  match:
+    type: simple
+    log_type: web_server
+    conditions:
+    - field: extra.method
+      op: contains
+      value: GET
+    condition_logic: and
+  mitre_technique_id: T1189
+  mitre_tactic: initial-access
+  flag: injection_attempt

@@ -1,0 +1,266 @@
+rules:
+
+  # ── Brute Force (threshold) ────────────────────────────────────────────────
+
+  - id: lr-builtin-win-001
+    title: Windows Authentication Brute Force (High)
+    source: lograven
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 5+ authentication failures from the same source IP within 60 seconds.
+    match:
+      type: threshold
+      log_type: windows_endpoint
+      event_type: auth_failure
+      group_by: source_ip
+      count: 5
+      window_seconds: 60
+
+  - id: lr-builtin-win-002
+    title: Windows Authentication Brute Force (Critical — High Volume)
+    source: lograven
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 20+ authentication failures from the same source IP within 5 minutes.
+    match:
+      type: threshold
+      log_type: windows_endpoint
+      event_type: auth_failure
+      group_by: source_ip
+      count: 20
+      window_seconds: 300
+
+  # ── Persistence ────────────────────────────────────────────────────────────
+
+  - id: lr-builtin-win-003
+    title: Scheduled Task Created (EventID 4698)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1053.005
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: A new scheduled task was registered. Attackers use scheduled tasks for persistence.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4698"
+
+  - id: lr-builtin-win-004
+    title: Scheduled Task Modified (EventID 4702)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1053.005
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: An existing scheduled task was updated. May indicate persistence modification.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4702"
+
+  - id: lr-builtin-win-005
+    title: Windows Service Installed (EventID 7045)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1543.003
+    mitre_tactic: persistence
+    flag: service_installation
+    description: A new service was installed. Attackers install malicious services for persistence.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "7045"
+
+  - id: lr-builtin-win-006
+    title: New Local User Account Created (EventID 4720)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1136.001
+    mitre_tactic: persistence
+    flag: account_creation
+    description: A new user account was created. May indicate backdoor account creation.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4720"
+
+  # ── Defense Evasion ────────────────────────────────────────────────────────
+
+  - id: lr-builtin-win-007
+    title: Security Audit Log Cleared (EventID 1102)
+    source: lograven
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1070.001
+    mitre_tactic: defense-evasion
+    flag: log_tampering
+    description: The Windows Security audit log was cleared — a strong indicator of cover-up activity.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "1102"
+
+  - id: lr-builtin-win-008
+    title: System Event Log Cleared (EventID 104)
+    source: lograven
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1070.001
+    mitre_tactic: defense-evasion
+    flag: log_tampering
+    description: The Windows System event log was cleared.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "104"
+
+  - id: lr-builtin-win-009
+    title: Audit Policy Changed (EventID 4719)
+    source: lograven
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1562.002
+    mitre_tactic: defense-evasion
+    flag: log_tampering
+    description: A system audit policy was modified. Attackers disable auditing to blind defenders.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4719"
+
+  # ── Privilege Escalation / Credential Access ───────────────────────────────
+
+  - id: lr-builtin-win-010
+    title: Special Privileges Assigned to New Logon (EventID 4672)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1078.003
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: Sensitive privileges (SeDebugPrivilege, SeTcbPrivilege, etc.) assigned at logon.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4672"
+
+  - id: lr-builtin-win-011
+    title: Sensitive Privilege Use (EventID 4673)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1548
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: A sensitive privilege was used. Indicates potential privilege abuse.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4673"
+
+  - id: lr-builtin-win-012
+    title: Explicit Credential Use (EventID 4648)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1550
+    mitre_tactic: lateral-movement
+    flag: credential_access
+    description: A logon was attempted using explicit credentials (runas). Often used in lateral movement.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4648"
+
+  # ── Account / Group Management ─────────────────────────────────────────────
+
+  - id: lr-builtin-win-013
+    title: User Added to Local Security Group (EventID 4732)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: group_modification
+    description: A user was added to a local security group. Adding to Administrators group is critical.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4732"
+
+  - id: lr-builtin-win-014
+    title: User Added to Global Group (EventID 4728)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: group_modification
+    description: A user was added to a global security group (e.g. Domain Admins).
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4728"
+
+  - id: lr-builtin-win-015
+    title: User Added to Universal Group (EventID 4756)
+    source: lograven
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: group_modification
+    description: A user was added to a universal security group.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4756"

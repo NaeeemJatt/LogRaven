@@ -1,0 +1,246 @@
+rules:
+
+  # ── PowerShell Execution ───────────────────────────────────────────────────
+
+  - id: lr-sigma-win-exec-001
+    title: PowerShell Process Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: low
+    mitre_technique_id: T1059.001
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: PowerShell was started. Informational — correlate with other indicators.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: contains_any
+          values: ["powershell.exe", "powershell_ise.exe", "pwsh.exe"]
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-002
+    title: Encoded PowerShell Command (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1059.001
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: >
+      PowerShell launched with -EncodedCommand / -enc flag.
+      Attackers encode commands to bypass command-line detection.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "-EncodedCommand"
+            - " -enc "
+            - "-e "
+            - "-encodedcommand"
+            - "FromBase64String"
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-003
+    title: PowerShell Download Cradle
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1059.001
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: PowerShell command line contains a download or remote execution pattern.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "IEX"
+            - "Invoke-Expression"
+            - "DownloadString"
+            - "DownloadFile"
+            - "WebClient"
+            - "Net.WebClient"
+            - "Invoke-WebRequest"
+            - "curl "
+            - "wget "
+      condition_logic: or
+
+  # ── Living-Off-the-Land Binaries (LOLBins) ─────────────────────────────────
+
+  - id: lr-sigma-win-exec-004
+    title: Regsvr32 Suspicious Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1218.010
+    mitre_tactic: defense-evasion
+    flag: suspicious_process
+    description: regsvr32.exe used to register a remote or unusual DLL. Common AppLocker bypass.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "regsvr32.exe"
+        - field: extra.CommandLine
+          op: contains_any
+          values: ["/s", "/u", "http", "scrobj", ".sct", ".dll"]
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-005
+    title: Rundll32 Suspicious Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1218.011
+    mitre_tactic: defense-evasion
+    flag: suspicious_process
+    description: rundll32.exe executing a non-standard function or remote resource.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "rundll32.exe"
+        - field: extra.CommandLine
+          op: contains_any
+          values: ["javascript:", "vbscript:", "http", "shell32", "advpack", "ieadvpack"]
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-006
+    title: MSHTA Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1218.005
+    mitre_tactic: defense-evasion
+    flag: suspicious_process
+    description: mshta.exe executed a remote HTA file or JavaScript. Common malware delivery vector.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "mshta.exe"
+
+  - id: lr-sigma-win-exec-007
+    title: CertUtil Downloader (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1105
+    mitre_tactic: command-and-control
+    flag: suspicious_process
+    description: certutil.exe used with -urlcache or -decode. Common LOLBin for downloading payloads.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "certutil.exe"
+        - field: extra.CommandLine
+          op: contains_any
+          values: ["-urlcache", "-decode", "-encode", "-split", "http"]
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-008
+    title: WMIC Remote Command Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1047
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: wmic.exe executing a remote command. Used for lateral movement and malware execution.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "wmic.exe"
+        - field: extra.CommandLine
+          op: contains_any
+          values: ["/node:", "process call create", "shadowcopy delete"]
+      condition_logic: and
+
+  # ── Domain Reconnaissance via Net Commands ─────────────────────────────────
+
+  - id: lr-sigma-win-exec-009
+    title: Net User / Net Group Reconnaissance (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1087.002
+    mitre_tactic: discovery
+    flag: recon_candidate
+    description: net.exe or net1.exe used to enumerate users or groups.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "net user"
+            - "net group"
+            - "net localgroup"
+            - "net accounts"
+            - "net share"
+            - "net view"
+      condition_logic: and
+
+  - id: lr-sigma-win-exec-010
+    title: WScript / CScript Script Host Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1059.005
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: Windows Script Host executing a VBScript or JScript file. Common malware delivery.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: contains_any
+          values: ["wscript.exe", "cscript.exe"]
