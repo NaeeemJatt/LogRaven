@@ -1,0 +1,212 @@
+rules:
+
+  # ── SQL Injection ──────────────────────────────────────────────────────────
+
+  - id: lr-sigma-web-inj-001
+    title: SQL Injection — UNION-Based Probe
+    source: sigma
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1190
+    mitre_tactic: initial-access
+    flag: injection_attempt
+    description: UNION SELECT pattern detected in the request. Indicates SQL injection enumeration.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: re
+          value: "UNION[\\s%20+]+SELECT"
+
+  - id: lr-sigma-web-inj-002
+    title: SQL Injection — Boolean-Based Probe
+    source: sigma
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1190
+    mitre_tactic: initial-access
+    flag: injection_attempt
+    description: Common boolean-based SQL injection payloads detected.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - "' OR '1'='1"
+            - "' OR 1=1"
+            - "\" OR \"1\"=\"1"
+            - "1' OR '1'='1"
+            - "OR 1=1--"
+            - "' OR 'x'='x"
+            - "admin'--"
+
+  - id: lr-sigma-web-inj-003
+    title: XSS Injection — Script Tag Probe
+    source: sigma
+    log_type: web_server
+    severity: medium
+    mitre_technique_id: T1059.007
+    mitre_tactic: execution
+    flag: injection_attempt
+    description: Cross-site scripting payload detected in request.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - "<script>"
+            - "%3Cscript%3E"
+            - "javascript:"
+            - "onerror="
+            - "onload="
+            - "alert("
+            - "document.cookie"
+
+  - id: lr-sigma-web-inj-004
+    title: OS Command Injection Probe
+    source: sigma
+    log_type: web_server
+    severity: critical
+    mitre_technique_id: T1059
+    mitre_tactic: execution
+    flag: injection_attempt
+    description: OS command injection patterns in the request URI.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - ";cat /etc/passwd"
+            - ";id;"
+            - "$(id)"
+            - "`id`"
+            - "|whoami"
+            - "%7Cwhoami"
+            - ";ls -la"
+            - "&& cat /etc/shadow"
+
+  # ── Reconnaissance ─────────────────────────────────────────────────────────
+
+  - id: lr-sigma-web-recon-001
+    title: WordPress Core File Enumeration
+    source: sigma
+    log_type: web_server
+    severity: medium
+    mitre_technique_id: T1595.003
+    mitre_tactic: reconnaissance
+    flag: recon_candidate
+    description: Multiple requests to WordPress-specific paths. Automated WordPress fingerprinting.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - "xmlrpc.php"
+            - "wp-json/"
+            - "/wp-content/plugins/"
+            - "readme.html"
+            - "license.txt"
+
+  - id: lr-sigma-web-recon-002
+    title: Directory Brute-Force (4xx Spike)
+    source: sigma
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1595.003
+    mitre_tactic: reconnaissance
+    flag: recon_candidate
+    description: >
+      50+ 4xx responses from the same IP in 60 seconds.
+      Indicates automated directory/file brute-forcing (gobuster, dirbuster, etc.).
+    match:
+      type: threshold
+      log_type: web_server
+      group_by: source_ip
+      count: 50
+      window_seconds: 60
+
+  - id: lr-sigma-web-recon-003
+    title: Curl / Wget Automated Retrieval
+    source: sigma
+    log_type: web_server
+    severity: low
+    mitre_technique_id: T1595
+    mitre_tactic: reconnaissance
+    flag: recon_candidate
+    description: Request from curl or wget. May indicate automated scripted access.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.user_agent
+          op: contains_any
+          values: ["curl/", "Wget/", "python-requests", "Go-http-client"]
+
+  - id: lr-sigma-web-recon-004
+    title: CVE Exploit Probe — Log4Shell (CVE-2021-44228)
+    source: sigma
+    log_type: web_server
+    severity: critical
+    mitre_technique_id: T1190
+    mitre_tactic: initial-access
+    flag: injection_attempt
+    description: Log4Shell JNDI injection payload detected in request headers or path.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "${jndi:"
+            - "${jndi:ldap://"
+            - "${${lower:j}ndi:"
+            - "${j${::-n}di:"
+            - "%24%7Bjndi%3A"
+
+  - id: lr-sigma-web-recon-005
+    title: CVE Exploit Probe — Spring4Shell (CVE-2022-22965)
+    source: sigma
+    log_type: web_server
+    severity: critical
+    mitre_technique_id: T1190
+    mitre_tactic: initial-access
+    flag: injection_attempt
+    description: Spring Framework RCE payload pattern detected.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "class.module.classLoader"
+            - "class.classLoader"
+            - "spring.config.import"
+            - "RootBeanDefinition"
+
+  - id: lr-sigma-web-recon-006
+    title: HTTP Methods Abuse (TRACE/PUT/DELETE)
+    source: sigma
+    log_type: web_server
+    severity: medium
+    mitre_technique_id: T1190
+    mitre_tactic: initial-access
+    flag: recon_candidate
+    description: Non-standard HTTP methods used. TRACE enables cross-site tracing (XST) attacks.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.method
+          op: in
+          values: ["TRACE", "OPTIONS", "CONNECT", "PROPFIND", "PUT"]
