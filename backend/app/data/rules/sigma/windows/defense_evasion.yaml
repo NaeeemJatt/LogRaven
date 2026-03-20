@@ -1,0 +1,128 @@
+rules:
+
+  # ── Defense Evasion ────────────────────────────────────────────────────────
+
+  - id: lr-sigma-win-de-001
+    title: Windows Defender Disabled via Registry (EventID 4657)
+    source: sigma
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1562.001
+    mitre_tactic: defense-evasion
+    flag: log_tampering
+    description: Windows Defender was disabled via registry modification.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4657"
+        - field: raw_message
+          op: contains_any
+          values:
+            - "Windows Defender\\DisableAntiSpyware"
+            - "Windows Defender\\DisableRealtimeMonitoring"
+            - "\\Policies\\Microsoft\\Windows Defender"
+      condition_logic: and
+
+  - id: lr-sigma-win-de-002
+    title: Windows Firewall Disabled (EventID 2003)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1562.004
+    mitre_tactic: defense-evasion
+    flag: log_tampering
+    description: The Windows Firewall was disabled on a network profile.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "2003"
+
+  - id: lr-sigma-win-de-003
+    title: Volume Shadow Copy Deletion (wmic / vssadmin)
+    source: sigma
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1490
+    mitre_tactic: impact
+    flag: suspicious_process
+    description: Shadow copies were deleted. Ransomware almost always does this before encryption.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "shadowcopy delete"
+            - "shadow /quiet /nologo delete"
+            - "vssadmin delete shadows"
+            - "vssadmin resize shadowstorage"
+            - "bcdedit /set recoveryenabled No"
+            - "bcdedit /set bootstatuspolicy ignoreallfailures"
+
+  - id: lr-sigma-win-de-004
+    title: Process Injection via CreateRemoteThread Indicators
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1055.003
+    mitre_tactic: defense-evasion
+    flag: suspicious_process
+    description: Known process injection tool keywords in log data.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "CreateRemoteThread"
+            - "VirtualAllocEx"
+            - "WriteProcessMemory"
+            - "NtCreateThreadEx"
+
+  - id: lr-sigma-win-de-005
+    title: Whoami Execution (Privilege Discovery)
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1033
+    mitre_tactic: discovery
+    flag: recon_candidate
+    description: whoami executed — attacker confirming execution context.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.NewProcessName
+          op: endswith
+          value: "whoami.exe"
+
+  - id: lr-sigma-win-de-006
+    title: Network Share Mapped (EventID 4648 + net use)
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1021.002
+    mitre_tactic: lateral-movement
+    flag: lateral_movement_candidate
+    description: net use or net share command mapped a remote share. May indicate lateral movement staging.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "net use \\\\"
+            - "net use /user"
+            - "New-PSDrive"
