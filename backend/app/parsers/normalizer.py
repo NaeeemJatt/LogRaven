@@ -18,6 +18,7 @@ class NormalizedEvent:
     raw_message:    str             = ""
     flags:          list            = field(default_factory=list)
     severity_hint:  str             = "informational"
+    extra_fields:   dict            = field(default_factory=dict)
 
 
 def normalize_entity(value: str | None) -> str | None:

@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -146,6 +146,12 @@ async def upload_file(
         raise HTTPException(status_code=400, detail=f"File type .{ext} not allowed. Allowed: {sorted(ALLOWED_EXTENSIONS)}")
 
     size_limit = TIER_SIZE_LIMITS.get(current_user.tier, TIER_SIZE_LIMITS["free"])
+    if file.size is not None and file.size > size_limit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File exceeds size limit for your tier. "
+                   f"Max: {size_limit // (1024 * 1024)}MB"
+        )
     file_id = uuid.uuid4()
     storage_key = f"uploads/{investigation_id}/{file_id}_{filename}"
 
@@ -197,6 +203,7 @@ async def delete_file(
 @router.post("/{investigation_id}/analyze")
 async def analyze_investigation(
     investigation_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -214,8 +221,8 @@ async def analyze_investigation(
     inv.status = "queued"
     await db.commit()
 
-    from app.tasks.process_investigation import process_investigation
-    process_investigation.delay(str(investigation_id))
+    from app.tasks.process_investigation import _run_pipeline
+    background_tasks.add_task(_run_pipeline, str(investigation_id))
 
     return {"status": "queued", "investigation_id": str(investigation_id)}
 
@@ -233,6 +240,7 @@ async def get_investigation_status(
         id=inv.id,
         status=inv.status,
         progress_stage=inv.status,
+        error_message=inv.error_message,
         files=[
             InvestigationFileResponse(
                 id=f.id,
@@ -304,9 +312,8 @@ async def download_report_pdf(
     investigation_id: uuid.UUID,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
 ):
-    from app.utils.storage import LocalStorageBackend
-
     await _get_investigation_or_404(investigation_id, current_user, db)
 
     result = await db.execute(
@@ -322,7 +329,6 @@ async def download_report_pdf(
             detail="PDF not generated yet. Try again or re-run analysis.",
         )
 
-    storage = LocalStorageBackend()
     download_url = storage.get_download_url(report.pdf_storage_key)
 
     return {

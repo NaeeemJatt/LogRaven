@@ -17,7 +17,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime, Boolean, ForeignKey
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
@@ -40,6 +40,7 @@ class Investigation(Base):
     time_window_end:     Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
     created_at:          Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow)
     completed_at:        Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
+    error_message:       Mapped[str | None]        = mapped_column(Text, nullable=True)
 
     user:   Mapped["User"]                       = relationship("User",              back_populates="investigations")
     files:  Mapped[list["InvestigationFile"]]    = relationship("InvestigationFile", back_populates="investigation", cascade="all, delete-orphan")

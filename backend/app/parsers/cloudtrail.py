@@ -77,6 +77,25 @@ class CloudTrailParser(BaseParser):
 
             raw_msg = json.dumps(rec)[:500]
 
+            # Populate extra_fields for YAML rule matching
+            extra: dict = {"eventSource": event_source or "", "eventName": event_name or ""}
+            if error_code:
+                extra["errorCode"] = str(error_code)
+            for field_name in ("errorMessage", "userAgent", "awsRegion", "requestRegion"):
+                val = rec.get(field_name)
+                if val:
+                    extra[field_name] = str(val)[:200]
+            # Flatten top-level requestParameters (strings/numbers only)
+            req_params = rec.get("requestParameters") or {}
+            if isinstance(req_params, dict):
+                for k, v in req_params.items():
+                    if v is not None and isinstance(v, (str, int, float, bool)):
+                        extra[f"requestParameters.{k}"] = str(v)[:200]
+            # Include identity type
+            identity_type = identity.get("type")
+            if identity_type:
+                extra["identityType"] = str(identity_type)
+
             event = NormalizedEvent(
                 timestamp=ts,
                 source_type="cloudtrail",
@@ -87,6 +106,7 @@ class CloudTrailParser(BaseParser):
                 event_id=event_name,
                 raw_message=raw_msg,
                 flags=flags,
+                extra_fields=extra,
             )
             if flags:
                 event.severity_hint = "high" if "sensitive_action" in flags else "medium"

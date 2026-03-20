@@ -1,0 +1,193 @@
+rules:
+
+  # ── Injection & Application Attacks ───────────────────────────────────────
+
+  - id: lr-builtin-web-001
+    title: Admin Panel Access Attempt
+    source: lograven
+    log_type: web_server
+    severity: medium
+    mitre_technique_id: T1078
+    mitre_tactic: initial-access
+    flag: admin_panel_access
+    description: A request was made to an admin panel path. May indicate reconnaissance or brute force.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - /admin
+            - /wp-admin
+            - /wp-login
+            - /administrator
+            - /phpmyadmin
+            - /manager/html
+            - /console
+            - /_cpanel
+            - /webadmin
+
+  - id: lr-builtin-web-002
+    title: Sensitive File Access Attempt
+    source: lograven
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1083
+    mitre_tactic: discovery
+    flag: sensitive_file_access
+    description: Request for a sensitive file (.env, .git, .htaccess, backup files, config files).
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - .env
+            - .git/
+            - .htaccess
+            - .htpasswd
+            - /backup
+            - /config.php
+            - /settings.php
+            - /wp-config.php
+            - /database.yml
+            - /secrets
+            - /.aws/credentials
+            - /id_rsa
+            - /id_ecdsa
+
+  - id: lr-builtin-web-003
+    title: Potential Webshell Upload (POST to Script Extension)
+    source: lograven
+    log_type: web_server
+    severity: critical
+    mitre_technique_id: T1505.003
+    mitre_tactic: persistence
+    flag: webshell_attempt
+    description: A POST request to a file with an executable extension. May indicate webshell upload.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.method
+          op: eq
+          value: POST
+        - field: extra.request_path
+          op: contains_any
+          values: [".php", ".aspx", ".asp", ".jsp", ".cfm", ".cgi", ".pl", ".py"]
+      condition_logic: and
+
+  - id: lr-builtin-web-004
+    title: Path Traversal Attempt
+    source: lograven
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1083
+    mitre_tactic: discovery
+    flag: injection_attempt
+    description: Directory traversal sequence detected in the request path.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.request_path
+          op: contains_any
+          values:
+            - ../
+            - ..%2F
+            - ..%5C
+            - "%2e%2e%2f"
+            - "%252e%252e%252f"
+
+  - id: lr-builtin-web-005
+    title: Server-Side Template Injection Indicators
+    source: lograven
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1059
+    mitre_tactic: execution
+    flag: injection_attempt
+    description: SSTI probe characters detected in the request (e.g., {{7*7}}, ${7*7}).
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "{{7*7}}"
+            - "${7*7}"
+            - "#{7*7}"
+            - "<%= 7*7 %>"
+            - "{{config}}"
+
+  # ── Brute Force (threshold) ────────────────────────────────────────────────
+
+  - id: lr-builtin-web-006
+    title: Login Endpoint Brute Force
+    source: lograven
+    log_type: web_server
+    severity: high
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 20+ POST requests to a login endpoint from the same IP within 60 seconds.
+    match:
+      type: threshold
+      log_type: web_server
+      group_by: source_ip
+      count: 20
+      window_seconds: 60
+
+  # ── Reconnaissance ─────────────────────────────────────────────────────────
+
+  - id: lr-builtin-web-007
+    title: Common Vulnerability Scanner User Agent
+    source: lograven
+    log_type: web_server
+    severity: medium
+    mitre_technique_id: T1595
+    mitre_tactic: reconnaissance
+    flag: recon_candidate
+    description: Request from a known vulnerability scanner or exploit framework.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.user_agent
+          op: contains_any
+          values:
+            - sqlmap
+            - nikto
+            - nmap
+            - masscan
+            - acunetix
+            - nessus
+            - openvas
+            - burpsuite
+            - w3af
+            - "Metasploit"
+            - dirbuster
+            - gobuster
+            - wfuzz
+            - nuclei
+            - zaproxy
+
+  - id: lr-builtin-web-008
+    title: HTTP Response 500 (Server Error)
+    source: lograven
+    log_type: web_server
+    severity: low
+    mitre_technique_id: ~
+    mitre_tactic: ~
+    flag: ~
+    description: Server returned HTTP 500. Repeated 500s may indicate exploitation attempts.
+    match:
+      type: simple
+      log_type: web_server
+      conditions:
+        - field: extra.status_code
+          op: eq
+          value: "500"

@@ -5,7 +5,9 @@ Backend:    FastAPI 0.111, Python 3.11, SQLAlchemy 2.0, Alembic 1.13
 Queue:      Celery 5.3, Redis 7.2
 Database:   PostgreSQL 15
 Parsers:    pyevtx-rs (pip install evtx), mitreattack-python
-AI:         Claude claude-sonnet-4-6 via anthropic SDK — cloud only v1
+AI:         Gemini 2.5 Flash via google-genai package — cloud only v1
+            API key: GEMINI_API_KEY (set in .env)
+            NOT anthropic SDK — not installed or used
 PDF:        WeasyPrint 62 + Jinja2 template: lograven_report.html
 Storage:    LocalStorageBackend (dev) / S3StorageBackend (prod)
 Frontend:   React 18, TypeScript 5.4, Vite 5.2, Tailwind 3.4, React Query 5

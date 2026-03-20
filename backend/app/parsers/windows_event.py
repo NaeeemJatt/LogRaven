@@ -82,6 +82,19 @@ class WindowsEventParser(BaseParser):
             raw = json.dumps(data)[:500]
             event_type = self.EVENT_TYPE_MAP.get(event_id, "other")
 
+            # Populate extra_fields from EventData for YAML rule matching
+            extra: dict = {}
+            for k, v in event_data.items():
+                if v is None:
+                    continue
+                if isinstance(v, dict):
+                    # Handle {"#text": value} pattern from XML serialization
+                    text_val = v.get("#text")
+                    if text_val is not None:
+                        extra[k] = str(text_val)
+                elif isinstance(v, (str, int, float, bool)):
+                    extra[k] = str(v)
+
             return NormalizedEvent(
                 timestamp=ts,
                 source_type="windows_endpoint",
@@ -91,6 +104,7 @@ class WindowsEventParser(BaseParser):
                 event_type=event_type,
                 event_id=event_id,
                 raw_message=raw,
+                extra_fields=extra,
             )
         except Exception as e:
             self._log_skip(str(data)[:120], f"extract error: {e}")
@@ -118,6 +132,19 @@ class WindowsEventParser(BaseParser):
                         raw = str(row)[:500]
                         event_type = self.EVENT_TYPE_MAP.get(event_id.strip(), "other")
 
+                        # Populate extra_fields from CSV columns for YAML rule matching
+                        _USEFUL_CSV_FIELDS = {
+                            "LogonType", "ProcessName", "CommandLine", "NewProcessName",
+                            "ParentProcessName", "TaskName", "ServiceName", "GroupName",
+                            "AuthenticationPackageName", "FailureReason", "PrivilegeList",
+                            "SubjectUserSid", "TargetUserSid", "WorkstationName",
+                        }
+                        csv_extra = {
+                            k: str(v)
+                            for k, v in row.items()
+                            if k in _USEFUL_CSV_FIELDS and v and str(v).strip() not in ("", "-", "N/A")
+                        }
+
                         events.append(NormalizedEvent(
                             timestamp=ts,
                             source_type="windows_endpoint",
@@ -127,6 +154,7 @@ class WindowsEventParser(BaseParser):
                             event_type=event_type,
                             event_id=event_id.strip(),
                             raw_message=raw,
+                            extra_fields=csv_extra,
                         ))
                     except Exception as e:
                         self._log_skip(str(row)[:120], f"csv row error: {e}")
