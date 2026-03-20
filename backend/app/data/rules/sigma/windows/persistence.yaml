@@ -1,0 +1,202 @@
+rules:
+
+  # ── Scheduled Tasks ────────────────────────────────────────────────────────
+
+  - id: lr-sigma-win-pers-001
+    title: Suspicious Scheduled Task With Encoded Command
+    source: sigma
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1053.005
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: A scheduled task was created and the action contains an encoded PowerShell command.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4698"
+        - field: extra.TaskContent
+          op: contains_any
+          values:
+            - "-EncodedCommand"
+            - "-enc "
+            - "FromBase64String"
+            - "IEX("
+            - "Invoke-Expression"
+      condition_logic: and
+
+  - id: lr-sigma-win-pers-002
+    title: Scheduled Task in Suspicious Path
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1053.005
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: A scheduled task was created pointing to a file in a temp or unusual directory.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4698"
+        - field: extra.TaskContent
+          op: contains_any
+          values:
+            - "\\Temp\\"
+            - "\\AppData\\Roaming\\"
+            - "\\AppData\\Local\\Temp\\"
+            - "\\ProgramData\\"
+            - "%temp%"
+            - "%appdata%"
+      condition_logic: and
+
+  # ── Services ───────────────────────────────────────────────────────────────
+
+  - id: lr-sigma-win-pers-003
+    title: Malicious Service Path Indicators (EventID 7045)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1543.003
+    mitre_tactic: persistence
+    flag: service_installation
+    description: A new service was installed with a suspicious binary path.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "7045"
+        - field: extra.ServiceFileName
+          op: contains_any
+          values:
+            - "\\Temp\\"
+            - "\\AppData\\"
+            - "\\ProgramData\\"
+            - "cmd.exe"
+            - "powershell.exe"
+            - "mshta.exe"
+            - "rundll32.exe"
+            - "regsvr32.exe"
+      condition_logic: and
+
+  # ── Account Persistence ────────────────────────────────────────────────────
+
+  - id: lr-sigma-win-pers-004
+    title: User Added to Administrators Group
+    source: sigma
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: privilege_escalation
+    description: A user was added to the local Administrators group.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4732"
+        - field: extra.GroupName
+          op: contains_any
+          values: ["Administrators", "Domain Admins", "Enterprise Admins", "Schema Admins"]
+      condition_logic: and
+
+  - id: lr-sigma-win-pers-005
+    title: Password Never Expires Set on Account
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1136
+    mitre_tactic: persistence
+    flag: account_creation
+    description: >
+      A user account was modified to have password-never-expires flag.
+      Common backdoor account configuration.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4738"
+        - field: extra.UserAccountControl
+          op: contains
+          value: "DONT_EXPIRE_PASSWORD"
+      condition_logic: and
+
+  # ── DLL Search Order Hijacking ─────────────────────────────────────────────
+
+  - id: lr-sigma-win-pers-006
+    title: COM Object Hijacking Registry Key Modified
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1546.015
+    mitre_tactic: persistence
+    flag: persistence_mechanism
+    description: HKCU\\Software\\Classes\\CLSID registry key modified — used for COM hijacking persistence.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4657"
+        - field: raw_message
+          op: contains_any
+          values:
+            - "HKCU\\Software\\Classes\\CLSID"
+            - "Classes\\CLSID"
+      condition_logic: and
+
+  - id: lr-sigma-win-pers-007
+    title: Registry Run Key Modification (Autostart)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1547.001
+    mitre_tactic: persistence
+    flag: persistence_mechanism
+    description: A registry Run key was modified. Classic Windows autostart persistence mechanism.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4657"
+        - field: raw_message
+          op: contains_any
+          values:
+            - "\\CurrentVersion\\Run"
+            - "\\CurrentVersion\\RunOnce"
+            - "\\Winlogon\\Userinit"
+            - "\\Winlogon\\Shell"
+      condition_logic: and
+
+  - id: lr-sigma-win-pers-008
+    title: Startup Folder File Written
+    source: sigma
+    log_type: windows_endpoint
+    severity: medium
+    mitre_technique_id: T1547.001
+    mitre_tactic: persistence
+    flag: persistence_mechanism
+    description: A file was created in a Windows Startup folder.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "\\Start Menu\\Programs\\Startup"
+            - "\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu"

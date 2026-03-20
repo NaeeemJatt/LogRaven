@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:safe": "node -e \"const{execSync:e,spawnSync:s}=require('child_process');try{const r=s('powershell',['-Command','(Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue).OwningProcess'],{encoding:'utf8'});const pid=r.stdout.trim();if(pid&&!isNaN(pid)){console.log('Killing PID '+pid+' on port 5173');e('taskkill /PID '+pid+' /F')}}catch(err){}\" && vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx"

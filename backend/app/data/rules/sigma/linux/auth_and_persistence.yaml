@@ -1,0 +1,222 @@
+rules:
+
+  # ── SSH Brute Force ────────────────────────────────────────────────────────
+
+  - id: lr-sigma-lin-auth-001
+    title: Linux SSH Password Brute Force — Sustained Attack
+    source: sigma
+    log_type: linux_endpoint
+    severity: critical
+    mitre_technique_id: T1110.001
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: >
+      Sustained SSH password brute force: 30+ failures from the same IP within 10 minutes.
+      Sustained attacks indicate automated tooling.
+    match:
+      type: threshold
+      log_type: linux_endpoint
+      event_type: auth_failure
+      group_by: source_ip
+      count: 30
+      window_seconds: 600
+
+  - id: lr-sigma-lin-auth-002
+    title: Linux SSH User Enumeration — Multiple Invalid Users
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1110.003
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: Multiple invalid user attempts from same IP — indicates user enumeration.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains
+          value: "Invalid user"
+
+  - id: lr-sigma-lin-auth-003
+    title: Linux PAM Authentication Failure
+    source: sigma
+    log_type: linux_endpoint
+    severity: low
+    mitre_technique_id: T1110
+    mitre_tactic: credential-access
+    flag: ~
+    description: PAM authentication failure. Single failure is informational; spikes indicate brute force.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "PAM: Authentication failure"
+            - "pam_unix(sshd:auth): authentication failure"
+            - "pam_unix(sudo:auth): authentication failure"
+
+  # ── Privilege Escalation ───────────────────────────────────────────────────
+
+  - id: lr-sigma-lin-priv-001
+    title: Sudo -i Root Shell Invoked
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1548.003
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: sudo -i or sudo su executed — spawns a root shell.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: extra.message
+          op: contains_any
+          values:
+            - "sudo -i"
+            - "sudo su"
+            - "sudo -s"
+            - "TTY=pts"
+        - field: username
+          op: exists
+      condition_logic: and
+
+  - id: lr-sigma-lin-priv-002
+    title: SUID/SGID Binary Execution Indicators
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1548.001
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: Execution of a SUID binary commonly abused for privilege escalation.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "python -c 'import pty"
+            - "python3 -c 'import pty"
+            - "/usr/bin/find . -exec /bin/sh"
+            - "nmap --interactive"
+            - "vim -c '!sh'"
+            - "less /etc/passwd"
+
+  # ── Persistence ────────────────────────────────────────────────────────────
+
+  - id: lr-sigma-lin-pers-001
+    title: /etc/passwd or /etc/shadow Modified
+    source: sigma
+    log_type: linux_endpoint
+    severity: critical
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: account_creation
+    description: The system password database was modified. May indicate new backdoor account added.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "/etc/passwd"
+            - "/etc/shadow"
+            - "/etc/sudoers"
+            - "visudo"
+
+  - id: lr-sigma-lin-pers-002
+    title: Systemd Service Unit Created or Modified
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1543.002
+    mitre_tactic: persistence
+    flag: service_installation
+    description: A systemd service unit was created or modified. Used for persistent malware execution.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "/etc/systemd/system/"
+            - "systemctl enable"
+            - "systemctl daemon-reload"
+
+  - id: lr-sigma-lin-pers-003
+    title: Reverse Shell Indicators in Log Messages
+    source: sigma
+    log_type: linux_endpoint
+    severity: critical
+    mitre_technique_id: T1059.004
+    mitre_tactic: execution
+    flag: suspicious_process
+    description: Common reverse shell command patterns in syslog data.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "bash -i >& /dev/tcp"
+            - "bash -c 'bash -i"
+            - "nc -e /bin/bash"
+            - "nc -e /bin/sh"
+            - "0<&196;exec 196<>/dev/tcp"
+            - "python -c 'import socket"
+            - "perl -e 'use Socket"
+
+  - id: lr-sigma-lin-pers-004
+    title: Root Cron Job Added
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1053.003
+    mitre_tactic: persistence
+    flag: scheduled_task_creation
+    description: A cron job running as root was added.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "(root) CMD"
+            - "CRON["
+            - "crond["
+        - field: extra.process
+          op: contains_any
+          values: ["cron", "crond", "CRON"]
+      condition_logic: and
+
+  - id: lr-sigma-lin-pers-005
+    title: Unusual SSH Port or Tunnel
+    source: sigma
+    log_type: linux_endpoint
+    severity: high
+    mitre_technique_id: T1572
+    mitre_tactic: command-and-control
+    flag: lateral_movement_candidate
+    description: SSH used for port forwarding or tunneling. Common C2 and exfiltration technique.
+    match:
+      type: simple
+      log_type: linux_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "-L 0.0.0.0"
+            - "-R 0.0.0.0"
+            - "-D 1080"
+            - "ProxyCommand"
+            - "direct-tcpip"
+            - "forwarded-tcpip"

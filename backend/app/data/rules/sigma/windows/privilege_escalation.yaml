@@ -1,0 +1,183 @@
+rules:
+
+  # ── Privilege Escalation ───────────────────────────────────────────────────
+
+  - id: lr-sigma-win-priv-001
+    title: User Added to Domain Admins or Enterprise Admins
+    source: sigma
+    log_type: windows_endpoint
+    severity: critical
+    mitre_technique_id: T1098
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: A user was added to a highly privileged domain group.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: in
+          values: ["4728", "4756"]
+        - field: extra.GroupName
+          op: contains_any
+          values:
+            - "Domain Admins"
+            - "Enterprise Admins"
+            - "Schema Admins"
+            - "Group Policy Creator Owners"
+            - "Administrators"
+      condition_logic: and
+
+  - id: lr-sigma-win-priv-002
+    title: Token Impersonation via SeImpersonatePrivilege (EventID 4672)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1134.001
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: >
+      SeImpersonatePrivilege assigned at logon. Combined with process injection this
+      enables privilege escalation (JuicyPotato, PrintSpoofer, etc.).
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4672"
+        - field: extra.PrivilegeList
+          op: contains
+          value: SeImpersonatePrivilege
+      condition_logic: and
+
+  - id: lr-sigma-win-priv-003
+    title: SeDebugPrivilege Assigned (EventID 4672)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1134
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: SeDebugPrivilege assigned — allows reading/writing any process memory (e.g., LSASS dump).
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4672"
+        - field: extra.PrivilegeList
+          op: contains
+          value: SeDebugPrivilege
+      condition_logic: and
+
+  - id: lr-sigma-win-priv-004
+    title: Token Duplication via SeTcbPrivilege (EventID 4673)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1548.002
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: SeTcbPrivilege used. This privilege allows acting as part of the OS.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4673"
+        - field: extra.PrivilegeName
+          op: contains
+          value: SeTcbPrivilege
+      condition_logic: and
+
+  - id: lr-sigma-win-priv-005
+    title: PsExec Remote Execution (EventID 4688)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1569.002
+    mitre_tactic: execution
+    flag: lateral_movement_candidate
+    description: PsExec service created or executable launched. Used for remote code execution.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "PSEXESVC"
+            - "psexec"
+            - "PsExec Service"
+
+  - id: lr-sigma-win-priv-006
+    title: UAC Bypass via Known Techniques
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1548.002
+    mitre_tactic: privilege-escalation
+    flag: privilege_escalation
+    description: Known UAC bypass binary or technique detected in command line.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: extra.CommandLine
+          op: contains_any
+          values:
+            - "eventvwr.exe"
+            - "fodhelper.exe"
+            - "sdclt.exe"
+            - "cmstp.exe"
+            - "msconfig.exe"
+            - "computerdefaults.exe"
+
+  # ── Lateral Movement ───────────────────────────────────────────────────────
+
+  - id: lr-sigma-win-priv-007
+    title: WMI Remote Execution (EventID 4624 + WMI)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1047
+    mitre_tactic: lateral-movement
+    flag: lateral_movement_candidate
+    description: WMI used for remote execution. WMI network logon followed by process creation.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: raw_message
+          op: contains_any
+          values:
+            - "WmiPrvSE.exe"
+            - "wmic.exe /node:"
+            - "WMI Provider Host"
+
+  - id: lr-sigma-win-priv-008
+    title: DCOM Lateral Movement (EventID 4624)
+    source: sigma
+    log_type: windows_endpoint
+    severity: high
+    mitre_technique_id: T1021.003
+    mitre_tactic: lateral-movement
+    flag: lateral_movement_candidate
+    description: DCOM object used for remote execution — a less-monitored lateral movement technique.
+    match:
+      type: simple
+      log_type: windows_endpoint
+      conditions:
+        - field: event_id
+          op: eq
+          value: "4688"
+        - field: extra.ParentProcessName
+          op: contains_any
+          values: ["svchost.exe", "wmiprvse.exe", "dllhost.exe"]
+        - field: extra.NewProcessName
+          op: contains_any
+          values: ["cmd.exe", "powershell.exe", "mshta.exe", "wscript.exe", "cscript.exe"]
+      condition_logic: and

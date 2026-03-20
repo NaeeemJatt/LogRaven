@@ -1,0 +1,266 @@
+rules:
+
+  # ── IAM — Account & Key Management ────────────────────────────────────────
+
+  - id: lr-builtin-ct-001
+    title: IAM User Created
+    source: lograven
+    log_type: cloudtrail
+    severity: medium
+    mitre_technique_id: T1136.003
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: A new IAM user was created. Review for unauthorised account creation.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: CreateUser
+
+  - id: lr-builtin-ct-002
+    title: IAM User Deleted
+    source: lograven
+    log_type: cloudtrail
+    severity: medium
+    mitre_technique_id: T1531
+    mitre_tactic: impact
+    flag: iam_abuse
+    description: An IAM user was deleted. May indicate account hijacking or clean-up.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: DeleteUser
+
+  - id: lr-builtin-ct-003
+    title: Access Key Created
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1098.001
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: A new IAM access key was created. Attackers create access keys for persistent API access.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: CreateAccessKey
+
+  - id: lr-builtin-ct-004
+    title: IAM Policy Attached to User
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1098.001
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: An IAM managed policy was attached to a user. May grant excessive permissions.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: AttachUserPolicy
+
+  - id: lr-builtin-ct-005
+    title: IAM Policy Attached to Role
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: An IAM managed policy was attached to a role.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: AttachRolePolicy
+
+  - id: lr-builtin-ct-006
+    title: IAM Inline Policy Put on User
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1098.001
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: An inline IAM policy was placed on a user. Inline policies are harder to audit.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: PutUserPolicy
+
+  # ── Root Account ───────────────────────────────────────────────────────────
+
+  - id: lr-builtin-ct-007
+    title: AWS Root Account Activity
+    source: lograven
+    log_type: cloudtrail
+    severity: critical
+    mitre_technique_id: T1078.004
+    mitre_tactic: initial-access
+    flag: credential_access
+    description: API activity from the root account. The root account should never be used for routine tasks.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: username
+          op: contains
+          value: root
+
+  # ── Secrets & Data Access ──────────────────────────────────────────────────
+
+  - id: lr-builtin-ct-008
+    title: Secrets Manager Secret Accessed (GetSecretValue)
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1552.001
+    mitre_tactic: credential-access
+    flag: credential_access
+    description: A secret was retrieved from AWS Secrets Manager.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: GetSecretValue
+
+  - id: lr-builtin-ct-009
+    title: S3 Bucket Policy Modified
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1530
+    mitre_tactic: collection
+    flag: data_exfil_candidate
+    description: An S3 bucket policy was changed. May expose data publicly.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["PutBucketPolicy", "PutBucketAcl", "DeleteBucketPolicy"]
+
+  # ── Network / Security Group ───────────────────────────────────────────────
+
+  - id: lr-builtin-ct-010
+    title: Security Group Inbound Rule Added
+    source: lograven
+    log_type: cloudtrail
+    severity: medium
+    mitre_technique_id: T1562.007
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: An inbound rule was added to an EC2 security group. Wide-open rules (0.0.0.0/0) are critical.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: AuthorizeSecurityGroupIngress
+
+  - id: lr-builtin-ct-011
+    title: Assume Role
+    source: lograven
+    log_type: cloudtrail
+    severity: medium
+    mitre_technique_id: T1078.004
+    mitre_tactic: privilege-escalation
+    flag: iam_abuse
+    description: An IAM role was assumed. May indicate cross-account access or privilege escalation.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: AssumeRole
+
+  # ── Defense Evasion ────────────────────────────────────────────────────────
+
+  - id: lr-builtin-ct-012
+    title: CloudTrail Logging Stopped
+    source: lograven
+    log_type: cloudtrail
+    severity: critical
+    mitre_technique_id: T1562.008
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: CloudTrail logging was stopped. A clear indicator of an attacker covering tracks.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["StopLogging", "DeleteTrail", "UpdateTrail"]
+
+  - id: lr-builtin-ct-013
+    title: CloudWatch Alarms Deleted
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1562
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: CloudWatch alarms were deleted. May indicate an attacker silencing monitoring.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: DeleteAlarms
+
+  - id: lr-builtin-ct-014
+    title: MFA Device Deleted or Deactivated
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1556.006
+    mitre_tactic: credential-access
+    flag: iam_abuse
+    description: MFA was removed from an IAM user. Weakens account security.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["DeleteVirtualMFADevice", "DeactivateMFADevice"]
+
+  - id: lr-builtin-ct-015
+    title: Multiple Consecutive API Errors (Brute Force / Recon)
+    source: lograven
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1110.003
+    mitre_tactic: credential-access
+    flag: brute_force_candidate
+    description: 10+ API errors from the same user within 5 minutes. Indicates recon or credential spraying.
+    match:
+      type: threshold
+      log_type: cloudtrail
+      event_type: auth_failure
+      group_by: username
+      count: 10
+      window_seconds: 300

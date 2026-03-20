@@ -1,0 +1,276 @@
+rules:
+
+  # ── IAM Abuse ──────────────────────────────────────────────────────────────
+
+  - id: lr-sigma-ct-iam-001
+    title: IAM Role Created with Admin Policy
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1098
+    mitre_tactic: persistence
+    flag: iam_abuse
+    description: A new IAM role was created and immediately had an admin-level policy attached.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: CreateRole
+
+  - id: lr-sigma-ct-iam-002
+    title: IAM Password Policy Weakened
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1556
+    mitre_tactic: credential-access
+    flag: iam_abuse
+    description: The account IAM password policy was weakened. May allow weaker credentials.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: UpdateAccountPasswordPolicy
+
+  - id: lr-sigma-ct-iam-003
+    title: IAM Access Key Last-Used Over 90 Days Reactivated
+    source: sigma
+    log_type: cloudtrail
+    severity: medium
+    mitre_technique_id: T1078.004
+    mitre_tactic: initial-access
+    flag: iam_abuse
+    description: An access key was reactivated (UpdateAccessKey). Dormant keys being activated is suspicious.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: UpdateAccessKey
+
+  - id: lr-sigma-ct-iam-004
+    title: Console Login Without MFA
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1078.004
+    mitre_tactic: initial-access
+    flag: credential_access
+    description: AWS console login without MFA. High-risk in production environments.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: ConsoleLogin
+        - field: raw_message
+          op: contains
+          value: "MFAUsed"
+        - field: raw_message
+          op: contains
+          value: "No"
+      condition_logic: and
+
+  - id: lr-sigma-ct-iam-005
+    title: Cross-Account AssumeRole from Unusual Identity
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1078.004
+    mitre_tactic: privilege-escalation
+    flag: iam_abuse
+    description: An IAM role was assumed by a service like Lambda or EC2. May indicate confused deputy.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: AssumeRoleWithWebIdentity
+
+  # ── Data Exfiltration / Discovery ──────────────────────────────────────────
+
+  - id: lr-sigma-ct-exfil-001
+    title: S3 Bucket ACL Set to Public
+    source: sigma
+    log_type: cloudtrail
+    severity: critical
+    mitre_technique_id: T1530
+    mitre_tactic: collection
+    flag: data_exfil_candidate
+    description: An S3 bucket ACL was set to allow public access. Immediate data exposure risk.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: PutBucketAcl
+        - field: raw_message
+          op: contains_any
+          values: ["AllUsers", "AuthenticatedUsers", "public-read", "public-read-write"]
+      condition_logic: and
+
+  - id: lr-sigma-ct-exfil-002
+    title: S3 GetObject on Multiple Buckets (Exfiltration)
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1530
+    mitre_tactic: collection
+    flag: data_exfil_candidate
+    description: High-volume S3 GetObject calls — 50+ in 5 minutes indicates automated data exfiltration.
+    match:
+      type: threshold
+      log_type: cloudtrail
+      group_by: username
+      count: 50
+      window_seconds: 300
+
+  - id: lr-sigma-ct-exfil-003
+    title: SSM Parameter Store Secret Retrieved
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1552.001
+    mitre_tactic: credential-access
+    flag: credential_access
+    description: An SSM Parameter Store secure string was retrieved via GetParameter/GetParameters.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["GetParameter", "GetParameters", "GetParametersByPath"]
+
+  - id: lr-sigma-ct-exfil-004
+    title: EC2 Snapshot Created and Shared Externally
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1537
+    mitre_tactic: exfiltration
+    flag: data_exfil_candidate
+    description: An EBS snapshot was created and its permissions modified. May expose volume data.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["ModifySnapshotAttribute", "CreateSnapshot"]
+
+  # ── Defense Evasion ────────────────────────────────────────────────────────
+
+  - id: lr-sigma-ct-de-001
+    title: GuardDuty Detector Disabled
+    source: sigma
+    log_type: cloudtrail
+    severity: critical
+    mitre_technique_id: T1562
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: AWS GuardDuty was disabled. Disabling threat detection is a key attacker technique.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["DeleteDetector", "DisassociateFromMasterAccount", "UpdateDetector"]
+
+  - id: lr-sigma-ct-de-002
+    title: AWS Config Service Disabled
+    source: sigma
+    log_type: cloudtrail
+    severity: critical
+    mitre_technique_id: T1562
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: AWS Config recorder was stopped or delivery channel deleted.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["StopConfigurationRecorder", "DeleteConfigurationRecorder", "DeleteDeliveryChannel"]
+
+  - id: lr-sigma-ct-de-003
+    title: VPC Flow Logs Disabled
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1562.008
+    mitre_tactic: defense-evasion
+    flag: cloud_evasion
+    description: VPC Flow Logs were deleted. Removes network visibility from the environment.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: DeleteFlowLogs
+
+  - id: lr-sigma-ct-de-004
+    title: Route53 DNS Record Changed
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1584.002
+    mitre_tactic: resource-development
+    flag: cloud_evasion
+    description: Route53 DNS records were modified. May indicate DNS hijacking.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: ChangeResourceRecordSets
+
+  - id: lr-sigma-ct-de-005
+    title: EC2 Instance Modified (Metadata IMDSv1 Exposed)
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1552.005
+    mitre_tactic: credential-access
+    flag: credential_access
+    description: EC2 instance attribute modified. Downgrading to IMDSv1 enables SSRF-based credential theft.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: eq
+          value: ModifyInstanceAttribute
+        - field: raw_message
+          op: contains_any
+          values: ["httpTokens", "optional", "MetadataOptions"]
+      condition_logic: and
+
+  - id: lr-sigma-ct-de-006
+    title: KMS Key Policy Modified
+    source: sigma
+    log_type: cloudtrail
+    severity: high
+    mitre_technique_id: T1484
+    mitre_tactic: defense-evasion
+    flag: iam_abuse
+    description: A KMS key policy was modified. May allow new principals to decrypt protected data.
+    match:
+      type: simple
+      log_type: cloudtrail
+      conditions:
+        - field: event_id
+          op: in
+          values: ["PutKeyPolicy", "DeleteAlias", "ScheduleKeyDeletion"]
