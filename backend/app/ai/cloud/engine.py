@@ -2,7 +2,6 @@
 
 import asyncio
 import json
-import os
 
 from app.ai import chunker
 from app.ai.prompts import base_prompt
@@ -18,12 +17,15 @@ def _get_client():
     global _client
     if _client is not None:
         return _client
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+    # Use settings so .env values are found even before they reach os.environ
+    from app.config import settings
+    api_key = settings.GEMINI_API_KEY
     if not api_key:
+        logger.warning("LogRaven AI: GEMINI_API_KEY not configured in .env — skipping AI analysis")
         return None
     try:
         from google import genai
-        _client = genai.Client()
+        _client = genai.Client(api_key=api_key)
         return _client
     except ImportError:
         logger.warning("google-genai package not installed. Run: pip install google-genai")

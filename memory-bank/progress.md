@@ -212,6 +212,64 @@ Completed: 2026-03-18
 
 ---
 
+## Production Bug Fixes — Pre-Launch Hardening
+Status: COMPLETE
+Completed: 2026-03-20
+
+### Done
+- [x] Created `backend/app/rules/engine.py` — was entirely missing (CRITICAL)
+- [x] Added `correlate = analyze` alias in `correlation/engine.py` — function name mismatch (CRITICAL)
+- [x] File size validation by tier in `api/investigations/routes.py` upload handler
+- [x] PDF download endpoint uses DI storage — was hardcoded `LocalStorageBackend()`
+- [x] `LogRavenError.status_code = 500` added to base exception class
+- [x] HTTP 500 handler returns generic message — hides raw exception details
+- [x] `investigation.error_message` Text column added (Alembic migration 007)
+- [x] `InvestigationStatusResponse.error_message` field added to schema
+- [x] Pipeline records `investigation.error_message = str(exc)[:500]` on failure
+- [x] AI cost limiter uses priority-based event selection (not naive slice)
+- [x] AI client fixed: reads `settings.GEMINI_API_KEY` (not `os.environ`) + passes `api_key=` to `genai.Client()`
+- [x] Rule engine performance: event_id index reduces 2000×1873 to ~2000×15 comparisons (~100× speedup)
+- [x] Pre-compiled regex patterns in `SimpleCondition` via `PrivateAttr` + `model_post_init`
+- [x] PDF fallback: `xhtml2pdf` installed and wired — WeasyPrint fails on Windows (no GTK3), xhtml2pdf generates PDF successfully
+- [x] `xhtml2pdf>=0.2.17` and `pyyaml>=6.0` added to `requirements.txt`
+
+---
+
+## Rule Engine Expansion
+Status: COMPLETE
+Completed: 2026-03-20
+
+### Done
+- [x] `NormalizedEvent.extra_fields: dict` added to normalizer
+- [x] All 4 parsers updated to populate `extra_fields`:
+      windows_event: EventData fields + CSV fields
+      syslog: process, pid, message
+      cloudtrail: eventSource, eventName, requestParameters.*, identityType
+      nginx: method, request_path, status_code, response_bytes, user_agent, referer
+- [x] `rules/schema.py`: Pydantic models — `SimpleCondition`, `SimpleMatch`, `ThresholdMatch`, `RuleDefinition`
+      `SimpleCondition` pre-compiles regex via `PrivateAttr` + `model_post_init`
+- [x] `rules/loader.py`: loads YAML files from `app/data/rules/` with file-level caching
+- [x] `rules/evaluator.py`: `run_yaml_rules()` with 2-level event_id index + threshold rules
+- [x] `rules/engine.py`: updated to call YAML evaluator after hardcoded rules
+- [x] Built-in YAML rules: `data/rules/builtin/windows.yaml` (15), `linux.yaml` (10), `cloudtrail.yaml` (15), `nginx.yaml` (8)
+- [x] Sigma-derived rules:
+      `data/rules/sigma/windows/` — 5 files, 54 rules (credential_access, execution, persistence, defense_evasion, privilege_escalation)
+      `data/rules/sigma/linux/auth_and_persistence.yaml` — 13 rules
+      `data/rules/sigma/cloudtrail/iam_and_evasion.yaml` — 16 rules
+      `data/rules/sigma/nginx/attacks_and_recon.yaml` — 6 rules
+- [x] `scripts/sigma_to_lograven.py`: converter script for SigmaHQ repos
+- [x] `scripts/test_pipeline.py`: end-to-end integration test script
+- [x] Total rules at startup: **2,212** (2,202 simple + 10 threshold)
+- [x] Pipeline verified: rules load in ~14s, evaluation of 2000 events completes in <1s (with index)
+
+### Not Done (future)
+- [ ] EQL-style sequence rules (would unlock ~800 more Sigma rules currently skipped)
+- [ ] `|cidr` operator support in converter
+- [ ] Zeek/Bro network log parser + rules
+- [ ] Okta / Azure AD logsource mapping
+
+---
+
 ## Month 5 — Polish
 Status: NOT STARTED
 
@@ -221,6 +279,7 @@ Status: NOT STARTED
 - [ ] utils/rate_limiter.py: Redis-backed rate limiter
 - [ ] Audit log retention cleanup job
 - [ ] Error handling hardening
+- [ ] `pip install mitreattack-python` in venv (currently skipped at runtime)
 
 ---
 

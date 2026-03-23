@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
-from typing import Literal, Optional
-from pydantic import BaseModel, field_validator
+import re
+from typing import Any, Literal, Optional
+from pydantic import BaseModel, PrivateAttr, field_validator
 
 
 class SimpleCondition(BaseModel):
@@ -29,6 +30,9 @@ class SimpleCondition(BaseModel):
     negate: bool = False
     """Invert the result of this condition."""
 
+    # Pre-compiled regex — populated in model_post_init, never serialized
+    _compiled_re: re.Pattern | None = PrivateAttr(default=None)
+
     @field_validator("values", mode="before")
     @classmethod
     def coerce_values(cls, v):
@@ -36,6 +40,13 @@ class SimpleCondition(BaseModel):
         if isinstance(v, str):
             return [x.strip() for x in v.split(",") if x.strip()]
         return v
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.op == "re" and self.value:
+            try:
+                object.__setattr__(self, "_compiled_re", re.compile(self.value, re.IGNORECASE))
+            except re.error:
+                pass
 
 
 class SimpleMatch(BaseModel):

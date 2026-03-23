@@ -39,8 +39,12 @@ anthropic==0.28.0
 openai==1.35.0
 
 # PDF generation
-weasyprint>=62.3
+weasyprint>=62.3      # best quality (Linux/Docker — needs GTK3)
+xhtml2pdf>=0.2.17     # pure-Python fallback (Windows dev, no system deps needed)
 jinja2>=3.1.4
+
+# Rule engine / YAML rule loading
+pyyaml>=6.0
 
 # File I/O
 aiofiles==23.2.1

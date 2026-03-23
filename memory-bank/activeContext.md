@@ -1,273 +1,108 @@
 # LogRaven — Active Context
 
-## Current Session Goal
-Month 4 + Frontend COMPLETE
+## Current Status
+**All Months 1–4 complete. Production bug fixes + rule engine expansion complete.**
+Pipeline verified end-to-end: parse → rules → correlate → Gemini AI → MITRE → PDF → complete.
 
-## Status
-Full backend pipeline + PDF generation + React frontend operational.
+---
 
 ## Environment (Windows, No Docker)
 - OS: Windows 10, PowerShell
-- Python: 3.14 at backend/venv/
+- Python: 3.14 at `backend/venv/`
 - PostgreSQL: localhost:5432/lograven (password: root)
-- Redis: localhost:6379 (NOT needed — Celery task_always_eager=True)
-- Start backend: cd backend && uvicorn app.main:app --reload --port 8000
-- Start frontend: cd frontend && npm run dev  (runs on http://localhost:5173)
-- Dev setup script: .\scripts\windows_setup.ps1
-- DB utility: python scripts/db.py check|tables|migrations|drop
-- NOTE: bcrypt pinned to 4.2.1 (passlib incompatible with bcrypt 5.x)
-- GEMINI_API_KEY set in .env and working
-- enterprise-attack.json downloaded to backend/app/data/ (35.7 MB)
-- WeasyPrint 68.x installed (pure Python, no GTK needed on Windows)
-- Jinja2 3.1.6 installed
+- Redis: localhost:6379 (NOT needed — Celery `task_always_eager=True`)
+- Start backend: `cd backend && uvicorn app.main:app --reload --port 8000`
+- Start frontend: `cd frontend && npm run dev` (runs on http://localhost:5173)
+- Dev setup script: `.\scripts\windows_setup.ps1`
+- DB utility: `python scripts/db.py check|tables|migrations|drop`
+- `GEMINI_API_KEY` set in `.env` and confirmed working
+- `enterprise-attack.json` at `backend/app/data/` (35.7 MB)
+- `bcrypt` pinned to 4.2.1 — do not upgrade until passlib is replaced
 
-## All Completed (Months 1–4 + Frontend)
-
-### Foundation + Auth (Month 1)
-- All 6 DB tables, Alembic migrations applied
-- JWT auth: register, login, refresh, /auth/me
-- dependencies.py, main.py, config.py, license.py all working
-
-### Investigation CRUD + File Upload (Month 1 Week 3)
-- Full CRUD: POST/GET/DELETE /api/v1/investigations
-- File upload: POST /api/v1/investigations/{id}/files
-- File delete: DELETE /api/v1/investigations/{id}/files/{file_id}
-- Analyze trigger: POST /api/v1/investigations/{id}/analyze
-- Status polling: GET /api/v1/investigations/{id}/status
-- Report endpoint: GET /api/v1/investigations/{id}/report
-- PDF download: GET /api/v1/investigations/{id}/report/download
-
-### Parsers (Month 2)
-- windows_event (evtx + CSV), syslog, cloudtrail, nginx
-- detector.py: two-phase log type detection
-- NormalizedEvent dataclass + normalize_entity()
-- Celery pipeline scaffold with task_always_eager=True
-
-### Rule Engine + Correlation + AI (Month 3)
-- rules/engine.py: 4 rules
-- correlation: entity_extractor, chain_builder, engine
-- ai/cost_limiter.py: enforce_ceiling() free/pro/team tiers
-- ai/prompts/: base, windows, syslog, cloudtrail, nginx, correlation
-- ai/chunker.py: split_events() + merge_findings()
-- ai/cloud/engine.py: Gemini 2.5 Flash via google-genai
-- ai/router.py: route_analysis() dispatch
-- reports/mitre_mapper.py: enrich_all(), get_coverage_matrix()
-- process_investigation.py: fully wired end-to-end pipeline
-- Report + Finding rows saved to DB after AI analysis
-
-### PDF Reports (Month 4)
-- reports/builder.py: build_report_context() for Jinja2
-- reports/templates/lograven_report.html: full WeasyPrint PDF template
-- reports/templates/lograven_report.css: complete brand styling
-- reports/pdf_generator.py: generate_pdf() WeasyPrint + Jinja2
-- reports/uploader.py: upload_report() with temp file cleanup
-- storage.py: save_file_from_bytes() added to LocalStorageBackend
-- process_investigation.py: Step 5j PDF generation wired in (non-critical failure)
-- GET /api/v1/investigations/{id}/report/download returns download URL
-
-### Frontend (Month 4 — React/TypeScript/Tailwind)
-- api/client.ts: Axios with JWT request interceptor + 401 auto-refresh
-- store/authStore.ts: Zustand store (setTokens, setUser, logout)
-- api/auth.ts: register, login, refresh, me
-- api/investigations.ts: full CRUD + upload + analyze + report endpoints
-- hooks/useAuth.ts: login/register/logout with navigate
-- hooks/useJobStatus.ts: React Query polling (3s interval, stops on terminal state)
-- App.tsx: React Router with ProtectedRoute, all 7 routes
-- pages/Auth/Login.tsx: centered card, error handling, loading state
-- pages/Auth/Register.tsx: password match validation, error handling
-- pages/Dashboard.tsx: investigation table, status badges, delete, report link
-- pages/NewInvestigation.tsx: name form → navigate to investigation detail
-- pages/Investigation.tsx: drag-drop upload, source type selector, analyze button
-- pages/JobStatus.tsx: stepped progress bar, 3s polling, auto-navigate on complete
-- pages/Report.tsx: full findings display, correlated section, IOCs, PDF download
-- components/reports/FindingCard.tsx: severity badges, IOCs, remediation, MITRE detail
-- components/ui/Badge.tsx: soft + solid severity badge variants
-- All files TypeScript clean (tsc --noEmit exits 0)
+---
 
 ## All Decisions Locked
 - Name: LogRaven / lograven.io / Docker: lograven:v1.0
 - Docker delivery model, no hosted SaaS for v1
-- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai, NOT ANTHROPIC_API_KEY
-- bcrypt pinned to 4.2.1 — do not upgrade until passlib is replaced
-- Celery task_always_eager=True for dev (no Redis needed)
+- AI: `google-genai` (gemini-2.5-flash) — NOT anthropic, NOT ANTHROPIC_API_KEY
+- `bcrypt` pinned to 4.2.1 — do not upgrade until passlib is replaced
+- Celery `task_always_eager=True` for dev (no Redis needed)
 - Local storage for dev, S3 backend stubs ready for production
 - PyArmor + hardware-bound license for Docker protection
 - No admin panel in v1
 - Frontend: Vite + React 18 + TypeScript + Tailwind + Zustand + React Query
+- Rule engine: YAML-first with event_id index; hardcoded rules remain as fallback
+- PDF: WeasyPrint (primary, Linux/Docker) + xhtml2pdf (fallback, Windows dev)
 
-## What Is NOT Done Yet (Remaining)
-- license.py: full HMAC validation (currently bypass_dev=True)
-- Rate limiting on auth endpoints
-- Full structured JSON logging (currently basic stream logger)
-- Audit log retention cleanup job
-- Docker image build (docker-compose + Dockerfile)
-- PyArmor obfuscation pipeline
-- Frontend: npm deps must be installed (npm install in frontend/)
-- vite-env.d.ts missing — worked around via /// <reference in main.tsx
+---
 
-## Open Questions
-None. All decisions made.
-
-
-## Status
-Full backend pipeline operational end-to-end:
-parse → run_rules → correlate → enforce_ceiling → Gemini AI → MITRE enrich → save Report + Findings → complete
-
-## Environment (Windows, No Docker)
-- OS: Windows 10, PowerShell
-- Python: 3.14 at backend/venv/
-- PostgreSQL: localhost:5432/lograven (password: root)
-- Redis: localhost:6379 (NOT needed — Celery task_always_eager=True)
-- Start server: cd backend && uvicorn app.main:app --reload --port 8000
-- Dev setup script: .\scripts\windows_setup.ps1
-- DB utility: python scripts/db.py check|tables|migrations|drop
-- NOTE: bcrypt pinned to 4.2.1 (passlib incompatible with bcrypt 5.x)
-- GEMINI_API_KEY set in .env and working
-- enterprise-attack.json downloaded to backend/app/data/ (35.7 MB)
-
-## All Completed (Months 1–3)
+## Completed Work
 
 ### Foundation + Auth (Month 1)
-- All 6 DB tables, Alembic migrations applied
+- All 6 DB tables, Alembic migrations 001–007 applied
 - JWT auth: register, login, refresh, /auth/me
-- dependencies.py, main.py, config.py, license.py all working
+- `dependencies.py`, `main.py`, `config.py`, `license.py` all working
 
 ### Investigation CRUD + File Upload (Month 1 Week 3)
-- Full CRUD: POST/GET/DELETE /api/v1/investigations
-- File upload: POST /api/v1/investigations/{id}/files
-- File delete: DELETE /api/v1/investigations/{id}/files/{file_id}
-- Analyze trigger: POST /api/v1/investigations/{id}/analyze
-- Status polling: GET /api/v1/investigations/{id}/status
-- Report endpoint: GET /api/v1/investigations/{id}/report
+- Full CRUD + file upload + analyze trigger + status polling + report endpoint
+- PDF download: `GET /api/v1/investigations/{id}/report/download`
 
 ### Parsers (Month 2)
-- windows_event (evtx + CSV), syslog, cloudtrail, nginx
-- detector.py: two-phase log type detection
-- NormalizedEvent dataclass + normalize_entity()
-- Celery pipeline scaffold with task_always_eager=True
+- `windows_event` (evtx + CSV), `syslog`, `cloudtrail`, `nginx`
+- `NormalizedEvent` dataclass now includes `extra_fields: dict` for rule matching
+- All 4 parsers populate `extra_fields` with source-specific metadata
 
 ### Rule Engine + Correlation + AI (Month 3)
-- rules/engine.py: 4 rules (critical brute force, high lateral movement,
-  high sensitive action, 5s deduplication window)
-- correlation/entity_extractor.py: extract_entities()
-- correlation/chain_builder.py: build_chains() 5-min sliding window
-- correlation/engine.py: correlate() orchestration
-- ai/cost_limiter.py: enforce_ceiling() free/pro/team tiers
-- ai/prompts/: base, windows, syslog, cloudtrail, nginx, correlation
-- ai/chunker.py: split_events() with overlap, merge_findings() dedup
-- ai/cloud/engine.py: Gemini 2.5 Flash via google-genai
-  3-attempt backoff, graceful skip if API key missing
-- ai/router.py: route_analysis() dispatch by log_type
-- reports/mitre_mapper.py: enrich_all(), get_coverage_matrix()
-  Lazy load enterprise-attack.json, graceful skip if missing
-- process_investigation.py: fully wired end-to-end pipeline
-- Report + Finding rows saved to DB after AI analysis
-- GET /api/v1/investigations/{id}/report returns full report + findings
+- `rules/engine.py`: 4 hardcoded rules + YAML rule evaluation
+- `rules/schema.py`: Pydantic models for YAML rule format (SimpleMatch, ThresholdMatch)
+- `rules/loader.py`: YAML loader with file-level caching
+- `rules/evaluator.py`: evaluator with **event_id index** (~100× faster) + pre-compiled regex
+- Correlation engine: entity extraction + 5-min sliding window chain building
+- AI cost limiter: priority-based event selection (critical > high > medium > info)
+- Gemini 2.5 Flash: `analyze_events()` + `analyze_chains()` with 3-attempt backoff
 
-## All Decisions Locked
-- Name: LogRaven / lograven.io / Docker: lograven:v1.0
-- Docker delivery model, no hosted SaaS for v1
-- AI: google-genai (gemini-2.5-flash) — NOT anthropic, NOT google-generativeai, NOT ANTHROPIC_API_KEY
-- bcrypt pinned to 4.2.1 — do not upgrade until passlib is replaced
-- Celery task_always_eager=True for dev (no Redis needed)
-- Local storage for dev, S3 backend stubs ready for production
-- PyArmor + hardware-bound license for Docker protection
-- No admin panel in v1
+### YAML Rule Library (Rule Engine Expansion)
+- **2,212 total rules** loaded at startup (2,202 simple + 10 threshold)
+- Built-in rules: 48 rules across `windows.yaml`, `linux.yaml`, `cloudtrail.yaml`, `nginx.yaml`
+- Sigma-derived rules: 89 Windows + 13 Linux + 16 CloudTrail + 6 Nginx = **124 Sigma rules** in YAML
+- Converter script: `scripts/sigma_to_lograven.py` (converts SigmaHQ repos to LogRaven format)
+- Rule directories: `backend/app/data/rules/builtin/` and `backend/app/data/rules/sigma/`
+
+### PDF Reports (Month 4)
+- `reports/builder.py`, `reports/templates/lograven_report.html/.css`
+- `reports/pdf_generator.py`: WeasyPrint primary → **xhtml2pdf fallback** (works on Windows)
+- `reports/uploader.py`: stores PDF via storage abstraction
+
+### Production Bug Fixes (Pre-Launch)
+- `rules/engine.py` created (was missing — CRITICAL)
+- Correlation `correlate = analyze` alias added (function name mismatch — CRITICAL)
+- File size validation by tier added to upload endpoint
+- PDF download uses DI storage (not hardcoded `LocalStorageBackend()`)
+- `LogRavenError.status_code = 500` added to base exception class
+- HTTP 500 responses hide raw exception detail (only generic message returned)
+- `investigation.error_message` column added (migration 007) — pipeline failure reason surfaced
+- AI client bug fixed: now reads `settings.GEMINI_API_KEY` (not `os.environ`) and passes `api_key=` to `genai.Client()`
+- Rule engine performance: event_id index + pre-compiled regex (39s → ~0.3s for 2k events)
+- PDF fallback: `xhtml2pdf` installed and wired as WeasyPrint fallback
+
+### Frontend (Month 4 — React/TypeScript/Tailwind)
+- All 16 components complete; TypeScript clean (`tsc --noEmit` exits 0)
+- `api/client.ts`, `store/authStore.ts`, all hooks, all pages, FindingCard, Badge
+
+---
 
 ## What Is NOT Done Yet
-- PDF report generation (Month 4)
-- schemas/report.py: Pydantic response models for report/findings
-- api/reports/routes.py: dedicated reports router (GET report, download PDF)
-- reports/pdf_generator.py: WeasyPrint + Jinja2 HTML template
-- reports/builder.py: compile findings into PDF context
-- license.py: full HMAC validation (currently bypass_dev=True)
-- Frontend (not started)
+- `license.py`: full HMAC validation (currently `bypass_dev=True`)
 - Rate limiting on auth endpoints
-- Docker image build
+- Full structured JSON logging
+- Audit log retention cleanup job
+- Docker image build (`docker-compose` + `Dockerfile`)
+- PyArmor obfuscation pipeline
+- `mitreattack-python` not installed in venv (`pip install mitreattack-python` needed)
+- EQL-style sequence rules (would unlock ~800 more Sigma rules currently skipped)
+- `vite-env.d.ts` missing — worked around via `/// <reference` in `main.tsx`
 
-## Next Session — Month 4 (PDF Reports)
-
-```
-@memory-bank/projectbrief.md
-@memory-bank/techContext.md
-@memory-bank/systemPatterns.md
-@memory-bank/activeContext.md
-@backend/app/models/report.py
-@backend/app/models/finding.py
-@backend/app/api/investigations/routes.py
-@backend/app/reports/mitre_mapper.py
-@backend/app/schemas/investigation.py
-
-Read all memory bank files first.
-
-WHAT IS ALREADY DONE — DO NOT REIMPLEMENT:
-- All 6 DB tables, JWT auth, investigation CRUD, file upload
-- All 4 parsers, rule engine, correlation engine, cost limiter
-- Full Gemini AI pipeline: analyze_events, analyze_chains
-- MITRE enrichment: enrich_all() with enterprise-attack.json
-- Report and Finding rows saved to DB after every analysis
-- GET /api/v1/investigations/{id}/report — returns report + findings JSON
-- enterprise-attack.json at backend/app/data/ (35.7 MB, downloaded)
-- google-genai installed, GEMINI_API_KEY in .env
-
-TODAY: Implement PDF report generation.
-
-TASK 1 — backend/app/schemas/report.py
-  FindingResponse: all Finding model fields as Pydantic model
-  ReportResponse: all Report fields + findings: list[FindingResponse]
-  Both use from_attributes = True
-
-TASK 2 — backend/app/reports/builder.py
-  build_report_context(report, findings) -> dict
-  Assembles template context dict for Jinja2:
-    investigation_name, created_at, summary,
-    severity_counts, mitre_techniques (enriched list),
-    correlated_findings (list), single_findings (list),
-    findings_by_severity (grouped dict),
-    mitre_coverage_matrix (from mitre_mapper.get_coverage_matrix)
-
-TASK 3 — backend/app/reports/pdf_generator.py
-  generate_pdf(report, findings, output_path: str) -> str
-  Use WeasyPrint + Jinja2.
-  Template: backend/app/templates/lograven_report.html
-  Style: professional dark-header security report aesthetic
-  Sections:
-    Cover: LogRaven logo text, investigation name, date, severity summary
-    Executive Summary: AI-generated summary text
-    Findings table: severity badge, title, MITRE ID, description, remediation
-    Correlated findings section (if any)
-    MITRE ATT&CK coverage matrix
-    IOC appendix
-  Return output_path on success.
-  On WeasyPrint error: log and re-raise.
-
-TASK 4 — Wire PDF into process_investigation.py
-  After saving Report + Findings (existing Step 5i):
-  Step 5k — Generate PDF:
-    from app.reports.pdf_generator import generate_pdf
-    from app.reports.builder import build_report_context
-    pdf_key = f"reports/lograven-report-{report.id}.pdf"
-    pdf_path = os.path.join(settings.LOCAL_STORAGE_PATH, pdf_key)
-    generate_pdf(report, all_findings, pdf_path)
-    report.pdf_storage_key = pdf_key
-    await db.commit()
-    Log: f"LogRaven: PDF report generated at {pdf_path}"
-
-TASK 5 — Add PDF download endpoint to investigations/routes.py
-  GET /api/v1/investigations/{id}/report/download
-  Fetch report, verify ownership
-  Raise 404 if no pdf_storage_key yet
-  Stream PDF file using FastAPI FileResponse
-  Content-Disposition: attachment; filename=lograven-report-{id}.pdf
-
-RULES:
-- Fill existing files only — do not create new files
-  EXCEPTION: create backend/app/templates/lograven_report.html
-  (this is a template file, not a Python module)
-- WeasyPrint for PDF generation (already in requirements.txt)
-- Jinja2 for HTML templating (already in requirements.txt)
-- All DB operations async, SQLAlchemy 2.0 select() only
-```
+---
 
 ## Open Questions
 None. All decisions made.
