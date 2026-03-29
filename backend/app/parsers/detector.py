@@ -39,12 +39,7 @@ def detect(file_path: str) -> str:
     # Phase 2 — read first 50 lines, check content
     lines_read = 0
     try:
-        try:
-            fh = open(file_path, "r", encoding="utf-8", errors="strict")
-        except UnicodeDecodeError:
-            fh = open(file_path, "r", encoding="latin-1")
-
-        with fh:
+        with open(file_path, "r", encoding="utf-8", errors="replace") as fh:
             for raw_line in fh:
                 line = raw_line.strip()
                 if not line:
@@ -71,5 +66,11 @@ def detect(file_path: str) -> str:
     # Phase 1 fallback if content scan found nothing conclusive
     if phase1:
         return phase1
+
+    # Last resort: any plain-text log file that isn't EVTX → try nginx parser
+    # (handles IIS W3C, Apache combined, generic access logs)
+    ext_lower = Path(file_path).suffix.lower()
+    if ext_lower in (".log", ".txt", ".access"):
+        return "nginx"
 
     raise UnknownLogTypeError(f"Could not detect log type for: {file_path}")

@@ -1,7 +1,6 @@
 # LogRaven — Windows Event Log Parser
 
 import csv
-import json
 from collections import defaultdict
 from datetime import datetime, timezone
 
@@ -32,83 +31,88 @@ class WindowsEventParser(BaseParser):
             events = self._parse_csv(file_path)
         return self._detect_patterns(events)
 
-    # ── EVTX parsing via pyevtx-rs ────────────────────────────────────────────
+    # ── EVTX parsing via python-evtx (XML API) ───────────────────────────────
+
+    _EVTX_NS = "http://schemas.microsoft.com/win/2004/08/events/event"
 
     def _parse_evtx(self, file_path: str) -> list[NormalizedEvent]:
+        import xml.etree.ElementTree as ET
+
+        # Try python-evtx (installed as Evtx.Evtx)
         try:
-            from evtx import PyEvtxParser
+            import Evtx.Evtx as evtx_lib
         except ImportError:
             logger.warning("evtx package not installed — falling back to CSV parser")
             return self._parse_csv(file_path)
 
+        ns  = self._EVTX_NS
+        tag = lambda name: "{%s}%s" % (ns, name)
+
         events: list[NormalizedEvent] = []
         try:
-            parser = PyEvtxParser(file_path)
-            for record in parser.records_json():
-                try:
-                    data = json.loads(record["data"])
-                    event = self._extract_evtx_event(data)
-                    if event:
+            with evtx_lib.Evtx(file_path) as log:
+                for record in log.records():
+                    try:
+                        xml_str = record.xml()
+                        root    = ET.fromstring(xml_str)
+
+                        sys_el = root.find(tag("System"))
+                        ed_el  = root.find(tag("EventData"))
+
+                        if sys_el is None:
+                            continue
+
+                        event_id = (sys_el.findtext(tag("EventID")) or "").strip()
+                        computer = sys_el.findtext(tag("Computer")) or ""
+                        time_raw = ""
+                        tc = sys_el.find(tag("TimeCreated"))
+                        if tc is not None:
+                            time_raw = tc.get("SystemTime") or ""
+
+                        ts = self._safe_parse_timestamp(
+                            time_raw.replace("Z", "").split(".")[0]
+                        ) if time_raw else None
+                        if ts is None:
+                            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+
+                        # Collect EventData fields as a flat dict
+                        extra: dict = {}
+                        if ed_el is not None:
+                            for d in ed_el.findall(tag("Data")):
+                                name  = d.get("Name")
+                                value = (d.text or "").strip()
+                                if name and value and value not in ("-", "None", ""):
+                                    extra[name] = value
+
+                        username = extra.get("TargetUserName") or extra.get("SubjectUserName") or None
+                        source_ip = extra.get("IpAddress") or extra.get("SourceAddress") or extra.get("WorkstationName") or None
+                        if source_ip in ("-", "::1", "127.0.0.1", "LOCAL", ""):
+                            source_ip = None
+
+                        # Strip IPv6-mapped IPv4 prefix
+                        if source_ip and source_ip.startswith("::ffff:"):
+                            source_ip = source_ip[7:]
+
+                        event_type = self.EVENT_TYPE_MAP.get(event_id, "other")
+                        raw = xml_str[:500]
+
+                        event = NormalizedEvent(
+                            timestamp=ts,
+                            source_type="windows_endpoint",
+                            hostname=normalize_entity(computer),
+                            username=normalize_entity(username),
+                            source_ip=normalize_entity(source_ip),
+                            event_type=event_type,
+                            event_id=event_id,
+                            raw_message=raw,
+                            extra_fields=extra,
+                        )
                         events.append(event)
-                except Exception as e:
-                    self._log_skip(str(record), f"evtx parse error: {e}")
+                    except Exception as e:
+                        self._log_skip(str(record)[:120], f"evtx record error: {e}")
         except Exception as e:
             logger.error("Failed to open evtx file %s: %s", file_path, e)
         return events
-
-    def _extract_evtx_event(self, data: dict) -> NormalizedEvent | None:
-        try:
-            system = data.get("Event", {}).get("System", {})
-            event_data = data.get("Event", {}).get("EventData", {}) or {}
-
-            event_id = str(system.get("EventID", {}).get("#text", system.get("EventID", "")) or "")
-            time_raw = system.get("TimeCreated", {}).get("#attributes", {}).get("SystemTime", "")
-            computer = system.get("Computer", "")
-
-            # Normalize timestamp — strip trailing Z or fractional seconds
-            ts = self._safe_parse_timestamp(time_raw.replace("Z", "").split(".")[0]) if time_raw else None
-            if ts is None:
-                ts = datetime.now(timezone.utc).replace(tzinfo=None)
-
-            username = (
-                event_data.get("TargetUserName")
-                or event_data.get("SubjectUserName")
-                or None
-            )
-            source_ip = event_data.get("IpAddress") or event_data.get("WorkstationName") or None
-            if source_ip in ("-", "::1", "127.0.0.1", "LOCAL"):
-                source_ip = None
-
-            raw = json.dumps(data)[:500]
-            event_type = self.EVENT_TYPE_MAP.get(event_id, "other")
-
-            # Populate extra_fields from EventData for YAML rule matching
-            extra: dict = {}
-            for k, v in event_data.items():
-                if v is None:
-                    continue
-                if isinstance(v, dict):
-                    # Handle {"#text": value} pattern from XML serialization
-                    text_val = v.get("#text")
-                    if text_val is not None:
-                        extra[k] = str(text_val)
-                elif isinstance(v, (str, int, float, bool)):
-                    extra[k] = str(v)
-
-            return NormalizedEvent(
-                timestamp=ts,
-                source_type="windows_endpoint",
-                hostname=normalize_entity(computer),
-                username=normalize_entity(username),
-                source_ip=normalize_entity(source_ip),
-                event_type=event_type,
-                event_id=event_id,
-                raw_message=raw,
-                extra_fields=extra,
-            )
-        except Exception as e:
-            self._log_skip(str(data)[:120], f"extract error: {e}")
-            return None
 
     # ── CSV parsing (Windows Event Viewer export) ─────────────────────────────
 

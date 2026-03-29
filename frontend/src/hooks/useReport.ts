@@ -1,7 +1,25 @@
 // LogRaven — useReport Hook
-// Fetches full report with all findings from GET /api/v1/reports/{id}
-// TODO Month 4 Week 1: Implement.
+// Fetches a full report by its report UUID from GET /api/v1/reports/{id}
+// Use this when you have the report's own ID (not the investigation ID).
+// For investigation-scoped report access, use investigationsApi.getReport(investigationId).
 
-export function useReport(_reportId: string) {
-  return { report: null, isLoading: true, error: null }
+import { useQuery } from '@tanstack/react-query'
+import { reportsApi } from '../api/reports'
+import type { Report } from '../types/report'
+
+export function useReport(reportId: string | null | undefined) {
+  const { data: report, isLoading, error } = useQuery<Report>({
+    queryKey: ['report', reportId],
+    queryFn: async () => {
+      const res = await reportsApi.get(reportId!)
+      return res.data
+    },
+    enabled: !!reportId,
+  })
+
+  return {
+    report: report ?? null,
+    isLoading,
+    error: error ?? null,
+  }
 }

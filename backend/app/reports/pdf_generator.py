@@ -45,9 +45,78 @@ def _write_with_weasyprint(html_content: str, css_path: str, output_path: str) -
         fh.write(pdf_bytes)
 
 
-def _write_with_xhtml2pdf(html_content: str, output_path: str) -> None:
+def _strip_xhtml2pdf_unsupported_css(css: str) -> str:
+    """
+    Remove CSS constructs that crash xhtml2pdf:
+    - @page { @bottom-* { ... } } margin box blocks (WeasyPrint-only)
+    - display: flex / inline-flex (not supported)
+
+    Uses brace-counting to correctly identify and remove nested @page blocks.
+    """
+    import re as _re
+
+    # ── Strip @page blocks that contain @bottom rules ─────────────────────────
+    result: list[str] = []
+    i = 0
+    while i < len(css):
+        if css[i:i+5] == "@page":
+            brace_start = css.find("{", i)
+            if brace_start == -1:
+                result.append(css[i:])
+                break
+            # Count braces to find the matching closing brace
+            depth = 0
+            j = brace_start
+            while j < len(css):
+                if css[j] == "{":
+                    depth += 1
+                elif css[j] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        block_end = j + 1
+                        block = css[i:block_end]
+                        if "@bottom" in block:
+                            # Skip this entire block
+                            pass
+                        else:
+                            result.append(block)
+                        i = block_end
+                        break
+                j += 1
+            else:
+                result.append(css[i:])
+                break
+        else:
+            result.append(css[i])
+            i += 1
+
+    stripped = "".join(result)
+
+    # ── Replace flex layout (xhtml2pdf ignores flex and misrenders) ───────────
+    stripped = stripped.replace("display: flex;", "display: block;")
+    stripped = stripped.replace("display: inline-flex;", "display: inline-block;")
+
+    return stripped
+
+
+def _write_with_xhtml2pdf(html_content: str, css_path: str, output_path: str) -> None:
     """Render PDF using xhtml2pdf (pure Python — works on Windows)."""
     from xhtml2pdf import pisa
+
+    # xhtml2pdf cannot resolve relative <link href="..."> paths — inline the CSS.
+    # Also strip WeasyPrint-only rules that crash xhtml2pdf.
+    try:
+        with open(css_path, "r", encoding="utf-8") as fh:
+            css_text = fh.read()
+
+        css_text = _strip_xhtml2pdf_unsupported_css(css_text)
+
+        html_content = html_content.replace(
+            '<link rel="stylesheet" href="lograven_report.css">',
+            f"<style>{css_text}</style>",
+        )
+    except Exception:
+        pass  # proceed unstyled if CSS file unreadable
 
     with open(output_path, "wb") as fh:
         result = pisa.CreatePDF(html_content, dest=fh, encoding="utf-8")
@@ -88,6 +157,6 @@ def generate_pdf(report, findings: list, output_dir: str) -> str:
         logger.warning("WeasyPrint unavailable (%s) — falling back to xhtml2pdf", wp_err)
 
     # ── Fall back to xhtml2pdf ────────────────────────────────────────────────
-    _write_with_xhtml2pdf(html_content, output_path)
+    _write_with_xhtml2pdf(html_content, css_path, output_path)
     logger.info("LogRaven PDF [xhtml2pdf]: %s (%d bytes)", output_path, os.path.getsize(output_path))
     return output_path

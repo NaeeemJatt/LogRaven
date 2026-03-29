@@ -72,6 +72,7 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
 
             all_events = []
             primary_log_type: str | None = None
+            file_events_map: dict[str, list] = {}   # keyed by filename for correlation
 
             # ── Step 3: Parse files ───────────────────────────────────────────
             _banner("STEP 2 / 7  —  Parse Log Files")
@@ -114,6 +115,7 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                     await db.commit()
                     logger.info("  parsed: %d events from %s", len(events), inv_file.filename)
                     all_events.extend(events)
+                    file_events_map[inv_file.filename] = events
 
                 except Exception as file_exc:
                     logger.error("  ERROR parsing %s: %s", inv_file.filename, file_exc, exc_info=True)
@@ -139,16 +141,10 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
             _banner("STEP 4 / 7  —  Correlation Engine")
             correlation_summary: list = []
             try:
-                if len(investigation.files) >= 2:
+                if len(file_events_map) >= 2:
                     from app.correlation.engine import correlate
-                    events_by_file: dict = {}
-                    for event in all_events:
-                        st = event.source_type or "unknown"
-                        if st not in events_by_file:
-                            events_by_file[st] = []
-                        events_by_file[st].append(event)
                     correlation_summary = correlate(
-                        str(investigation.id), events_by_file
+                        str(investigation.id), file_events_map
                     )
                     chains_count = len(correlation_summary) if isinstance(correlation_summary, list) else 0
                     logger.info("  chains : %d cross-source chains found", chains_count)

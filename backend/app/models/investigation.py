@@ -44,4 +44,4 @@ class Investigation(Base):
 
     user:   Mapped["User"]                       = relationship("User",              back_populates="investigations")
     files:  Mapped[list["InvestigationFile"]]    = relationship("InvestigationFile", back_populates="investigation", cascade="all, delete-orphan")
-    report: Mapped["Report | None"]             = relationship("Report",            back_populates="investigation", uselist=False)
+    report: Mapped["Report | None"]             = relationship("Report",            back_populates="investigation", uselist=False, cascade="all, delete-orphan")

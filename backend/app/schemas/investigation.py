@@ -11,7 +11,7 @@
 #
 # TODO Month 1 Week 3: Implement this file.
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
 from typing import Optional, List
@@ -29,8 +29,7 @@ class InvestigationFileResponse(BaseModel):
     status: str
     event_count: Optional[int]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvestigationResponse(BaseModel):
@@ -41,8 +40,7 @@ class InvestigationResponse(BaseModel):
     files: List[InvestigationFileResponse] = []
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class InvestigationStatusResponse(BaseModel):

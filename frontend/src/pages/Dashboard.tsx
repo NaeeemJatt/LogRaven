@@ -1,8 +1,10 @@
 // LogRaven — Dashboard Page
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Navbar from '../components/layout/Navbar'
 import Badge from '../components/ui/Badge'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import { investigationsApi } from '../api/investigations'
 import type { Investigation } from '../types/investigation'
 
@@ -22,6 +24,9 @@ export default function Dashboard() {
   const navigate    = useNavigate()
   const queryClient = useQueryClient()
 
+  const [deleteTarget, setDeleteTarget] = useState<Investigation | null>(null)
+  const [deleting, setDeleting]         = useState(false)
+
   const { data, isLoading, error } = useQuery<Investigation[]>({
     queryKey: ['investigations'],
     queryFn: async () => {
@@ -30,10 +35,16 @@ export default function Dashboard() {
     },
   })
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this investigation?')) return
-    await investigationsApi.delete(id)
-    queryClient.invalidateQueries({ queryKey: ['investigations'] })
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await investigationsApi.delete(deleteTarget.id)
+      queryClient.invalidateQueries({ queryKey: ['investigations'] })
+    } finally {
+      setDeleting(false)
+      setDeleteTarget(null)
+    }
   }
 
   return (
@@ -123,7 +134,7 @@ export default function Dashboard() {
                         </>
                       )}
                       <button
-                        onClick={() => handleDelete(inv.id)}
+                        onClick={() => setDeleteTarget(inv)}
                         className="text-raven-400 text-xs hover:text-red-400 transition-colors"
                       >
                         delete
@@ -136,6 +147,16 @@ export default function Dashboard() {
           </table>
         </div>
       </main>
+
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        title="Delete Investigation"
+        message={`"${deleteTarget?.name}" and all its files and findings will be permanently deleted.`}
+        confirmLabel="Delete"
+        isLoading={deleting}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   )
 }

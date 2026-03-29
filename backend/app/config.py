@@ -13,6 +13,7 @@
 # TODO Month 1 Week 1: Implement this file.
 
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 from typing import Literal
 from pathlib import Path
 
@@ -62,9 +63,7 @@ class Settings(BaseSettings):
     AI_CEILING_PRO: int = 10000
     AI_CEILING_TEAM: int = 50000
 
-    class Config:
-        env_file = str(_ENV_FILE)
-        case_sensitive = True
+    model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True)
 
 
 settings = Settings()

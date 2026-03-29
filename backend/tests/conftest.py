@@ -1,0 +1,45 @@
+import sys
+import os
+from unittest.mock import MagicMock, patch
+
+# Add backend root to path so `from app.xxx` works
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+# ---------------------------------------------------------------------------
+# Stub out pydantic-settings before any app module is imported.
+# This prevents Settings() from failing on missing .env / DATABASE_URL.
+# ---------------------------------------------------------------------------
+_mock_settings = MagicMock()
+_mock_settings.DATABASE_URL         = "postgresql://test:test@localhost/test"
+_mock_settings.REDIS_URL            = "redis://localhost:6379"
+_mock_settings.JWT_SECRET_KEY       = "test-secret"
+_mock_settings.JWT_ALGORITHM        = "HS256"
+_mock_settings.ACCESS_TOKEN_EXPIRE_MINUTES  = 15
+_mock_settings.REFRESH_TOKEN_EXPIRE_DAYS    = 7
+_mock_settings.STORAGE_BACKEND     = "local"
+_mock_settings.LOCAL_STORAGE_PATH  = "./local"
+_mock_settings.GEMINI_API_KEY      = "test-gemini-key"
+_mock_settings.ANTHROPIC_API_KEY   = ""
+_mock_settings.OPENAI_API_KEY      = ""
+_mock_settings.LICENSE_KEY         = ""
+_mock_settings.LICENSE_BYPASS_DEV  = True
+_mock_settings.DEBUG               = False
+_mock_settings.APP_NAME            = "LogRaven"
+_mock_settings.APP_VERSION         = "1.0.0"
+_mock_settings.AWS_ACCESS_KEY_ID   = ""
+_mock_settings.AWS_SECRET_ACCESS_KEY = ""
+_mock_settings.AWS_REGION          = "eu-west-1"
+_mock_settings.S3_BUCKET_NAME      = "test-bucket"
+_mock_settings.AI_CEILING_FREE     = 2000
+_mock_settings.AI_CEILING_PRO      = 10000
+_mock_settings.AI_CEILING_TEAM     = 50000
+
+# Patch before any app imports resolve settings
+patch("app.config.settings", _mock_settings).start()
+
+# Also patch dependencies that try to create a real engine at import time
+import unittest.mock as _mock
+_fake_engine = _mock.MagicMock()
+_fake_session_maker = _mock.MagicMock()
+patch("app.dependencies.engine", _fake_engine).start()
+patch("app.dependencies.AsyncSessionLocal", _fake_session_maker).start()
