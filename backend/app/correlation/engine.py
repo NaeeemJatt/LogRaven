@@ -8,18 +8,24 @@
 # MAIN FUNCTION:
 #   analyze(investigation_id, events_by_file) -> List[CorrelatedChain]
 #
-#   events_by_file: dict of {source_type: List[NormalizedEvent]}
+#   events_by_file: dict of {filename: List[NormalizedEvent]}
+#
+#   Keys MUST be unique per uploaded file (filename is the correct choice).
+#   Do NOT key by source_type — multiple files of the same type (e.g. two
+#   .evtx uploads) would collapse into a single bucket, making the 2-source
+#   check always fail and producing zero chains.
 #
 #   ALGORITHM:
 #     1. entity_extractor.extract_all(events_by_file)
 #        -> {entity_value: List[EntityOccurrence]}
-#     2. Filter: keep entities appearing in 2+ different source_type files
+#        (EntityOccurrence.source_type == the filename key)
+#     2. Filter: keep entities appearing in 2+ different file keys
 #     3. For each qualifying entity:
 #        chain_builder.build_chain(entity, occurrences, time_window=300)
 #        -> List[CorrelatedChain]
 #     4. Score each chain:
-#        - 2 source types: High
-#        - 3+ source types: Critical (regardless of individual event severity)
+#        - 2 source files: High
+#        - 3+ source files: Critical (regardless of individual event severity)
 #     5. Return sorted List[CorrelatedChain] by score descending
 #
 # SINGLE FILE BEHAVIOR:
@@ -46,20 +52,20 @@ def analyze(investigation_id: str, events_by_file: dict) -> list:
     # Step 1: extract all entities across every source file
     occurrences_map = extract_all(events_by_file)
     logger.info(
-        "correlation [%s]: %d distinct entities extracted from %d source types",
+        "correlation [%s]: %d distinct entities extracted from %d source files",
         investigation_id[:8],
         len(occurrences_map),
         len(events_by_file),
     )
 
-    # Step 2: keep only entities that appear in 2+ distinct source types
+    # Step 2: keep only entities that appear in 2+ distinct source files
     qualifying: dict[str, list] = {
         entity: occs
         for entity, occs in occurrences_map.items()
         if len({occ.source_type for occ in occs}) >= 2
     }
     logger.info(
-        "correlation [%s]: %d entities qualify (present in 2+ source types)",
+        "correlation [%s]: %d entities qualify (present in 2+ source files)",
         investigation_id[:8],
         len(qualifying),
     )
