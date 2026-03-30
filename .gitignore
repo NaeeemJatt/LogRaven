@@ -49,3 +49,5 @@ logs/
 # Secrets
 *.pem
 *.key
+
+test-data/

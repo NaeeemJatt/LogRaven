@@ -1,7 +1,8 @@
-// LogRaven — Report Page
+// LogRaven — Security report (matches dashboard chrome)
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { ChevronLeft, Download } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import FindingCard from '../components/reports/FindingCard'
 import { investigationsApi } from '../api/investigations'
@@ -19,22 +20,47 @@ function uniqueIocs(findings: Finding[]): string[] {
   for (const f of findings)
     for (const ioc of f.iocs ?? []) {
       const s = String(ioc).trim()
-      if (s && !seen.has(s)) { seen.add(s); out.push(s) }
+      if (s && !seen.has(s)) {
+        seen.add(s)
+        out.push(s)
+      }
     }
   return out
 }
 
-function SectionHeader({ label }: { label: string }) {
+function SectionHeader({ label, subtitle }: { label: string; subtitle?: string }) {
   return (
-    <div className="flex items-center gap-3 mb-4 mt-8">
-      <div className="w-0.5 h-4 bg-electric-500" />
-      <span className="text-raven-400 text-xs uppercase tracking-widest font-medium">{label}</span>
+    <div className="mb-4 mt-10 first:mt-0">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="h-5 w-1 rounded-full bg-electric-500" />
+        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-electric-400/90">
+          {label}
+        </span>
+      </div>
+      {subtitle && <p className="text-sm text-raven-500 pl-4">{subtitle}</p>}
+    </div>
+  )
+}
+
+function StatCard({
+  label,
+  value,
+  valueClass,
+}: {
+  label: string
+  value: number
+  valueClass: string
+}) {
+  return (
+    <div className="rounded-xl border border-raven-700 bg-raven-800/80 p-5 shadow-lg shadow-black/10">
+      <p className={`text-3xl font-bold tabular-nums ${valueClass}`}>{value}</p>
+      <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-raven-500">{label}</p>
     </div>
   )
 }
 
 export default function Report() {
-  const { id }   = useParams<{ id: string }>()
+  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [pdfLoading, setPdfLoading] = useState(false)
 
@@ -56,109 +82,123 @@ export default function Report() {
     }
   }
 
-  if (isLoading) return (
-    <div className="min-h-screen bg-raven-900"><Navbar />
-      <div className="flex items-center justify-center py-32 text-raven-400 text-sm font-mono">Loading report...</div>
-    </div>
-  )
-
-  if (error || !report) return (
-    <div className="min-h-screen bg-raven-900"><Navbar />
-      <div className="flex flex-col items-center justify-center py-32 gap-3">
-        <p className="text-red-400 text-sm font-mono">— Report not available.</p>
-        <button
-          onClick={() => navigate(`/investigations/${id}/status`)}
-          className="text-raven-400 text-xs hover:text-electric-500 transition-colors"
-        >
-          Check analysis status →
-        </button>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-raven-950">
+        <Navbar />
+        <div className="flex items-center justify-center py-32">
+          <div
+            className="h-10 w-10 rounded-full border-2 border-raven-700 border-t-electric-500 animate-spin"
+            aria-hidden
+          />
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (error || !report) {
+    return (
+      <div className="min-h-screen bg-raven-950">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center py-32 gap-3 px-4">
+          <p className="text-red-400 text-sm font-mono text-center">Report not available.</p>
+          <button
+            type="button"
+            onClick={() => navigate(`/investigations/${id}/status`)}
+            className="text-sm text-electric-400 hover:text-electric-300 transition-colors"
+          >
+            Check analysis status →
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   const allFindings: Finding[] = report.findings ?? []
   const correlated = allFindings.filter((f) => f.finding_type === 'correlated')
-  const single     = sortBySeverity(allFindings.filter((f) => f.finding_type !== 'correlated'))
-  const iocs       = uniqueIocs(allFindings)
-  const counts     = report.severity_counts ?? {}
+  const single = sortBySeverity(allFindings.filter((f) => f.finding_type !== 'correlated'))
+  const iocs = uniqueIocs(allFindings)
+  const counts = report.severity_counts ?? {}
 
   return (
-    <div className="min-h-screen bg-raven-900">
+    <div className="min-h-screen bg-raven-950 text-raven-200">
       <Navbar />
 
-      <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Top bar */}
-        <div className="flex items-start justify-between mb-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between mb-10">
           <div>
             <button
+              type="button"
               onClick={() => navigate('/dashboard')}
-              className="text-raven-400 text-xs hover:text-electric-500 transition-colors mb-2 block"
+              className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-4"
             >
-              ← Investigations
+              <ChevronLeft className="h-4 w-4" />
+              Investigations
             </button>
-            <h1 className="text-white text-xl font-semibold">Security Report</h1>
-            <p className="text-raven-400 text-xs font-mono mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">Security report</h1>
+            <p className="text-raven-500 text-sm font-mono mt-2">
               {new Date(report.created_at).toLocaleString('en-GB')}
             </p>
           </div>
           <button
+            type="button"
             onClick={handleDownloadPdf}
             disabled={pdfLoading}
-            className="border border-electric-500 text-electric-500 text-xs px-4 py-2 rounded-none hover:bg-electric-900 disabled:opacity-50 transition-colors uppercase tracking-wide flex-shrink-0"
+            className="inline-flex items-center justify-center gap-2 self-start rounded-lg border border-electric-500/60 bg-electric-500/10 px-5 py-2.5 text-sm font-semibold text-electric-400 hover:bg-electric-500/15 hover:border-electric-400 disabled:opacity-50 transition-colors shrink-0"
           >
-            {pdfLoading ? 'Loading...' : 'Download PDF'}
+            <Download className="h-4 w-4" />
+            {pdfLoading ? 'Preparing…' : 'Download PDF'}
           </button>
         </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          {[
-            { label: 'Total',    value: allFindings.length,     color: 'text-raven-200' },
-            { label: 'Critical', value: counts.critical ?? 0,   color: 'text-red-400' },
-            { label: 'High',     value: counts.high ?? 0,       color: 'text-orange-400' },
-            { label: 'Medium',   value: counts.medium ?? 0,     color: 'text-yellow-400' },
-          ].map(({ label, value, color }) => (
-            <div key={label} className="bg-raven-800 border border-raven-700 p-4">
-              <p className={`text-2xl font-mono font-bold ${color}`}>{value}</p>
-              <p className="text-raven-400 text-xs uppercase tracking-widest mt-1">{label}</p>
-            </div>
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard label="Total" value={allFindings.length} valueClass="text-white" />
+          <StatCard label="Critical" value={counts.critical ?? 0} valueClass="text-red-400" />
+          <StatCard label="High" value={counts.high ?? 0} valueClass="text-orange-400" />
+          <StatCard label="Medium" value={counts.medium ?? 0} valueClass="text-yellow-400" />
         </div>
 
-        {/* Executive summary */}
         {report.summary && (
-          <div className="bg-raven-800 border border-raven-700 px-5 py-4 mt-6">
-            <p className="text-raven-400 text-xs uppercase tracking-widest mb-2">Summary</p>
-            <p className="text-raven-300 text-sm leading-relaxed">{report.summary}</p>
+          <div className="rounded-xl border border-raven-700 bg-raven-900/80 px-6 py-5 mb-10 shadow-lg shadow-black/15">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-raven-500 mb-3">Summary</p>
+            <p className="text-raven-200 text-sm leading-relaxed">{report.summary}</p>
           </div>
         )}
 
-        {/* Correlated findings */}
         {correlated.length > 0 && (
           <>
-            <SectionHeader label="Correlated Findings" />
-            <p className="text-raven-600 text-xs mb-3">
-              These findings span multiple log sources — highest confidence attack indicators.
-            </p>
-            {correlated.map((f) => <FindingCard key={f.id} finding={f} />)}
+            <SectionHeader
+              label="Correlated findings"
+              subtitle="These findings span multiple log sources — highest-confidence attack indicators."
+            />
+            <div className="space-y-3">
+              {correlated.map((f) => (
+                <FindingCard key={f.id} finding={f} />
+              ))}
+            </div>
           </>
         )}
 
-        {/* Individual findings */}
         {single.length > 0 && (
           <>
-            <SectionHeader label="Individual Findings" />
-            {single.map((f) => <FindingCard key={f.id} finding={f} />)}
+            <SectionHeader label="Individual findings" />
+            <div className="space-y-3">
+              {single.map((f) => (
+                <FindingCard key={f.id} finding={f} />
+              ))}
+            </div>
           </>
         )}
 
-        {/* MITRE techniques */}
         {report.mitre_techniques && report.mitre_techniques.length > 0 && (
           <>
             <SectionHeader label="MITRE ATT&CK" />
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {report.mitre_techniques.map((t: string) => (
-                <span key={t} className="bg-raven-800 border border-raven-700 px-2 py-0.5 text-electric-400 font-mono text-xs rounded-none">
+                <span
+                  key={t}
+                  className="rounded-lg border border-raven-600 bg-raven-800/80 px-3 py-1.5 text-electric-400 font-mono text-xs"
+                >
                   {t}
                 </span>
               ))}
@@ -166,13 +206,15 @@ export default function Report() {
           </>
         )}
 
-        {/* IOCs */}
         {iocs.length > 0 && (
           <>
             <SectionHeader label={`Extracted IOCs (${iocs.length})`} />
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-2">
               {iocs.map((ioc, i) => (
-                <span key={i} className="bg-raven-900 border border-raven-700 px-2 py-0.5 text-electric-400 font-mono text-xs rounded-none">
+                <span
+                  key={i}
+                  className="rounded-lg border border-electric-500/25 bg-raven-800/60 px-3 py-1.5 text-electric-300 font-mono text-xs"
+                >
                   {ioc}
                 </span>
               ))}
@@ -180,22 +222,24 @@ export default function Report() {
           </>
         )}
 
-        {/* No findings */}
         {allFindings.length === 0 && (
-          <div className="border border-raven-700 bg-raven-800 p-10 text-center mt-8">
-            <p className="text-raven-400 text-sm">No findings generated.</p>
-            <p className="text-raven-600 text-xs font-mono mt-1">AI analysis may have been skipped or found no threats.</p>
+          <div className="rounded-xl border border-raven-700 bg-raven-800/40 px-8 py-14 text-center mt-8">
+            <p className="text-raven-300 text-sm">No findings generated.</p>
+            <p className="text-raven-600 text-xs font-mono mt-2">
+              AI analysis may have been skipped or found no threats.
+            </p>
           </div>
         )}
 
-        {/* Download CTA */}
-        <div className="flex justify-center mt-10 mb-4">
+        <div className="flex justify-center mt-12 mb-6">
           <button
+            type="button"
             onClick={handleDownloadPdf}
             disabled={pdfLoading}
-            className="border border-electric-500 text-electric-500 text-xs px-8 py-2.5 rounded-none hover:bg-electric-900 disabled:opacity-50 transition-colors uppercase tracking-widest"
+            className="inline-flex items-center gap-2 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-50 text-raven-950 font-semibold text-sm px-8 py-3 transition-colors"
           >
-            {pdfLoading ? 'Loading...' : 'Download Full PDF Report'}
+            <Download className="h-4 w-4" />
+            {pdfLoading ? 'Preparing…' : 'Download full PDF report'}
           </button>
         </div>
       </main>

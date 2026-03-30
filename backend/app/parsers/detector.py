@@ -9,7 +9,7 @@ _SYSLOG_RFC3164 = re.compile(
     r"^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}\s"
 )
 _NGINX_COMBINED = re.compile(
-    r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3} - - \["
+    r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}[^\[]*\["
 )
 
 
@@ -17,7 +17,7 @@ def detect(file_path: str) -> str:
     """
     Detect the log type of a file.
     Phase 1: extension hint. Phase 2: content scan (always wins).
-    Returns: windows_event | syslog | cloudtrail | nginx
+    Returns: windows_event | syslog | cloudtrail | nginx | iis
     Raises: UnknownLogTypeError
     """
     path = Path(file_path)
@@ -55,6 +55,12 @@ def detect(file_path: str) -> str:
                 if '"eventSource"' in line and '"eventName"' in line:
                     return "cloudtrail"
 
+                # IIS W3C Extended Log Format — directive lines come first
+                if line.startswith("#Software: Microsoft Internet Information Services"):
+                    return "iis"
+                if line.startswith("#Fields:") and "cs-method" in line.lower():
+                    return "iis"
+
                 if _NGINX_COMBINED.match(line):
                     return "nginx"
 
@@ -67,8 +73,8 @@ def detect(file_path: str) -> str:
     if phase1:
         return phase1
 
-    # Last resort: any plain-text log file that isn't EVTX → try nginx parser
-    # (handles IIS W3C, Apache combined, generic access logs)
+    # Last resort: any plain-text log file → try web server parser
+    # (handles Apache combined, IIS W3C, generic access logs)
     ext_lower = Path(file_path).suffix.lower()
     if ext_lower in (".log", ".txt", ".access"):
         return "nginx"

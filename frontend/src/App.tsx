@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore'
 
 import Login           from './pages/Auth/Login'
 import Register        from './pages/Auth/Register'
+import Landing         from './pages/Landing'
 import Dashboard       from './pages/Dashboard'
 import NewInvestigation from './pages/NewInvestigation'
 import Investigation   from './pages/Investigation'
@@ -22,6 +23,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         {/* Public */}
+        <Route path="/"         element={<Landing />} />
         <Route path="/login"    element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -42,8 +44,8 @@ export default function App() {
           <ProtectedRoute><Report /></ProtectedRoute>
         } />
 
-        {/* Default */}
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        {/* Unknown paths → home (marketing); authenticated users use /dashboard from UI */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )

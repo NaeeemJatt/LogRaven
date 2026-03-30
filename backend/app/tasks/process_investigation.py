@@ -81,6 +81,7 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 "syslog":        SyslogParser,
                 "cloudtrail":    CloudTrailParser,
                 "nginx":         NginxParser,
+                "iis":           NginxParser,   # NginxParser handles IIS W3C internally
             }
 
             for inv_file in investigation.files:
