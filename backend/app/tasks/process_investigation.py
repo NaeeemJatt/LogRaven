@@ -339,6 +339,9 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 if investigation:
                     investigation.status = "failed"
                     investigation.error_message = str(exc)[:500]
+                    # Keep last committed stage for UI; default so API never emits an unknown stage
+                    if investigation.progress_stage is None:
+                        investigation.progress_stage = "queued"
                     await db.commit()
                     try:
                         from app.services.notification_service import send_job_failed

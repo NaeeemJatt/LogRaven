@@ -1,0 +1,17 @@
+# Editable install: from this folder run  pip install -e .
+# Then `import app` works from any cwd (fixes uvicorn from backend\backend, etc.).
+# Dev deps stay in requirements.txt — this only registers the package.
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lograven-backend"
+version = "1.0.0"
+requires-python = ">=3.11"
+description = "LogRaven FastAPI backend"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
