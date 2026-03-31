@@ -46,6 +46,6 @@ class InvestigationResponse(BaseModel):
 class InvestigationStatusResponse(BaseModel):
     id: UUID
     status: str
-    progress_stage: Optional[str]  # queued/parsing/rule_engine/correlation/ai_analysis/building_report/complete/failed
+    progress_stage: Optional[str]  # queued/parsing/rule_engine/correlation/ai_analysis/building_report/complete (last step if failed)
     error_message: Optional[str] = None
     files: List[InvestigationFileResponse] = []

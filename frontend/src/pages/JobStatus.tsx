@@ -27,6 +27,13 @@ const STAGE_INDEX: Record<string, number> = {
 
 function progressToIndex(progressStage: string | null | undefined, status: string): number {
   if (status === 'complete') return 7
+  if (status === 'failed') {
+    // Highlight the last known pipeline step (ignore legacy "failed" or unknown strings)
+    const raw = progressStage?.trim() || 'queued'
+    const n = STAGE_INDEX[raw]
+    if (n !== undefined && n >= 0) return n
+    return 0
+  }
   const stage =
     progressStage ||
     (status === 'queued' ? 'queued' : status === 'processing' ? 'parsing' : 'queued')

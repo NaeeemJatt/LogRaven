@@ -34,7 +34,8 @@ def _effective_progress_stage(status: str) -> str:
     if status == "complete":
         return "complete"
     if status == "failed":
-        return "failed"
+        # Must match frontend STAGE_INDEX keys — never return a bare "failed" stage
+        return "queued"
     return "queued"
 
 
