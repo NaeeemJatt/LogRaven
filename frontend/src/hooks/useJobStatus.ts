@@ -1,4 +1,4 @@
-// LogRaven — useJobStatus Polling Hook
+// LogRaven — useJobStatus polling (uses backend progress_stage for live pipeline)
 import { useQuery } from '@tanstack/react-query'
 import { investigationsApi } from '../api/investigations'
 import type { InvestigationStatus } from '../types/investigation'
@@ -13,21 +13,25 @@ export function useJobStatus(investigationId: string | null) {
       return res.data
     },
     enabled: investigationId !== null,
-    refetchInterval: (query) => {
-      const status = query.state.data?.status
-      if (status && TERMINAL.includes(status)) return false
-      return 3000
+    refetchInterval: (q) => {
+      const st = q.state.data?.status
+      if (st && TERMINAL.includes(st)) return false
+      return 2000
     },
   })
 
   const status = query.data?.status ?? 'queued'
-  const files  = query.data?.files  ?? []
+  const progressStage = query.data?.progress_stage ?? null
+  const files = query.data?.files ?? []
+  const errorMessage = query.data?.error_message ?? null
 
   return {
     status,
+    progressStage,
+    errorMessage,
     files,
-    isLoading:  query.isLoading,
+    isLoading: query.isLoading,
     isComplete: status === 'complete',
-    isFailed:   status === 'failed',
+    isFailed: status === 'failed',
   }
 }

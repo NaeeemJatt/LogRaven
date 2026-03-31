@@ -35,6 +35,7 @@ class Investigation(Base):
     user_id:             Mapped[uuid.UUID]         = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
     name:                Mapped[str]               = mapped_column(String(200), nullable=False)
     status:              Mapped[str]               = mapped_column(String(20), nullable=False, default="draft")
+    progress_stage:      Mapped[str | None]        = mapped_column(String(64), nullable=True)
     correlation_enabled: Mapped[bool]              = mapped_column(Boolean, default=True)
     time_window_start:   Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
     time_window_end:     Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)

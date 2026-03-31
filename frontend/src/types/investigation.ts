@@ -22,5 +22,6 @@ export interface InvestigationStatus {
   id: string
   status: string
   progress_stage: string | null
+  error_message?: string | null
   files: InvestigationFile[]
 }

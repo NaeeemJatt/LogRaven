@@ -17,11 +17,25 @@ from app.schemas.investigation import (
     InvestigationResponse,
     InvestigationStatusResponse,
 )
+from app.api.reports.helpers import build_report_response
 from app.models.finding import Finding
-from app.models.report import Report
+from app.services import report_service
 from app.utils.storage import StorageBackend
 
 router = APIRouter()
+
+
+def _effective_progress_stage(status: str) -> str:
+    """Fallback when progress_stage column is unset (legacy rows)."""
+    if status == "queued":
+        return "queued"
+    if status == "processing":
+        return "parsing"
+    if status == "complete":
+        return "complete"
+    if status == "failed":
+        return "failed"
+    return "queued"
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -131,7 +145,7 @@ async def upload_file(
     db: AsyncSession = Depends(get_db),
     storage: StorageBackend = Depends(get_storage),
 ):
-    from app.api.investigations.validators import ALLOWED_EXTENSIONS, TIER_SIZE_LIMITS, VALID_SOURCE_TYPES
+    from app.api.investigations.validators import VALID_SOURCE_TYPES, validate_file_upload
 
     inv = await _get_investigation_or_404(investigation_id, current_user, db)
     if inv.status not in ("draft",):
@@ -140,18 +154,9 @@ async def upload_file(
     if source_type not in VALID_SOURCE_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid source_type. Must be one of: {sorted(VALID_SOURCE_TYPES)}")
 
-    filename = file.filename or "upload"
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"File type .{ext} not allowed. Allowed: {sorted(ALLOWED_EXTENSIONS)}")
+    await validate_file_upload(file, current_user.tier)
 
-    size_limit = TIER_SIZE_LIMITS.get(current_user.tier, TIER_SIZE_LIMITS["free"])
-    if file.size is not None and file.size > size_limit:
-        raise HTTPException(
-            status_code=400,
-            detail=f"File exceeds size limit for your tier. "
-                   f"Max: {size_limit // (1024 * 1024)}MB"
-        )
+    filename = file.filename or "upload"
     file_id = uuid.uuid4()
     storage_key = f"uploads/{investigation_id}/{file_id}_{filename}"
 
@@ -179,6 +184,7 @@ async def delete_file(
     file_id: uuid.UUID,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
 ):
     inv = await _get_investigation_or_404(investigation_id, current_user, db)
     if inv.status != "draft":
@@ -194,6 +200,7 @@ async def delete_file(
     if inv_file is None:
         raise HTTPException(status_code=404, detail="File not found")
 
+    await storage.delete_file(inv_file.storage_key)
     await db.delete(inv_file)
     await db.commit()
 
@@ -219,6 +226,7 @@ async def analyze_investigation(
         )
 
     inv.status = "queued"
+    inv.progress_stage = "queued"
     await db.commit()
 
     from app.tasks.process_investigation import _run_pipeline
@@ -236,10 +244,11 @@ async def get_investigation_status(
     db: AsyncSession = Depends(get_db),
 ):
     inv = await _get_investigation_or_404(investigation_id, current_user, db, load_files=True)
+    effective_stage = inv.progress_stage or _effective_progress_stage(inv.status)
     return InvestigationStatusResponse(
         id=inv.id,
         status=inv.status,
-        progress_stage=inv.status,
+        progress_stage=effective_stage,
         error_message=inv.error_message,
         files=[
             InvestigationFileResponse(
@@ -263,46 +272,11 @@ async def get_report(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    # Verify ownership
     await _get_investigation_or_404(investigation_id, current_user, db)
-
-    result = await db.execute(
-        select(Report)
-        .options(selectinload(Report.findings))
-        .where(Report.investigation_id == investigation_id)
+    report, findings = await report_service.get_report_by_investigation(
+        investigation_id, current_user.id, db
     )
-    report = result.scalar_one_or_none()
-    if report is None:
-        raise HTTPException(status_code=404, detail="Report not ready yet. Run /analyze first.")
-
-    findings_out = [
-        {
-            "id": str(f.id),
-            "severity": f.severity,
-            "title": f.title,
-            "description": f.description,
-            "mitre_technique_id": f.mitre_technique_id,
-            "mitre_technique_name": f.mitre_technique_name,
-            "mitre_tactic": f.mitre_tactic,
-            "iocs": f.iocs,
-            "remediation": f.remediation,
-            "finding_type": f.finding_type,
-            "confidence": f.confidence,
-        }
-        for f in report.findings
-    ]
-
-    return {
-        "id": str(report.id),
-        "investigation_id": str(report.investigation_id),
-        "summary": report.summary,
-        "severity_counts": report.severity_counts,
-        "mitre_techniques": report.mitre_techniques,
-        "correlated_findings": report.correlated_findings,
-        "single_source_findings": report.single_source_findings,
-        "findings": findings_out,
-        "created_at": report.created_at.isoformat(),
-    }
+    return build_report_response(report, findings)
 
 
 # ── GET /api/v1/investigations/{id}/report/download ──────────────────────────
@@ -315,24 +289,13 @@ async def download_report_pdf(
     storage: StorageBackend = Depends(get_storage),
 ):
     await _get_investigation_or_404(investigation_id, current_user, db)
-
-    result = await db.execute(
-        select(Report).where(Report.investigation_id == investigation_id)
+    report = await report_service.get_report_row_for_investigation(
+        investigation_id, current_user.id, db
     )
-    report = result.scalar_one_or_none()
-    if report is None:
-        raise HTTPException(status_code=404, detail="Report not ready yet. Run /analyze first.")
-
-    if not report.pdf_storage_key:
+    payload = report_service.pdf_download_payload(report, storage)
+    if payload is None:
         raise HTTPException(
             status_code=404,
             detail="PDF not generated yet. Try again or re-run analysis.",
         )
-
-    download_url = storage.get_download_url(report.pdf_storage_key)
-
-    return {
-        "download_url": download_url,
-        "filename": f"lograven-report-{str(report.id)[:8]}.pdf",
-        "expires_in": 86400,
-    }
+    return payload

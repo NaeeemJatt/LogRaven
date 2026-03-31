@@ -3,6 +3,7 @@
 import asyncio
 import os
 import traceback
+from pathlib import Path
 from collections import Counter
 from datetime import datetime
 
@@ -15,6 +16,14 @@ from app.utils.logger import get_logger
 logger = get_logger("lograven.pipeline")
 
 _SEP = "─" * 55
+
+
+async def _commit_progress(db, investigation, stage: str, *, status: str | None = None) -> None:
+    """Persist progress so GET /status polling shows live pipeline position."""
+    if status is not None:
+        investigation.status = status
+    investigation.progress_stage = stage
+    await db.commit()
 
 
 def _banner(stage: str) -> None:
@@ -39,10 +48,10 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
     from app.parsers.nginx import NginxParser
     from app.parsers.syslog import SyslogParser
     from app.parsers.windows_event import WindowsEventParser
-    from app.utils.storage import LocalStorageBackend
     from app.config import settings
+    from app.utils.storage import create_storage_backend
 
-    storage = LocalStorageBackend(base_path=settings.LOCAL_STORAGE_PATH)
+    storage = create_storage_backend()
 
     logger.info("")
     logger.info("╔══════════════════════════════════════════════════════╗")
@@ -67,8 +76,7 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
             logger.info("  files : %d", len(investigation.files))
 
             # ── Step 2: Mark processing ───────────────────────────────────────
-            investigation.status = "processing"
-            await db.commit()
+            await _commit_progress(db, investigation, "parsing", status="processing")
 
             all_events = []
             primary_log_type: str | None = None
@@ -89,34 +97,37 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 try:
                     file_path = await storage.get_file_path(inv_file.storage_key)
                     file_path_str = str(file_path)
-
-                    log_type = detector.detect(file_path_str)
-                    inv_file.log_type = log_type
-                    await db.commit()
-                    logger.info("  type  : %s  →  detected as [%s]", inv_file.filename, log_type)
-
-                    if primary_log_type is None:
-                        primary_log_type = log_type
-
-                    parser_cls = parser_map.get(log_type)
-                    if parser_cls is None:
-                        logger.warning("  SKIP  : no parser for log_type=%s", log_type)
-                        inv_file.status = "failed"
-                        inv_file.error_message = f"No parser for log_type: {log_type}"
+                    try:
+                        log_type = detector.detect(file_path_str)
+                        inv_file.log_type = log_type
                         await db.commit()
-                        continue
+                        logger.info("  type  : %s  →  detected as [%s]", inv_file.filename, log_type)
 
-                    events = parser_cls().parse(file_path_str)
-                    for ev in events:
-                        ev.source_type = inv_file.source_type
+                        if primary_log_type is None:
+                            primary_log_type = log_type
 
-                    inv_file.status = "parsed"
-                    inv_file.event_count = len(events)
-                    inv_file.parsed_at = datetime.utcnow()
-                    await db.commit()
-                    logger.info("  parsed: %d events from %s", len(events), inv_file.filename)
-                    all_events.extend(events)
-                    file_events_map[inv_file.filename] = events
+                        parser_cls = parser_map.get(log_type)
+                        if parser_cls is None:
+                            logger.warning("  SKIP  : no parser for log_type=%s", log_type)
+                            inv_file.status = "failed"
+                            inv_file.error_message = f"No parser for log_type: {log_type}"
+                            await db.commit()
+                            continue
+
+                        events = parser_cls().parse(file_path_str)
+                        for ev in events:
+                            ev.source_type = inv_file.source_type
+
+                        inv_file.status = "parsed"
+                        inv_file.event_count = len(events)
+                        inv_file.parsed_at = datetime.utcnow()
+                        await db.commit()
+                        logger.info("  parsed: %d events from %s", len(events), inv_file.filename)
+                        all_events.extend(events)
+                        file_events_map[inv_file.filename] = events
+                    finally:
+                        if settings.STORAGE_BACKEND == "s3":
+                            Path(file_path_str).unlink(missing_ok=True)
 
                 except Exception as file_exc:
                     logger.error("  ERROR parsing %s: %s", inv_file.filename, file_exc, exc_info=True)
@@ -125,6 +136,8 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                     await db.commit()
 
             logger.info("  total : %d events across %d file(s)", len(all_events), len(investigation.files))
+
+            await _commit_progress(db, investigation, "rule_engine")
 
             # ── Step 4: Rule engine ───────────────────────────────────────────
             _banner("STEP 3 / 7  —  Rule Engine")
@@ -137,6 +150,8 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 logger.info("  flagged: %d events have detection flags", flagged)
             except Exception as e:
                 logger.warning("  rule engine error (skipping): %s", e)
+
+            await _commit_progress(db, investigation, "correlation")
 
             # ── Step 5: Correlation ───────────────────────────────────────────
             _banner("STEP 4 / 7  —  Correlation Engine")
@@ -153,6 +168,8 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                     logger.info("  skipped (only 1 file — need 2+ for correlation)")
             except Exception as e:
                 logger.warning("  correlation error (skipping): %s", e)
+
+            await _commit_progress(db, investigation, "ai_analysis")
 
             # ── Step 6: AI ceiling ────────────────────────────────────────────
             user_result = await db.execute(select(User).where(User.id == investigation.user_id))
@@ -192,6 +209,8 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                 logger.info("  correl : %d findings", len(correlated_findings))
             except Exception as e:
                 logger.error("  AI error (continuing): %s", e, exc_info=True)
+
+            await _commit_progress(db, investigation, "building_report")
 
             # ── MITRE enrichment ──────────────────────────────────────────────
             _banner("STEP 6 / 7  —  MITRE ATT&CK Enrichment")
@@ -266,15 +285,14 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
             findings_result = await db.execute(select(Finding).where(Finding.report_id == report.id))
             all_db_findings = findings_result.scalars().all()
 
-            temp_dir = os.path.join("local", "temp", str(investigation.id))
+            temp_dir = os.path.join(settings.LOCAL_STORAGE_PATH, "temp", str(investigation.id))
             os.makedirs(temp_dir, exist_ok=True)
 
             try:
                 from app.reports.pdf_generator import generate_pdf
                 from app.reports.uploader import upload_report
                 pdf_path = generate_pdf(report, all_db_findings, temp_dir)
-                pdf_storage = LocalStorageBackend(base_path=settings.LOCAL_STORAGE_PATH)
-                pdf_key = await upload_report(pdf_path, investigation.id, pdf_storage)
+                pdf_key = await upload_report(pdf_path, investigation.id, storage)
                 report.pdf_storage_key = pdf_key
                 await db.commit()
                 logger.info("  pdf    : saved → %s", pdf_key)
@@ -283,8 +301,22 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
 
             # ── Done ──────────────────────────────────────────────────────────
             investigation.status = "complete"
+            investigation.progress_stage = "complete"
             investigation.completed_at = datetime.utcnow()
             await db.commit()
+
+            try:
+                from app.services.notification_service import send_job_complete
+
+                if user:
+                    send_job_complete(
+                        user_email=user.email,
+                        investigation_name=investigation.name,
+                        report_id=str(report.id),
+                        finding_count=len(all_findings),
+                    )
+            except Exception as notify_exc:
+                logger.warning("notification (complete): %s", notify_exc)
 
             logger.info("")
             logger.info("╔══════════════════════════════════════════════════════╗")
@@ -308,6 +340,20 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                     investigation.status = "failed"
                     investigation.error_message = str(exc)[:500]
                     await db.commit()
+                    try:
+                        from app.services.notification_service import send_job_failed
+
+                        ur = await db.execute(
+                            select(User).where(User.id == investigation.user_id)
+                        )
+                        u = ur.scalar_one_or_none()
+                        send_job_failed(
+                            user_email=u.email if u else "unknown",
+                            investigation_name=investigation.name,
+                            error_message=str(exc),
+                        )
+                    except Exception as notify_exc:
+                        logger.warning("notification (failed): %s", notify_exc)
             except Exception:
                 pass
             raise

@@ -20,7 +20,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.utils.security import decode_token
-from app.utils.storage import LocalStorageBackend, S3StorageBackend, StorageBackend
+from app.utils.storage import StorageBackend, create_storage_backend
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
@@ -54,9 +54,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 # ── get_storage ───────────────────────────────────────────────────────────────
 
 def get_storage() -> StorageBackend:
-    if settings.STORAGE_BACKEND == "s3":
-        return S3StorageBackend(bucket=settings.S3_BUCKET_NAME, region=settings.AWS_REGION)
-    return LocalStorageBackend(base_path=settings.LOCAL_STORAGE_PATH)
+    return create_storage_backend()
 
 
 # ── get_current_user ──────────────────────────────────────────────────────────

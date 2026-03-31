@@ -1,4 +1,4 @@
-// LogRaven — Public marketing landing (no auth)
+// LogRaven — Public marketing landing (dashboard-aligned chrome, no auth)
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Upload, GitMerge, FileText, Shield, Lock, Zap, Search } from 'lucide-react'
@@ -78,6 +78,9 @@ const howItWorksSteps = [
   },
 ] as const
 
+const cardClass =
+  'bg-raven-800 border border-raven-700 rounded-xl p-8 shadow-lg shadow-black/20 transition-all duration-300 hover:border-electric-500/40'
+
 export default function Landing() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
@@ -86,16 +89,16 @@ export default function Landing() {
   const [btnRef, btnInView] = useScrollAnimation()
 
   return (
-    <div className="min-h-screen bg-raven-900 text-raven-200 font-sans">
+    <div className="min-h-screen bg-raven-950 text-raven-200 font-sans">
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-electric-500/10 via-transparent to-transparent pointer-events-none" />
 
-        <section className="relative px-6 py-24 md:py-32 lg:py-40">
+        <section className="relative px-4 sm:px-6 py-24 md:py-32 lg:py-40">
           <div className="max-w-7xl mx-auto">
             <div className="max-w-4xl mx-auto text-center">
               <h1
                 ref={headerRef}
-                className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 transition-all duration-700 ease-out ${
+                className={`text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-tight transition-all duration-700 ease-out ${
                   headerInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
                 }`}
               >
@@ -105,7 +108,7 @@ export default function Landing() {
 
               <p
                 ref={subRef}
-                className={`text-lg md:text-xl text-raven-400 mb-8 max-w-3xl mx-auto transition-all duration-700 ease-out delay-200 ${
+                className={`text-lg md:text-xl text-raven-500 mb-8 max-w-3xl mx-auto transition-all duration-700 ease-out delay-200 ${
                   subInView ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
                 }`}
               >
@@ -122,21 +125,21 @@ export default function Landing() {
                 {isAuthenticated ? (
                   <Link
                     to="/dashboard"
-                    className="px-8 py-4 bg-electric-500 hover:bg-electric-400 text-raven-950 font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-electric-500/20 hover:shadow-electric-500/40 hover:scale-[1.02] w-full sm:w-auto text-center"
+                    className="px-8 py-3.5 bg-electric-500 hover:bg-electric-400 text-raven-950 font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-electric-500/15 hover:shadow-electric-500/30 w-full sm:w-auto text-center"
                   >
                     Open dashboard
                   </Link>
                 ) : (
                   <Link
                     to="/register"
-                    className="px-8 py-4 bg-electric-500 hover:bg-electric-400 text-raven-950 font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-electric-500/20 hover:shadow-electric-500/40 hover:scale-[1.02] w-full sm:w-auto text-center"
+                    className="px-8 py-3.5 bg-electric-500 hover:bg-electric-400 text-raven-950 font-semibold rounded-lg transition-all duration-200 shadow-lg shadow-electric-500/15 hover:shadow-electric-500/30 w-full sm:w-auto text-center"
                   >
                     Get started
                   </Link>
                 )}
                 <Link
                   to="/login"
-                  className="px-8 py-4 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg transition-all duration-200 border border-white/10 hover:border-white/20 w-full sm:w-auto text-center"
+                  className="px-8 py-3.5 border border-raven-600 bg-raven-800/80 text-raven-200 font-semibold rounded-lg transition-all duration-200 hover:border-electric-500/40 hover:bg-raven-800 w-full sm:w-auto text-center"
                 >
                   {isAuthenticated ? 'Account' : 'Sign in'}
                 </Link>
@@ -145,30 +148,32 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="relative px-6 py-24 md:py-32">
+        <section className="relative px-4 sm:px-6 py-24 md:py-32">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">How it works</h2>
-              <p className="text-raven-400 text-lg">Three steps from raw logs to a shareable report</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
+                How it works
+              </h2>
+              <p className="text-raven-500 text-sm sm:text-base">Three steps from raw logs to a shareable report</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
               {howItWorksSteps.map((step, index) => {
                 const Icon = step.icon
                 return (
                   <div key={step.step} className="relative group">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-electric-500/50 transition-all duration-300 h-full">
+                    <div className={`${cardClass} h-full`}>
                       <div className="flex items-start gap-4 mb-4">
-                        <div className="text-5xl font-bold text-electric-500/20 tabular-nums">{step.step}</div>
-                        <div className="p-3 bg-electric-500/10 rounded-lg">
+                        <div className="text-5xl font-bold text-electric-500/25 tabular-nums">{step.step}</div>
+                        <div className="p-3 bg-electric-500/10 rounded-lg border border-electric-500/20">
                           <Icon className="w-6 h-6 text-electric-400" />
                         </div>
                       </div>
-                      <h3 className="text-xl font-semibold text-white mb-3">{step.title}</h3>
-                      <p className="text-raven-400 text-sm leading-relaxed">{step.description}</p>
+                      <h3 className="text-lg font-semibold text-white mb-3">{step.title}</h3>
+                      <p className="text-raven-500 text-sm leading-relaxed">{step.description}</p>
                     </div>
                     {index < howItWorksSteps.length - 1 && (
-                      <div className="hidden md:block absolute top-1/2 -right-6 w-12 h-0.5 bg-gradient-to-r from-electric-500 to-transparent" />
+                      <div className="hidden md:block absolute top-1/2 -right-4 w-8 h-0.5 bg-gradient-to-r from-electric-500/50 to-transparent" />
                     )}
                   </div>
                 )
@@ -177,11 +182,13 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="relative px-6 py-24 md:py-32">
+        <section className="relative px-4 sm:px-6 py-24 md:py-32">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">Built for investigations</h2>
-              <p className="text-raven-400 text-lg">Correlation, context, and reporting in one place</p>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 tracking-tight">
+                Built for investigations
+              </h2>
+              <p className="text-raven-500 text-sm sm:text-base">Correlation, context, and reporting in one place</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -189,13 +196,13 @@ export default function Landing() {
                 const Icon = feature.icon
                 return (
                   <div key={feature.title} className="group relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-electric-500/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl" />
-                    <div className="relative bg-white/5 border border-white/10 rounded-2xl p-8 hover:bg-white/10 hover:border-electric-500/50 transition-all duration-300">
-                      <div className="p-3 bg-electric-500/10 rounded-lg w-fit mb-4">
+                    <div className="absolute inset-0 bg-gradient-to-br from-electric-500/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl pointer-events-none" />
+                    <div className={`relative ${cardClass}`}>
+                      <div className="p-3 bg-electric-500/10 rounded-lg border border-electric-500/20 w-fit mb-4">
                         <Icon className="w-6 h-6 text-electric-400" />
                       </div>
-                      <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
-                      <p className="text-raven-400 text-sm leading-relaxed">{feature.description}</p>
+                      <h3 className="text-lg font-semibold text-white mb-3">{feature.title}</h3>
+                      <p className="text-raven-500 text-sm leading-relaxed">{feature.description}</p>
                     </div>
                   </div>
                 )
@@ -204,19 +211,21 @@ export default function Landing() {
           </div>
         </section>
 
-        <footer className="relative border-t border-white/10 px-6 py-12">
+        <footer className="relative border-t border-raven-800 px-4 sm:px-6 py-12">
           <div className="max-w-7xl mx-auto">
             <div className="flex flex-col items-center text-center">
               <div className="flex items-center gap-2 mb-4">
-                <Lock className="w-6 h-6 text-electric-500" aria-hidden />
-                <span className="text-xl font-bold text-white tracking-tight">LogRaven</span>
+                <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-electric-500/35 bg-electric-500/10 text-electric-400">
+                  <Lock className="w-4 h-4" aria-hidden />
+                </span>
+                <span className="text-lg font-bold text-white tracking-tight">LogRaven</span>
               </div>
-              <p className="text-raven-400 text-sm mb-6 max-w-md">
+              <p className="text-raven-500 text-sm mb-6 max-w-md">
                 Log correlation and reporting for security teams—without shipping your data to a black box you
                 cannot inspect.
               </p>
               <p className="text-xs text-raven-600 font-mono mb-2">lograven.io</p>
-              <div className="text-sm text-raven-500">© 2026 LogRaven. All rights reserved.</div>
+              <div className="text-sm text-raven-600">© 2026 LogRaven. All rights reserved.</div>
             </div>
           </div>
         </footer>

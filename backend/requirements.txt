@@ -48,6 +48,7 @@ pyyaml>=6.0
 
 # File I/O
 aiofiles==23.2.1
+boto3==1.34.131
 
 # HTTP client (for health checks)
 httpx==0.27.0

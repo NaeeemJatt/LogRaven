@@ -5,6 +5,10 @@ import { useQuery } from '@tanstack/react-query'
 import { ChevronLeft, Download } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import FindingCard from '../components/reports/FindingCard'
+import CorrelationCard from '../components/reports/CorrelationCard'
+import IOCTable from '../components/reports/IOCTable'
+import MitreMatrix from '../components/reports/MitreMatrix'
+import SeverityChart from '../components/reports/SeverityChart'
 import { investigationsApi } from '../api/investigations'
 import type { Finding } from '../types/report'
 
@@ -26,6 +30,21 @@ function uniqueIocs(findings: Finding[]): string[] {
       }
     }
   return out
+}
+
+function iocSourceHints(findings: Finding[]): Record<string, string> {
+  const m: Record<string, string> = {}
+  for (const f of findings) {
+    const hint =
+      f.source_files && f.source_files.length > 0
+        ? f.source_files.join(', ')
+        : (f.title?.slice(0, 48) ?? 'Finding')
+    for (const ioc of f.iocs ?? []) {
+      const s = String(ioc).trim()
+      if (s && m[s] === undefined) m[s] = hint
+    }
+  }
+  return m
 }
 
 function SectionHeader({ label, subtitle }: { label: string; subtitle?: string }) {
@@ -101,7 +120,9 @@ export default function Report() {
       <div className="min-h-screen bg-raven-950">
         <Navbar />
         <div className="flex flex-col items-center justify-center py-32 gap-3 px-4">
-          <p className="text-red-400 text-sm font-mono text-center">Report not available.</p>
+          <p className="text-rose-400 text-sm text-center border border-rose-900/50 bg-rose-950/30 px-4 py-3 rounded-lg max-w-md">
+            Report not available.
+          </p>
           <button
             type="button"
             onClick={() => navigate(`/investigations/${id}/status`)}
@@ -118,6 +139,7 @@ export default function Report() {
   const correlated = allFindings.filter((f) => f.finding_type === 'correlated')
   const single = sortBySeverity(allFindings.filter((f) => f.finding_type !== 'correlated'))
   const iocs = uniqueIocs(allFindings)
+  const iocHints = iocSourceHints(allFindings)
   const counts = report.severity_counts ?? {}
 
   return (
@@ -151,11 +173,15 @@ export default function Report() {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard label="Total" value={allFindings.length} valueClass="text-white" />
           <StatCard label="Critical" value={counts.critical ?? 0} valueClass="text-red-400" />
           <StatCard label="High" value={counts.high ?? 0} valueClass="text-orange-400" />
           <StatCard label="Medium" value={counts.medium ?? 0} valueClass="text-yellow-400" />
+        </div>
+
+        <div className="mb-10">
+          <SeverityChart counts={counts} />
         </div>
 
         {report.summary && (
@@ -173,7 +199,7 @@ export default function Report() {
             />
             <div className="space-y-3">
               {correlated.map((f) => (
-                <FindingCard key={f.id} finding={f} />
+                <CorrelationCard key={f.id} finding={f} />
               ))}
             </div>
           </>
@@ -193,32 +219,14 @@ export default function Report() {
         {report.mitre_techniques && report.mitre_techniques.length > 0 && (
           <>
             <SectionHeader label="MITRE ATT&CK" />
-            <div className="flex flex-wrap gap-2">
-              {report.mitre_techniques.map((t: string) => (
-                <span
-                  key={t}
-                  className="rounded-lg border border-raven-600 bg-raven-800/80 px-3 py-1.5 text-electric-400 font-mono text-xs"
-                >
-                  {t}
-                </span>
-              ))}
-            </div>
+            <MitreMatrix techniques={report.mitre_techniques} />
           </>
         )}
 
         {iocs.length > 0 && (
           <>
             <SectionHeader label={`Extracted IOCs (${iocs.length})`} />
-            <div className="flex flex-wrap gap-2">
-              {iocs.map((ioc, i) => (
-                <span
-                  key={i}
-                  className="rounded-lg border border-electric-500/25 bg-raven-800/60 px-3 py-1.5 text-electric-300 font-mono text-xs"
-                >
-                  {ioc}
-                </span>
-              ))}
-            </div>
+            <IOCTable values={iocs} sourceHint={iocHints} />
           </>
         )}
 

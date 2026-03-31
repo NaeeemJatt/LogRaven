@@ -1,15 +1,35 @@
-# LogRaven — Notification Service
+# LogRaven — Job completion / failure notifications
 #
-# PURPOSE:
-#   Send email notifications for job completion and failure.
-#   Uses AWS SES in production (same dependency as S3).
-#   In development: just logs the notification content.
-#
-# FUNCTIONS:
-#   send_job_complete(user, investigation, report) -> None
-#     - Send email with summary and download link if job took > 30 seconds
-#
-#   send_job_failed(user, investigation, error_msg) -> None
-#     - Send failure notification with generic user-facing message
-#
-# TODO Month 5: Implement this file.
+# v1: structured application logs (ops can wire SES/SMTP later via env).
+
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+
+def send_job_complete(
+    user_email: str,
+    investigation_name: str,
+    report_id: str,
+    finding_count: int,
+) -> None:
+    logger.info(
+        "[notification] analysis complete | user=%s | investigation=%s | report_id=%s | findings=%d",
+        user_email,
+        investigation_name,
+        report_id,
+        finding_count,
+    )
+
+
+def send_job_failed(
+    user_email: str,
+    investigation_name: str,
+    error_message: str,
+) -> None:
+    logger.warning(
+        "[notification] analysis failed | user=%s | investigation=%s | error=%s",
+        user_email,
+        investigation_name,
+        error_message[:500],
+    )

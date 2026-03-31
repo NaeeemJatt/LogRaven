@@ -42,6 +42,10 @@ class Settings(BaseSettings):
     # Storage
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
     LOCAL_STORAGE_PATH: str = "./local"
+    # Base URL for LocalStorageBackend download links (reverse-proxy / public API URL)
+    PUBLIC_API_BASE_URL: str = "http://localhost:8000"
+    # Optional S3-compatible endpoint (MinIO, etc.)
+    S3_ENDPOINT_URL: str = ""
 
     # AI
     GEMINI_API_KEY: str = ""

@@ -153,9 +153,12 @@ export default function Investigation() {
           Investigations
         </Link>
 
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{inv.name}</h1>
-          <Badge value={inv.status} variant="status" />
+        <div className="mb-8">
+          <div className="flex flex-wrap items-center gap-3 mb-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{inv.name}</h1>
+            <Badge value={inv.status} variant="status" />
+          </div>
+          <p className="text-raven-500 text-sm">Upload logs, set source types, then run analysis.</p>
         </div>
 
         {canEdit && (

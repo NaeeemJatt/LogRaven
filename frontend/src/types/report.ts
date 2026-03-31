@@ -23,5 +23,6 @@ export interface Report {
   correlated_findings: Finding[]
   single_source_findings: Finding[]
   mitre_techniques: string[]
+  findings: Finding[]
   created_at: string
 }
