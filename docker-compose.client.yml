@@ -1,5 +1,4 @@
-# LogRaven — Client Delivery Docker Compose
-# This is the file you send to clients alongside .env template
+# LogRaven — Example Docker Compose (optional local stack)
 
 version: '3.9'
 
@@ -10,11 +9,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - LICENSE_KEY=${LICENSE_KEY}
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - STORAGE_BACKEND=local
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
     volumes:
       - ./data/uploads:/app/local/uploads
       - ./data/reports:/app/local/reports
@@ -27,11 +26,11 @@ services:
     container_name: lograven-worker
     command: celery -A app.tasks.celery_app worker --loglevel=info
     environment:
-      - LICENSE_KEY=${LICENSE_KEY}
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - STORAGE_BACKEND=local
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
     volumes:
       - ./data/uploads:/app/local/uploads
       - ./data/reports:/app/local/reports

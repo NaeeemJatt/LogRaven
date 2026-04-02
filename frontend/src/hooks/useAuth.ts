@@ -8,22 +8,33 @@ export function useAuth() {
   const navigate = useNavigate()
 
   const login = async (email: string, password: string) => {
-    const res = await authApi.login(email, password)
-    store.setTokens(res.data.access_token, res.data.refresh_token)
-    const me = await authApi.me()
-    store.setUser(me.data)
+    const response = await authApi.login(email, password)
+    if (response.data.user) {
+      store.setUser(response.data.user)
+    } else {
+      const me = await authApi.me()
+      store.setUser(me.data)
+    }
     navigate('/dashboard')
   }
 
   const register = async (email: string, password: string) => {
-    const res = await authApi.register(email, password)
-    store.setTokens(res.data.access_token, res.data.refresh_token)
-    const me = await authApi.me()
-    store.setUser(me.data)
+    const response = await authApi.register(email, password)
+    if (response.data.user) {
+      store.setUser(response.data.user)
+    } else {
+      const me = await authApi.me()
+      store.setUser(me.data)
+    }
     navigate('/dashboard')
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      /* still clear client state */
+    }
     store.logout()
     navigate('/login')
   }

@@ -1,51 +1,63 @@
-// LogRaven — Axios HTTP Client
+// LogRaven — Axios HTTP client (httpOnly cookies; use empty VITE_API_URL + Vite proxy in dev)
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
+const baseURL = import.meta.env.VITE_API_URL ?? ''
+let refreshPromise: Promise<void> | null = null
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
-  headers: { 'Content-Type': 'application/json' },
+  baseURL,
+  withCredentials: true,
 })
 
-// Inject JWT on every request
-client.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+function redirectToLogin() {
+  useAuthStore.getState().logout()
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.href = '/login'
   }
-  return config
-})
+}
 
-// Auto-refresh on 401; redirect to /login if refresh also fails
+function refreshSession(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = axios
+      .post(`${baseURL}/auth/refresh`, {}, { withCredentials: true })
+      .then(() => undefined)
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true
-      const { refreshToken, setTokens, logout } = useAuthStore.getState()
-
-      if (refreshToken) {
-        try {
-          const res = await axios.post(
-            `${client.defaults.baseURL}/auth/refresh`,
-            { refresh_token: refreshToken },
-          )
-          const newAccess: string = res.data.access_token
-          setTokens(newAccess, refreshToken)
-          originalRequest.headers.Authorization = `Bearer ${newAccess}`
-          return client(originalRequest)
-        } catch {
-          // refresh failed — fall through to logout
-        }
-      }
-
-      logout()
-      window.location.href = '/login'
+    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined
+    if (!originalRequest || error.response?.status !== 401) {
+      return Promise.reject(error)
     }
 
-    return Promise.reject(error)
+    if (originalRequest._retry) {
+      return Promise.reject(error)
+    }
+
+    if (String(originalRequest.url ?? '').includes('/auth/refresh')) {
+      redirectToLogin()
+      return Promise.reject(error)
+    }
+
+    if (String(originalRequest.url ?? '').includes('/auth/login')) {
+      return Promise.reject(error)
+    }
+
+    originalRequest._retry = true
+    try {
+      await refreshSession()
+      return client(originalRequest)
+    } catch {
+      redirectToLogin()
+      return Promise.reject(error)
+    }
   },
 )
 

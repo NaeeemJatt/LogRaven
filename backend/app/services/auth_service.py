@@ -5,6 +5,7 @@
 #   Route handlers call these functions — no DB access in routes.
 
 import uuid
+import asyncio
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -12,8 +13,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit import AuditLog
 from app.models.user import User
-from app.schemas.user import TokenResponse
+from app.schemas.user import TokenResponse, UserResponse
+from app.utils import refresh_tokens
 from app.utils import security
+
+
+async def _wait_for_refresh_result(jti: str, user_id: str, *, attempts: int = 10, delay: float = 0.1) -> dict | None:
+    for _ in range(attempts):
+        result = await refresh_tokens.get_refresh_result(jti, user_id)
+        if result is not None:
+            return result
+        await asyncio.sleep(delay)
+    return None
 
 
 async def register_user(
@@ -30,14 +41,23 @@ async def register_user(
             detail="Password must be at least 8 characters",
         )
 
+    generic_register_exc = HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Unable to register with those credentials",
+    )
+
     # Check email not already taken
     result = await db.execute(select(User).where(User.email == email))
     existing = result.scalar_one_or_none()
     if existing is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
+        db.add(AuditLog(
+            action="failed_register",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata_={"email": email, "reason": "already_registered"},
+        ))
+        await db.commit()
+        raise generic_register_exc
 
     # Create user
     user = User(
@@ -61,9 +81,12 @@ async def register_user(
     await db.commit()
     await db.refresh(user)
 
+    refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
+    await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))
     return TokenResponse(
         access_token=security.create_access_token(str(user.id), user.tier),
-        refresh_token=security.create_refresh_token(str(user.id)),
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
     )
 
 
@@ -118,9 +141,12 @@ async def login_user(
     ))
     await db.commit()
 
+    refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
+    await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))
     return TokenResponse(
         access_token=security.create_access_token(str(user.id), user.tier),
-        refresh_token=security.create_refresh_token(str(user.id)),
+        refresh_token=refresh_token,
+        user=UserResponse.model_validate(user),
     )
 
 
@@ -141,8 +167,22 @@ async def refresh_token(token: str, db: AsyncSession) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token claims",
         )
+    try:
+        canonical_user_id = str(uuid.UUID(user_id))
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token claims",
+        )
 
-    result = await db.execute(select(User).where(User.id == uuid.UUID(user_id)))
+    jti: str | None = payload.get("jti")
+    if not jti:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token claims",
+        )
+
+    result = await db.execute(select(User).where(User.id == uuid.UUID(canonical_user_id)))
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(
@@ -150,7 +190,60 @@ async def refresh_token(token: str, db: AsyncSession) -> dict:
             detail="User not found",
         )
 
-    return {
-        "access_token": security.create_access_token(str(user.id), user.tier),
-        "token_type": "bearer",
-    }
+    cached_result = await refresh_tokens.get_refresh_result(jti, canonical_user_id)
+    if cached_result is not None:
+        return cached_result
+
+    lock_acquired = False
+    try:
+        for _ in range(10):
+            lock_acquired = await refresh_tokens.acquire_refresh_lock(jti)
+            if lock_acquired:
+                break
+
+            cached_result = await refresh_tokens.get_refresh_result(jti, canonical_user_id)
+            if cached_result is not None:
+                return cached_result
+
+            await asyncio.sleep(0.1)
+
+        if not lock_acquired:
+            cached_result = await _wait_for_refresh_result(jti, canonical_user_id)
+            if cached_result is not None:
+                return cached_result
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Refresh already in progress",
+            )
+
+        cached_result = await refresh_tokens.get_refresh_result(jti, canonical_user_id)
+        if cached_result is not None:
+            return cached_result
+
+        if not await refresh_tokens.consume_refresh_token(jti, canonical_user_id):
+            cached_result = await refresh_tokens.get_refresh_result(jti, canonical_user_id)
+            if cached_result is not None:
+                return cached_result
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token has been revoked or already used",
+            )
+
+        new_refresh_token, new_refresh_jti = security.create_refresh_token(str(user.id))
+        access_token = security.create_access_token(str(user.id), user.tier)
+        await refresh_tokens.store_refresh_rotation_result(
+            jti,
+            canonical_user_id,
+            new_refresh_jti,
+            access_token,
+            new_refresh_token,
+        )
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer",
+            "user": UserResponse.model_validate(user).model_dump(mode="json"),
+        }
+    finally:
+        if lock_acquired:
+            await refresh_tokens.release_refresh_lock(jti)

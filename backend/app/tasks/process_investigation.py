@@ -33,11 +33,11 @@ def _banner(stage: str) -> None:
 
 
 @celery_app.task(name="process_investigation", bind=True, max_retries=0)
-def process_investigation(self, investigation_id: str):
-    asyncio.run(_run_pipeline(investigation_id))
+def process_investigation(self, investigation_id: str, cloud_ai_consent: bool = False):
+    asyncio.run(_run_pipeline(investigation_id, cloud_ai_consent=cloud_ai_consent))
 
 
-async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
+async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False) -> None:  # noqa: C901
     from app.dependencies import AsyncSessionLocal
     from app.models.finding import Finding
     from app.models.investigation import Investigation
@@ -74,6 +74,15 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
 
             logger.info("  name  : %s", investigation.name)
             logger.info("  files : %d", len(investigation.files))
+
+            from app.ai.cloud.consent import require_cloud_ai_consent
+
+            try:
+                require_cloud_ai_consent(cloud_ai_consent)
+            except Exception:
+                investigation.progress_stage = "ai_analysis"
+                await db.commit()
+                raise
 
             # ── Step 2: Mark processing ───────────────────────────────────────
             await _commit_progress(db, investigation, "parsing", status="processing")
@@ -115,6 +124,19 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
                             continue
 
                         events = parser_cls().parse(file_path_str)
+                        if len(events) > settings.MAX_PARSED_EVENTS_PER_FILE:
+                            raise ValueError(
+                                f"Parsed event count exceeded per-file security cap "
+                                f"({settings.MAX_PARSED_EVENTS_PER_FILE})"
+                            )
+
+                        next_total = len(all_events) + len(events)
+                        if next_total > settings.MAX_PARSED_EVENTS_PER_INVESTIGATION:
+                            raise ValueError(
+                                "Parsed event volume exceeded investigation security cap "
+                                f"({settings.MAX_PARSED_EVENTS_PER_INVESTIGATION})"
+                            )
+
                         for ev in events:
                             ev.source_type = inv_file.source_type
 
@@ -202,6 +224,7 @@ async def _run_pipeline(investigation_id: str) -> None:  # noqa: C901
 
             try:
                 from app.ai.router import route_analysis
+
                 single_findings, correlated_findings = await route_analysis(
                     events_for_ai, ai_log_type, chains, tier
                 )

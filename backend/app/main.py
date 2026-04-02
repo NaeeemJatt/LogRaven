@@ -1,7 +1,4 @@
 # LogRaven — FastAPI Application Entry Point
-#
-# CRITICAL: validate_license() is called FIRST in startup event.
-#           If license is invalid, SystemExit is raised and app does not start.
 
 import logging
 import os
@@ -11,10 +8,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
-from app.license import validate_license
+from app.limiter import limiter
 from app.utils.exceptions import LogRavenError
 from app.utils.logger import get_logger
 
@@ -34,20 +32,8 @@ async def lifespan(app: FastAPI):
     app_log.info("  Debug   : %s", settings.DEBUG)
     app_log.info("=" * 60)
 
-    validate_license(
-        license_key=settings.LICENSE_KEY,
-        bypass_dev=settings.LICENSE_BYPASS_DEV,
-    )
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "reports"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "uploads"), exist_ok=True)
-
-    if settings.STORAGE_BACKEND == "local":
-        if not any(r.name == "files" for r in app.routes):
-            app.mount(
-                "/files",
-                StaticFiles(directory=settings.LOCAL_STORAGE_PATH),
-                name="files",
-            )
 
     yield
     app_log.info("LogRaven API shut down.")
@@ -59,6 +45,8 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Access log middleware ─────────────────────────────────────────────────────
 
@@ -80,9 +68,13 @@ async def access_logger(request: Request, call_next):
         status_str = f"\033[31m{status}\033[0m"   # red
 
     method = request.method.ljust(6)
-    path   = request.url.path
+    path = request.url.path
     if request.url.query:
-        path += f"?{request.url.query}"
+        # Never log signed download JWTs (credential leak into log aggregators)
+        if path == "/api/v1/downloads/file":
+            path = f"{path}?token=<redacted>"
+        else:
+            path = f"{path}?{request.url.query}"
 
     access_log.info(
         "%s  %-45s  %s  %.1fms",

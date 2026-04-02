@@ -12,6 +12,8 @@ logger = get_logger(__name__)
 # Lazy client — only initialised when GEMINI_API_KEY is present
 _client = None
 
+_VALID_SEVERITIES = {"critical", "high", "medium", "low", "informational"}
+
 
 def _get_client():
     global _client
@@ -76,9 +78,50 @@ async def _call_gemini(client, system_prompt: str, user_prompt: str) -> list[dic
     return []
 
 
+def _normalize_findings(raw_findings: list[dict]) -> list[dict]:
+    """Restrict model output to the expected schema and safe sizes."""
+    normalized: list[dict] = []
+    for item in raw_findings:
+        if not isinstance(item, dict):
+            continue
+
+        severity = str(item.get("severity", "informational")).lower()
+        if severity not in _VALID_SEVERITIES:
+            severity = "informational"
+
+        iocs = item.get("iocs")
+        if not isinstance(iocs, list):
+            iocs = []
+        safe_iocs = []
+        for value in iocs[:25]:
+            text = " ".join(str(value).split())
+            if text:
+                safe_iocs.append(text[:256])
+
+        confidence = item.get("confidence", 0.5)
+        try:
+            confidence = float(confidence)
+        except (TypeError, ValueError):
+            confidence = 0.5
+        confidence = max(0.0, min(1.0, confidence))
+
+        normalized.append({
+            "severity": severity,
+            "title": " ".join(str(item.get("title", "Untitled finding")).split())[:80],
+            "description": " ".join(str(item.get("description", "")).split())[:600],
+            "mitre_technique_id": item.get("mitre_technique_id"),
+            "iocs": safe_iocs,
+            "remediation": " ".join(str(item.get("remediation", "")).split())[:300],
+            "confidence": confidence,
+        })
+
+    return normalized[:20]
+
+
 async def analyze_events(
     events: list,
     log_type: str,
+    prompt_builder,
     system_prompt: str,
     user_prompt: str,
 ) -> list[dict]:
@@ -99,9 +142,10 @@ async def analyze_events(
 
     all_chunk_findings: list[list] = []
     for i, chunk in enumerate(chunks):
-        # Rebuild user prompt with this chunk's events
-        chunk_user_prompt = base_prompt.build_prompt(chunk, log_type)
-        chunk_findings = await _call_gemini(client, system_prompt, chunk_user_prompt)
+        # Rebuild prompts with the same prompt family so chunking does not drop
+        # log-type-specific instructions or prompt-injection defenses.
+        chunk_system_prompt, chunk_user_prompt = prompt_builder(chunk)
+        chunk_findings = _normalize_findings(await _call_gemini(client, chunk_system_prompt, chunk_user_prompt))
         logger.info("LogRaven AI: chunk %d/%d -> %d findings", i + 1, len(chunks), len(chunk_findings))
         all_chunk_findings.append(chunk_findings)
 
@@ -123,6 +167,6 @@ async def analyze_chains(chains: list) -> list[dict]:
     from app.ai.prompts.correlation_prompt import build_correlation_prompt
     system_prompt, user_prompt = build_correlation_prompt(chains)
 
-    findings = await _call_gemini(client, system_prompt, user_prompt)
+    findings = _normalize_findings(await _call_gemini(client, system_prompt, user_prompt))
     logger.info("LogRaven AI: correlation analysis -> %d findings", len(findings))
     return findings

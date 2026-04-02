@@ -6,24 +6,25 @@ fastapi==0.111.0
 uvicorn[standard]==0.30.1
 
 # Database
-sqlalchemy==2.0.31
+sqlalchemy==2.0.48
 alembic==1.13.2
-asyncpg==0.29.0
-psycopg2-binary==2.9.9
+asyncpg==0.31.0
+psycopg2-binary==2.9.11
 
-# Validation
-pydantic==2.8.2
-pydantic-settings==2.3.4
+# Validation (2.12+ pulls pydantic-core wheels for Python 3.14 on Windows; older pins require Rust to build)
+pydantic==2.12.5
+pydantic-settings==2.13.1
 email-validator==2.2.0
 
 # Auth
-python-jose[cryptography]==3.3.0
+PyJWT[crypto]==2.9.0
+slowapi==0.1.9
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.3
-python-multipart==0.0.9
+python-multipart==0.0.22
 
 # Task queue
-celery>=5.3.6
+celery==5.3.6
 redis==5.0.7
 kombu==5.3.4
 
@@ -34,29 +35,29 @@ evtx==0.8.9
 mitreattack-python==5.4.0
 
 # AI
-google-genai>=1.0.0
+google-genai==1.69.0
 anthropic==0.28.0
 openai==1.35.0
 
 # PDF generation
-weasyprint>=62.3      # best quality (Linux/Docker — needs GTK3)
-xhtml2pdf>=0.2.17     # pure-Python fallback (Windows dev, no system deps needed)
-jinja2>=3.1.4
+weasyprint==68.1      # best quality (Linux/Docker — needs GTK3)
+xhtml2pdf==0.2.17     # pure-Python fallback (Windows dev, no system deps needed)
+jinja2==3.1.6
 
 # Rule engine / YAML rule loading
-pyyaml>=6.0
+pyyaml==6.0.3
 
 # File I/O
 aiofiles==23.2.1
 boto3==1.34.131
 
 # HTTP client (for health checks)
-httpx==0.27.0
+httpx==0.28.1
 
 # Testing
 pytest==8.2.2
 pytest-asyncio==0.23.7
-httpx==0.27.0
+httpx==0.28.1
 
 # Logging
 structlog==24.2.0

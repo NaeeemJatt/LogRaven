@@ -3,6 +3,8 @@
 from celery import Celery
 import os
 
+from app.config import settings
+
 celery_app = Celery(
     "lograven",
     broker=os.getenv("REDIS_URL", "redis://localhost:6379"),
@@ -16,9 +18,7 @@ celery_app.conf.update(
     task_acks_late=True,
     task_reject_on_worker_lost=True,
     worker_max_tasks_per_child=100,
-    # Run tasks synchronously without a broker — safe for development/testing on Windows.
-    # Set to False in production with Redis.
-    task_always_eager=True,
+    task_always_eager=settings.CELERY_TASK_ALWAYS_EAGER,
     task_eager_propagates=True,
 )
 

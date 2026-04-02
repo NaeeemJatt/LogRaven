@@ -41,6 +41,7 @@ def _make_finding(**kwargs):
 def _make_report(**kwargs):
     r = MagicMock()
     r.id               = kwargs.get("id",               uuid.uuid4())
+    r.user_id          = kwargs.get("user_id",          uuid.uuid4())
     r.investigation_id = kwargs.get("investigation_id", uuid.uuid4())
     r.summary          = kwargs.get("summary",          "Analysis complete.")
     r.severity_counts  = kwargs.get("severity_counts",  {"high": 1})
@@ -161,11 +162,30 @@ class TestBuildDownloadResponse:
         assert "filename" in result
         assert "expires_in" in result
 
-    def test_download_url_built_from_storage(self):
+    def test_download_url_local_uses_signed_api_path(self):
+        key = "reports/inv123/lograven-report-abc.pdf"
+        report = _make_report(pdf_storage_key=key)
+        storage = _make_storage()
+        import app.config as cfg
+
+        cfg.settings.STORAGE_BACKEND = "local"
+        cfg.settings.JWT_SECRET_KEY = "test-secret-key-with-32-characters!"
+        cfg.settings.JWT_ALGORITHM = "HS256"
+        cfg.settings.JWT_ISSUER = "lograven"
+        result = self.fn(report, storage)
+        assert result["download_url"].startswith("/api/v1/downloads/file?token=")
+
+    def test_download_url_s3_uses_storage_presign(self):
         key = "reports/inv123/lograven-report-abc.pdf"
         report = _make_report(pdf_storage_key=key)
         storage = _make_storage(base_url="http://localhost:8000")
-        result = self.fn(report, storage)
+        import app.config as cfg
+
+        cfg.settings.STORAGE_BACKEND = "s3"
+        try:
+            result = self.fn(report, storage)
+        finally:
+            cfg.settings.STORAGE_BACKEND = "local"
         assert result["download_url"] == f"http://localhost:8000/files/{key}"
 
     def test_filename_contains_report_id_prefix(self):
@@ -176,10 +196,25 @@ class TestBuildDownloadResponse:
         assert "12345678" in result["filename"]
         assert result["filename"].endswith(".pdf")
 
-    def test_expires_in_is_24_hours(self):
+    def test_expires_in_matches_backend(self):
         report = _make_report(pdf_storage_key="some/key.pdf")
-        result = self.fn(report, _make_storage())
-        assert result["expires_in"] == 86400
+        storage = _make_storage()
+        import app.config as cfg
+
+        cfg.settings.STORAGE_BACKEND = "local"
+        cfg.settings.JWT_SECRET_KEY = "test-secret-key-with-32-characters!"
+        cfg.settings.JWT_ALGORITHM = "HS256"
+        cfg.settings.JWT_ISSUER = "lograven"
+        result = self.fn(report, storage)
+        assert result["expires_in"] == 15 * 60
+
+        cfg.settings.STORAGE_BACKEND = "s3"
+        cfg.settings.S3_DOWNLOAD_URL_EXPIRE_SECONDS = 900
+        try:
+            result_s3 = self.fn(report, storage)
+        finally:
+            cfg.settings.STORAGE_BACKEND = "local"
+        assert result_s3["expires_in"] == 900
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +306,10 @@ class TestRouterImport:
 
     def test_reports_routes_importable(self):
         from app.api.reports.routes import router
+        assert router is not None
+
+    def test_downloads_routes_importable(self):
+        from app.api.downloads.routes import router
         assert router is not None
 
     def test_schemas_importable(self):
