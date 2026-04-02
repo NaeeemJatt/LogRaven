@@ -45,10 +45,7 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
     from app.models.user import User
     from app.parsers.detector import detect_candidates
     from app.parsers.quality import PARSE_QUALITY_SUFFICIENT, assess_parse_quality
-    from app.parsers.cloudtrail import CloudTrailParser
-    from app.parsers.nginx import NginxParser
-    from app.parsers.syslog import SyslogParser
-    from app.parsers.windows_event import WindowsEventParser
+    from app.parsers.registry import PARSER_REGISTRY
     from app.config import settings
     from app.utils.storage import create_storage_backend
 
@@ -94,13 +91,7 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
 
             # ── Step 3: Parse files ───────────────────────────────────────────
             _banner("STEP 2 / 7  —  Parse Log Files")
-            parser_map = {
-                "windows_event": WindowsEventParser,
-                "syslog":        SyslogParser,
-                "cloudtrail":    CloudTrailParser,
-                "nginx":         NginxParser,
-                "iis":           NginxParser,   # NginxParser handles IIS W3C internally
-            }
+            parser_map = PARSER_REGISTRY
 
             for inv_file in investigation.files:
                 logger.info("  file  : %s", inv_file.filename)
