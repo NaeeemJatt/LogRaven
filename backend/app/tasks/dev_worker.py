@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 import subprocess
 import sys
@@ -27,23 +28,6 @@ def _logfile() -> Path:
     return _runtime_dir() / "celery-worker.log"
 
 
-def _pid_is_running(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
-
-
-def _read_pid() -> int | None:
-    try:
-        return int(_pidfile().read_text(encoding="utf-8").strip())
-    except (OSError, ValueError):
-        return None
-
-
 def _write_pid(pid: int) -> None:
     _runtime_dir().mkdir(parents=True, exist_ok=True)
     _pidfile().write_text(str(pid), encoding="utf-8")
@@ -64,15 +48,16 @@ def ensure_dev_worker_running() -> bool:
     In local development, start a detached Celery worker on demand so queued
     investigations begin processing without manual worker startup.
     """
-    if not settings.DEBUG or settings.CELERY_TASK_ALWAYS_EAGER or not settings.AUTO_START_DEV_WORKER:
+    # Rely on AUTO_START_DEV_WORKER (not DEBUG): DEBUG defaults false and would
+    # leave tasks stuck in Redis with no consumer for typical local .env setups.
+    if settings.CELERY_TASK_ALWAYS_EAGER or not settings.AUTO_START_DEV_WORKER:
         return False
 
     if _has_active_worker():
         return False
 
-    pid = _read_pid()
-    if pid and _pid_is_running(pid):
-        return False
+    # Do not skip startup based on pidfile alone: Windows PID reuse or a non-Celery
+    # process holding the same PID would leave the queue stuck with no consumer.
 
     _runtime_dir().mkdir(parents=True, exist_ok=True)
     command = [
@@ -106,5 +91,14 @@ def ensure_dev_worker_running() -> bool:
         proc = subprocess.Popen(command, **kwargs)
 
     _write_pid(proc.pid)
+    time.sleep(1.5)
+    exit_code = proc.poll()
+    if exit_code is not None:
+        logger.error(
+            "Celery worker process exited immediately (code=%s). Check %s",
+            exit_code,
+            _logfile(),
+        )
+        return False
     logger.info("Auto-started local Celery worker (pid=%s, log=%s)", proc.pid, _logfile())
     return True

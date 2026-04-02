@@ -38,6 +38,7 @@ _mock_settings.MAX_PARSED_EVENTS_PER_FILE = 50000
 _mock_settings.MAX_PARSED_EVENTS_PER_INVESTIGATION = 100000
 _mock_settings.CELERY_TASK_ALWAYS_EAGER = True
 _mock_settings.AUTO_START_DEV_WORKER = True
+_mock_settings.USE_ASYNCIO_INVESTIGATION_PIPELINE = False
 _mock_settings.COOKIE_SECURE       = False
 _mock_settings.PUBLIC_API_BASE_URL = "http://localhost:8000"
 _mock_settings.INCLUDE_TOKENS_IN_AUTH_JSON = False

@@ -7,11 +7,13 @@ class DummyProcess:
     def __init__(self, pid: int):
         self.pid = pid
 
+    def poll(self):
+        return None  # still "running" after ensure_dev_worker_running's sleep + poll check
 
-def test_dev_worker_skips_outside_debug(monkeypatch):
-    monkeypatch.setattr(dev_worker.settings, "DEBUG", False, raising=False)
+
+def test_dev_worker_skips_when_auto_start_disabled(monkeypatch):
     monkeypatch.setattr(dev_worker.settings, "CELERY_TASK_ALWAYS_EAGER", False, raising=False)
-    monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", True, raising=False)
+    monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", False, raising=False)
 
     started = {"called": False}
 
@@ -26,7 +28,6 @@ def test_dev_worker_skips_outside_debug(monkeypatch):
 
 
 def test_dev_worker_skips_when_worker_already_active(monkeypatch):
-    monkeypatch.setattr(dev_worker.settings, "DEBUG", True, raising=False)
     monkeypatch.setattr(dev_worker.settings, "CELERY_TASK_ALWAYS_EAGER", False, raising=False)
     monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", True, raising=False)
     monkeypatch.setattr(dev_worker, "_has_active_worker", lambda: True)
@@ -44,11 +45,9 @@ def test_dev_worker_skips_when_worker_already_active(monkeypatch):
 
 
 def test_dev_worker_starts_detached_process(monkeypatch, tmp_path: Path):
-    monkeypatch.setattr(dev_worker.settings, "DEBUG", True, raising=False)
     monkeypatch.setattr(dev_worker.settings, "CELERY_TASK_ALWAYS_EAGER", False, raising=False)
     monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", True, raising=False)
     monkeypatch.setattr(dev_worker, "_has_active_worker", lambda: False)
-    monkeypatch.setattr(dev_worker, "_read_pid", lambda: None)
     monkeypatch.setattr(dev_worker, "_backend_root", lambda: tmp_path)
     monkeypatch.setattr(dev_worker, "_runtime_dir", lambda: tmp_path / "runtime")
     monkeypatch.setattr(dev_worker, "_pidfile", lambda: tmp_path / "runtime" / "celery-worker.pid")

@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     CELERY_TASK_ALWAYS_EAGER: bool = False
     # Local development convenience: start a worker automatically when jobs are queued.
     AUTO_START_DEV_WORKER: bool = True
+    # When True, run the investigation pipeline with asyncio in the API process (no Celery consumer).
+    # Reliable for local uvicorn on Windows; set False when using a dedicated Celery worker (Docker/K8s).
+    USE_ASYNCIO_INVESTIGATION_PIPELINE: bool = True
 
     model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True)
 

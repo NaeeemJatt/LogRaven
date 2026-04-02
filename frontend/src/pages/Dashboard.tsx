@@ -4,12 +4,14 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { animate, motion, useInView, useMotionValue, useMotionValueEvent } from 'framer-motion'
 import {
+  Activity,
   AlertCircle,
   CircleCheck,
   CircleDashed,
   FileBarChart,
   FileText,
   Eye,
+  Loader2,
   Plus,
   Search,
   Trash2,
@@ -153,6 +155,13 @@ function InvestigationRowCard({
     year: 'numeric',
   })
 
+  const titleNav =
+    ['queued', 'processing', 'failed'].includes(inv.status)
+      ? `/investigations/${inv.id}/status`
+      : `/investigations/${inv.id}`
+
+  const openTitleNav = () => onNavigate(titleNav)
+
   return (
     <motion.div
       layout
@@ -163,7 +172,25 @@ function InvestigationRowCard({
     >
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
-          <h3 className="text-raven-100 font-semibold text-base mb-1.5 truncate">{inv.name}</h3>
+          <h3
+            role="link"
+            tabIndex={0}
+            onClick={openTitleNav}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                openTitleNav()
+              }
+            }}
+            className="text-raven-100 font-semibold text-base mb-1.5 truncate cursor-pointer hover:text-electric-300 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-electric-500/50 rounded"
+            title={
+              ['queued', 'processing', 'failed'].includes(inv.status)
+                ? 'Open analysis progress'
+                : 'Open investigation'
+            }
+          >
+            {inv.name}
+          </h3>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-raven-500">
             <span className="inline-flex items-center gap-1">
               <FileText className="w-3.5 h-3.5" />
@@ -181,10 +208,24 @@ function InvestigationRowCard({
               type="button"
               onClick={() => onNavigate(`/investigations/${inv.id}`)}
               className="p-2 rounded-lg bg-electric-500/10 text-electric-400 hover:bg-electric-500/20 transition-colors"
-              title="View investigation"
+              title="Files & setup"
             >
               <Eye className="w-4 h-4" />
             </button>
+            {['queued', 'processing', 'failed'].includes(inv.status) && (
+              <button
+                type="button"
+                onClick={() => onNavigate(`/investigations/${inv.id}/status`)}
+                className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
+                title="Analysis progress — live pipeline"
+              >
+                {inv.status === 'processing' ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Activity className="w-4 h-4" />
+                )}
+              </button>
+            )}
             {inv.status === 'complete' && (
               <button
                 type="button"

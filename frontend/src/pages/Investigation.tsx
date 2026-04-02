@@ -4,6 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRight, ChevronLeft } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { InvestigationSubNav } from '../components/investigation/InvestigationSubNav'
 import Badge from '../components/ui/Badge'
 import { investigationsApi } from '../api/investigations'
 import type { Investigation, InvestigationFile } from '../types/investigation'
@@ -150,19 +151,62 @@ export default function Investigation() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Link
           to="/dashboard"
-          className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-6"
+          className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-4"
         >
           <ChevronLeft className="h-4 w-4" />
           Investigations
         </Link>
+
+        {id && <InvestigationSubNav investigationId={id} active="files" />}
 
         <div className="mb-8">
           <div className="flex flex-wrap items-center gap-3 mb-1">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{inv.name}</h1>
             <Badge value={inv.status} variant="status" />
           </div>
-          <p className="text-raven-500 text-sm">Upload logs, set source types, then run analysis.</p>
+          <p className="text-raven-500 text-sm">
+            {inv.status === 'draft' || inv.status === 'failed'
+              ? 'Upload logs, set source types, then run analysis.'
+              : inv.status === 'complete'
+                ? 'Analysis finished. Open the report or review files below.'
+                : 'Pipeline is running or queued. Use Analysis progress to watch stages through report generation.'}
+          </p>
         </div>
+
+        {['queued', 'processing', 'failed'].includes(inv.status) && (
+          <div className="mb-8 rounded-xl border border-electric-500/35 bg-gradient-to-r from-electric-500/10 to-raven-900/80 px-4 py-4 sm:px-5 sm:py-5 shadow-lg shadow-black/20">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-electric-300">
+                  {inv.status === 'failed' ? 'Analysis needs attention' : 'Analysis pipeline active'}
+                </p>
+                <p className="text-xs text-raven-500 mt-1 max-w-xl">
+                  {inv.status === 'failed'
+                    ? 'Open the progress view for the error detail and file states. You can retry from files & setup when the investigation is failed.'
+                    : 'Follow live stages (parsing → rules → correlation → AI → report) on the status page until the PDF is ready.'}
+                </p>
+              </div>
+              <Link
+                to={`/investigations/${id}/status`}
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-electric-500 hover:bg-electric-400 text-raven-950 text-sm font-semibold px-5 py-2.5 transition-colors shrink-0"
+              >
+                View analysis progress
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {inv.status === 'complete' && (
+          <div className="mb-8 flex flex-wrap gap-3">
+            <Link
+              to={`/investigations/${id}/status`}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-raven-600 bg-raven-800/60 px-4 py-2 text-sm font-medium text-raven-200 hover:border-electric-500/40 hover:text-electric-300 transition-colors"
+            >
+              View last run progress
+            </Link>
+          </div>
+        )}
 
         {canEdit && (
           <div className="mb-8">
@@ -250,7 +294,7 @@ export default function Investigation() {
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-raven-700 bg-raven-800/40">
-                    {['Filename', 'Source type', 'Status', 'Events', ...(canEdit ? [''] : [])].map((h) => (
+                    {['Filename', 'Source type', 'Log format', 'Status', 'Events', ...(canEdit ? [''] : [])].map((h) => (
                       <th
                         key={h || 'actions'}
                         className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-raven-500"
@@ -270,6 +314,34 @@ export default function Investigation() {
                         {f.filename}
                       </td>
                       <td className="px-4 py-3 text-raven-400 text-xs font-mono">{f.source_type}</td>
+                      <td
+                        className="px-4 py-3 text-raven-400 text-xs font-mono max-w-[200px]"
+                        title={
+                          f.parser_selection_detail
+                            ? [
+                                `Parser: ${f.log_type ?? '—'}`,
+                                f.parser_detection_confidence != null
+                                  ? `Detection confidence: ${f.parser_detection_confidence}`
+                                  : null,
+                                f.parser_selection_detail.parse_quality != null &&
+                                f.parser_selection_detail.parse_quality !== undefined
+                                  ? `Parse quality: ${f.parser_selection_detail.parse_quality}`
+                                  : null,
+                                f.parser_selection_detail.fallback_used ? 'Fallback: yes (first-ranked parser had low parse quality)' : null,
+                                f.parser_selection_detail.parse_warnings?.length
+                                  ? `Warnings: ${f.parser_selection_detail.parse_warnings.join(', ')}`
+                                  : null,
+                              ]
+                                .filter(Boolean)
+                                .join('\n')
+                            : f.log_type ?? undefined
+                        }
+                      >
+                        <span className="text-electric-400/90">{f.log_type ?? '—'}</span>
+                        {f.parser_selection_detail?.fallback_used ? (
+                          <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-500/90">fallback</span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3">
                         <span
                           className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide ${FILE_STATUS[f.status] ?? FILE_STATUS.pending}`}

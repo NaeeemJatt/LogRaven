@@ -15,12 +15,13 @@ export function useJobStatus(investigationId: string | null) {
     enabled: investigationId !== null,
     refetchInterval: (q) => {
       const st = q.state.data?.status
-      if (st && TERMINAL.includes(st)) return false
+      if (!st || st === 'draft') return false
+      if (TERMINAL.includes(st)) return false
       return 2000
     },
   })
 
-  const status = query.data?.status ?? 'queued'
+  const status = query.data?.status
   const progressStage = query.data?.progress_stage ?? null
   const files = query.data?.files ?? []
   const errorMessage = query.data?.error_message ?? null
@@ -31,7 +32,9 @@ export function useJobStatus(investigationId: string | null) {
     errorMessage,
     files,
     isLoading: query.isLoading,
+    isError: query.isError,
     isComplete: status === 'complete',
     isFailed: status === 'failed',
+    isDraft: status === 'draft',
   }
 }

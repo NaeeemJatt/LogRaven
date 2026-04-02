@@ -1,5 +1,6 @@
 # LogRaven — Investigation Routes
 
+import asyncio
 import uuid
 from datetime import datetime
 
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.ai.cloud.consent import cloud_ai_enabled, require_cloud_ai_consent
+from app.config import settings
 from app.dependencies import ensure_pro_or_team_tier, get_current_user, get_db, get_storage
 from app.limiter import limiter
 from app.models.investigation import Investigation
@@ -266,13 +268,24 @@ async def analyze_investigation(
     inv.progress_stage = "queued"
     await db.commit()
 
-    from app.tasks.dev_worker import ensure_dev_worker_running
-    from app.tasks.process_investigation import process_investigation
+    inv_id_str = str(investigation_id)
+    consent = body.cloud_ai_consent
 
-    ensure_dev_worker_running()
-    process_investigation.delay(str(investigation_id), body.cloud_ai_consent)
+    if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+        from app.tasks.process_investigation import run_investigation_pipeline_inline
 
-    return {"status": "queued", "investigation_id": str(investigation_id)}
+        asyncio.create_task(
+            run_investigation_pipeline_inline(inv_id_str, cloud_ai_consent=consent),
+            name=f"lograven-pipeline-{inv_id_str[:8]}",
+        )
+    else:
+        from app.tasks.dev_worker import ensure_dev_worker_running
+        from app.tasks.process_investigation import process_investigation
+
+        ensure_dev_worker_running()
+        process_investigation.delay(inv_id_str, consent)
+
+    return {"status": "queued", "investigation_id": inv_id_str}
 
 
 # ── GET /api/v1/investigations/{id}/status ───────────────────────────────────
@@ -290,17 +303,7 @@ async def get_investigation_status(
         status=inv.status,
         progress_stage=effective_stage,
         error_message=inv.error_message,
-        files=[
-            InvestigationFileResponse(
-                id=f.id,
-                filename=f.filename,
-                source_type=f.source_type,
-                log_type=f.log_type,
-                status=f.status,
-                event_count=f.event_count,
-            )
-            for f in inv.files
-        ],
+        files=[InvestigationFileResponse.model_validate(f) for f in inv.files],
     )
 
 
