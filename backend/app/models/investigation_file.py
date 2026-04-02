@@ -19,7 +19,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime, Integer, ForeignKey, Text
+from sqlalchemy import JSON, String, DateTime, Float, Integer, ForeignKey, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
@@ -36,6 +36,8 @@ class InvestigationFile(Base):
     filename:         Mapped[str]             = mapped_column(String(255), nullable=False)
     source_type:      Mapped[str]             = mapped_column(String(50), nullable=False)
     log_type:         Mapped[str | None]      = mapped_column(String(20), nullable=True)
+    parser_detection_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    parser_selection_detail:     Mapped[dict | None]  = mapped_column(JSON, nullable=True)
     storage_key:      Mapped[str]             = mapped_column(String(500), nullable=False)
     status:           Mapped[str]             = mapped_column(String(20), nullable=False, default="pending")
     event_count:      Mapped[int | None]      = mapped_column(Integer, nullable=True)

@@ -14,7 +14,7 @@
 from pydantic import BaseModel, ConfigDict
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, List
+from typing import Any, Optional, List
 
 
 class InvestigationCreate(BaseModel):
@@ -32,6 +32,8 @@ class InvestigationFileResponse(BaseModel):
     log_type: Optional[str]
     status: str
     event_count: Optional[int]
+    parser_detection_confidence: Optional[float] = None
+    parser_selection_detail: Optional[dict[str, Any]] = None
 
     model_config = ConfigDict(from_attributes=True)
 

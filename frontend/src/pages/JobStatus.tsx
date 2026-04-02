@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ChevronLeft } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
+import { InvestigationSubNav } from '../components/investigation/InvestigationSubNav'
 import { useJobStatus } from '../hooks/useJobStatus'
 
 const STEPS = [
@@ -25,7 +26,8 @@ const STAGE_INDEX: Record<string, number> = {
   complete: 6,
 }
 
-function progressToIndex(progressStage: string | null | undefined, status: string): number {
+function progressToIndex(progressStage: string | null | undefined, status: string | undefined): number {
+  if (!status || status === 'draft') return 0
   if (status === 'complete') return 7
   if (status === 'failed') {
     // Highlight the last known pipeline step (ignore legacy "failed" or unknown strings)
@@ -53,7 +55,17 @@ const FILE_STATUS: Record<string, string> = {
 export default function JobStatus() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { status, progressStage, errorMessage, files, isComplete, isFailed } = useJobStatus(id ?? null)
+  const {
+    status,
+    progressStage,
+    errorMessage,
+    files,
+    isLoading,
+    isError,
+    isComplete,
+    isFailed,
+    isDraft,
+  } = useJobStatus(id ?? null)
 
   useEffect(() => {
     if (isComplete) {
@@ -65,19 +77,79 @@ export default function JobStatus() {
   const currentIdx = progressToIndex(progressStage, status)
   const allDone = status === 'complete'
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-raven-950 text-raven-200">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-6"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Investigations
+          </Link>
+          <div className="flex items-center justify-center py-24">
+            <div
+              className="h-10 w-10 rounded-full border-2 border-raven-700 border-t-electric-500 animate-spin"
+              aria-hidden
+            />
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (isError || status === undefined) {
+    return (
+      <div className="min-h-screen bg-raven-950 text-raven-200">
+        <Navbar />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-6"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Investigations
+          </Link>
+          <p className="text-rose-400 text-sm font-mono border border-rose-900/40 bg-rose-950/20 rounded-lg px-4 py-3">
+            Could not load investigation status. Check that you are signed in and the investigation exists.
+          </p>
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-raven-950 text-raven-200">
       <Navbar />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <Link
-          to={`/investigations/${id}`}
-          className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-8"
+          to="/dashboard"
+          className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-4"
         >
           <ChevronLeft className="h-4 w-4" />
-          Investigation
+          Investigations
         </Link>
 
+        {id && <InvestigationSubNav investigationId={id} active="progress" />}
+
+        {isDraft ? (
+          <div className="rounded-xl border border-raven-700 bg-raven-900/80 px-6 py-10 text-center max-w-lg mx-auto">
+            <h1 className="text-xl font-semibold text-white mb-2">Analysis not started</h1>
+            <p className="text-raven-500 text-sm mb-6">
+              This investigation is still in draft. Upload log files and run analysis from the setup page to
+              track the pipeline here.
+            </p>
+            <Link
+              to={`/investigations/${id}`}
+              className="inline-flex items-center justify-center rounded-lg bg-electric-500 hover:bg-electric-400 text-raven-950 text-sm font-semibold px-6 py-2.5 transition-colors"
+            >
+              Go to files & setup
+            </Link>
+          </div>
+        ) : (
         <div className="w-full">
           <div className="flex flex-wrap items-center gap-3 mb-2">
             {!isFailed && !isComplete && (
@@ -239,11 +311,12 @@ export default function JobStatus() {
                 onClick={() => navigate(`/investigations/${id}`)}
                 className="inline-flex items-center justify-center rounded-lg border border-raven-600 bg-raven-800/80 px-5 py-2.5 text-sm font-semibold text-raven-200 hover:border-electric-500/40 transition-colors shrink-0"
               >
-                Back to investigation
+                Back to files & setup
               </button>
             </div>
           )}
         </div>
+        )}
       </main>
     </div>
   )

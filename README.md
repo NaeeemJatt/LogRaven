@@ -14,7 +14,7 @@ cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
 # Frontend: cd frontend && npm install && npm run dev
 ```
 
-When `DEBUG=true`, LogRaven will auto-start a local Celery worker on the first queued analysis if one is not already running.
+By default, investigations run **in-process** (`USE_ASYNCIO_INVESTIGATION_PIPELINE=true` in `.env.example`) so analysis progresses without a Celery worker—useful on Windows. For a separate worker, set `USE_ASYNCIO_INVESTIGATION_PIPELINE=false` and run `celery -A app.tasks.process_investigation worker --loglevel=info --pool=solo`, or use Docker Compose (which disables in-process mode and uses `lograven-worker`).
 
 For Docker-based local stacks, `docker-compose.yml` no longer exposes Postgres or Redis on host ports and requires `JWT_SECRET_KEY` to be set explicitly.
 

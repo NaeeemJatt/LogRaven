@@ -43,7 +43,8 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
     from app.models.investigation import Investigation
     from app.models.report import Report
     from app.models.user import User
-    from app.parsers import detector
+    from app.parsers.detector import detect_candidates
+    from app.parsers.quality import PARSE_QUALITY_SUFFICIENT, assess_parse_quality
     from app.parsers.cloudtrail import CloudTrailParser
     from app.parsers.nginx import NginxParser
     from app.parsers.syslog import SyslogParser
@@ -107,23 +108,87 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
                     file_path = await storage.get_file_path(inv_file.storage_key)
                     file_path_str = str(file_path)
                     try:
-                        log_type = detector.detect(file_path_str)
+                        candidates = detect_candidates(file_path_str)
+                        best_events: list | None = None
+                        best_cand = None
+                        best_quality_score = -1.0
+                        best_qr = None
+                        attempts: list[dict] = []
+
+                        for i, cand in enumerate(candidates[:4]):
+                            parser_cls = parser_map.get(cand.log_type)
+                            if parser_cls is None:
+                                attempts.append({"log_type": cand.log_type, "skipped": "no_parser"})
+                                continue
+                            try:
+                                evs = parser_cls().parse(file_path_str)
+                            except Exception as parse_exc:
+                                attempts.append(
+                                    {
+                                        "log_type": cand.log_type,
+                                        "error": str(parse_exc)[:200],
+                                        "events": 0,
+                                    }
+                                )
+                                continue
+                            qr = assess_parse_quality(evs)
+                            attempts.append(
+                                {
+                                    "log_type": cand.log_type,
+                                    "detection_confidence": cand.confidence,
+                                    "parse_quality": round(qr.score, 4),
+                                    "event_count": len(evs),
+                                }
+                            )
+                            if len(evs) == 0:
+                                continue
+                            if qr.score > best_quality_score:
+                                best_quality_score = qr.score
+                                best_events = evs
+                                best_cand = cand
+                                best_qr = qr
+                            if i == 0 and qr.score >= PARSE_QUALITY_SUFFICIENT:
+                                break
+
+                        if not best_events or best_cand is None:
+                            raise ValueError("Could not parse log file with any candidate parser")
+
+                        log_type = best_cand.log_type
+                        fallback_used = candidates[0].log_type != best_cand.log_type
+                        ranked_payload = [
+                            {
+                                "log_type": c.log_type,
+                                "confidence": c.confidence,
+                                "reasons": list(c.reasons),
+                            }
+                            for c in candidates
+                        ]
+                        detail = {
+                            "ranked_candidates": ranked_payload,
+                            "chosen_log_type": best_cand.log_type,
+                            "detection_confidence": best_cand.confidence,
+                            "parse_quality": round(best_qr.score, 4) if best_qr else None,
+                            "parse_warnings": list(best_qr.warnings) if best_qr else [],
+                            "fallback_used": fallback_used,
+                            "attempts": attempts,
+                        }
                         inv_file.log_type = log_type
+                        inv_file.parser_detection_confidence = best_cand.confidence
+                        inv_file.parser_selection_detail = detail
                         await db.commit()
-                        logger.info("  type  : %s  →  detected as [%s]", inv_file.filename, log_type)
+                        logger.info(
+                            "  type  : %s  →  chosen [%s] conf=%s quality=%.2f fallback=%s",
+                            inv_file.filename,
+                            log_type,
+                            best_cand.confidence,
+                            best_qr.score if best_qr else 0.0,
+                            fallback_used,
+                        )
 
                         if primary_log_type is None:
                             primary_log_type = log_type
 
-                        parser_cls = parser_map.get(log_type)
-                        if parser_cls is None:
-                            logger.warning("  SKIP  : no parser for log_type=%s", log_type)
-                            inv_file.status = "failed"
-                            inv_file.error_message = f"No parser for log_type: {log_type}"
-                            await db.commit()
-                            continue
-
-                        events = parser_cls().parse(file_path_str)
+                        events = best_events
                         if len(events) > settings.MAX_PARSED_EVENTS_PER_FILE:
                             raise ValueError(
                                 f"Parsed event count exceeded per-file security cap "
@@ -383,3 +448,18 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
             except Exception:
                 pass
             raise
+
+
+# Celery CLI (`celery -A app.tasks.process_investigation`) looks for `app` by default.
+app = celery_app
+
+
+async def run_investigation_pipeline_inline(investigation_id: str, *, cloud_ai_consent: bool = False) -> None:
+    """
+    Execute the full pipeline in the current event loop (FastAPI background task).
+    Used when USE_ASYNCIO_INVESTIGATION_PIPELINE is enabled instead of Celery.
+    """
+    try:
+        await _run_pipeline(investigation_id, cloud_ai_consent=cloud_ai_consent)
+    except Exception:
+        logger.exception("Investigation pipeline failed (inline): %s", investigation_id)

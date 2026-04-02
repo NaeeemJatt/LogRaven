@@ -17,6 +17,8 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - STORAGE_BACKEND=local
       - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
+      - AUTO_START_DEV_WORKER=false
+      - USE_ASYNCIO_INVESTIGATION_PIPELINE=false
     volumes:
       - ./backend:/app
       - ./local:/app/local
@@ -42,7 +44,7 @@ services:
     depends_on:
       - lograven-db
       - lograven-redis
-    command: celery -A app.tasks.celery_app worker --loglevel=info
+    command: celery -A app.tasks.process_investigation worker --loglevel=info
 
   lograven-db:
     image: postgres:15-alpine
