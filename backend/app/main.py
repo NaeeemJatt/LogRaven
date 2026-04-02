@@ -137,3 +137,9 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 from app.api.router import router  # noqa: E402
 
 app.include_router(router)
+
+
+@app.get("/")
+def api_root():
+    """Avoid bare 404 on /; full API is under /auth, /api/v1/..., /health."""
+    return {"service": "LogRaven API", "docs": "/docs", "health": "/health"}
