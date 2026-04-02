@@ -1,8 +1,9 @@
 // LogRaven — Axios HTTP client (httpOnly cookies; use empty VITE_API_URL + Vite proxy in dev)
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
+import { normalizeApiBase } from './normalizeApiBase'
 
-const baseURL = import.meta.env.VITE_API_URL ?? ''
+const baseURL = normalizeApiBase(import.meta.env.VITE_API_URL)
 let refreshPromise: Promise<void> | null = null
 
 const client = axios.create({

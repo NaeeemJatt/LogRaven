@@ -34,6 +34,17 @@ async def lifespan(app: FastAPI):
 
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "reports"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "uploads"), exist_ok=True)
+    os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "playground"), exist_ok=True)
+
+    play_paths = sorted(
+        {getattr(r, "path", "") for r in app.routes if "play-parser" in getattr(r, "path", "")}
+    )
+    if play_paths:
+        app_log.info("  PlayParser : %s", " ".join(play_paths))
+    else:
+        app_log.warning(
+            "  PlayParser : no routes (this process is not the current LogRaven API build)"
+        )
 
     yield
     app_log.info("LogRaven API shut down.")
@@ -84,9 +95,19 @@ async def access_logger(request: Request, call_next):
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 
+# In DEBUG, allow any localhost / 127.0.0.1 port so Vite (5173), alternate hosts, and
+# VITE_API_URL=http://127.0.0.1:8000 still work with credentials.
+_cors_origins = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"]
+_cors_regex = (
+    r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
+    if settings.DEBUG
+    else None
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"],
+    allow_origins=_cors_origins,
+    allow_origin_regex=_cors_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
