@@ -44,6 +44,8 @@ export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, repoRoot, ''), ...loadEnv(mode, __dirname, '') }
   // Prefer 127.0.0.1 on Windows so the dev proxy does not hit ::1 while uvicorn listens on IPv4 only.
   const apiTarget = env.VITE_DEV_API_PROXY_TARGET || 'http://127.0.0.1:8000'
+  // eslint-disable-next-line no-console -- dev-server hint when /api/* returns FastAPI 404 from wrong/old backend
+  console.log(`[vite] proxy /api /auth /health → ${apiTarget}`)
   const apiProxy = createApiProxy(apiTarget)
 
   return {

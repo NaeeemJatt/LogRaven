@@ -18,4 +18,5 @@ assert '/api/v1/play-parser/meta' in paths, (
 print('  OK —', ' '.join(sorted(paths)))
 "@
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& $py -m uvicorn app.main:app --reload --port $Port
+# Only watch app/ — otherwise edits under tests/, alembic/, etc. reload mid-request → 404 / ECONNRESET on PlayParser uploads.
+& $py -m uvicorn app.main:app --reload --port $Port --reload-dir app
