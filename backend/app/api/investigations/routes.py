@@ -3,15 +3,18 @@
 import uuid
 from datetime import datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Request, UploadFile, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import get_current_user, get_db, get_storage
+from app.ai.cloud.consent import cloud_ai_enabled, require_cloud_ai_consent
+from app.dependencies import ensure_pro_or_team_tier, get_current_user, get_db, get_storage
+from app.limiter import limiter
 from app.models.investigation import Investigation
 from app.models.investigation_file import InvestigationFile
 from app.schemas.investigation import (
+    InvestigationAnalyzeRequest,
     InvestigationCreate,
     InvestigationFileResponse,
     InvestigationResponse,
@@ -23,6 +26,21 @@ from app.services import report_service
 from app.utils.storage import StorageBackend
 
 router = APIRouter()
+
+# Cap OFFSET cost: max page × max limit stays bounded for PostgreSQL
+_MAX_INVESTIGATION_LIST_PAGE = 2000
+
+
+def _ensure_pro_for_multi_source_correlation(inv: Investigation, user) -> None:
+    """Cross-source correlation (2+ distinct source_type) requires pro or team."""
+    if not inv.correlation_enabled:
+        return
+    if len({f.source_type for f in inv.files}) < 2:
+        return
+    ensure_pro_or_team_tier(
+        user,
+        detail="Cross-source correlation requires a pro or team subscription.",
+    )
 
 
 def _effective_progress_stage(status: str) -> str:
@@ -37,6 +55,11 @@ def _effective_progress_stage(status: str) -> str:
         # Must match frontend STAGE_INDEX keys — never return a bare "failed" stage
         return "queued"
     return "queued"
+
+
+def _serialize_investigation_response(inv: Investigation) -> InvestigationResponse:
+    payload = InvestigationResponse.model_validate(inv)
+    return payload.model_copy(update={"cloud_ai_enabled": cloud_ai_enabled()})
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -87,7 +110,7 @@ async def create_investigation(
         .options(selectinload(Investigation.files))
         .where(Investigation.id == inv.id)
     )
-    return result.scalar_one()
+    return _serialize_investigation_response(result.scalar_one())
 
 
 # ── GET /api/v1/investigations ────────────────────────────────────────────────
@@ -99,6 +122,8 @@ async def list_investigations(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    page = min(max(1, page), _MAX_INVESTIGATION_LIST_PAGE)
+    limit = min(max(1, limit), 100)
     offset = (page - 1) * limit
     result = await db.execute(
         select(Investigation)
@@ -108,7 +133,7 @@ async def list_investigations(
         .offset(offset)
         .limit(limit)
     )
-    return result.scalars().all()
+    return [_serialize_investigation_response(inv) for inv in result.scalars().all()]
 
 
 # ── GET /api/v1/investigations/{id} ──────────────────────────────────────────
@@ -119,7 +144,8 @@ async def get_investigation(
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    return await _get_investigation_or_404(investigation_id, current_user, db, load_files=True)
+    inv = await _get_investigation_or_404(investigation_id, current_user, db, load_files=True)
+    return _serialize_investigation_response(inv)
 
 
 # ── DELETE /api/v1/investigations/{id} ────────────────────────────────────────
@@ -138,7 +164,9 @@ async def delete_investigation(
 # ── POST /api/v1/investigations/{id}/files ────────────────────────────────────
 
 @router.post("/{investigation_id}/files", response_model=InvestigationFileResponse, status_code=201)
+@limiter.limit("120/hour")
 async def upload_file(
+    request: Request,
     investigation_id: uuid.UUID,
     source_type: str = Form(...),
     file: UploadFile = File(...),
@@ -146,7 +174,11 @@ async def upload_file(
     db: AsyncSession = Depends(get_db),
     storage: StorageBackend = Depends(get_storage),
 ):
-    from app.api.investigations.validators import VALID_SOURCE_TYPES, validate_file_upload
+    from app.api.investigations.validators import (
+        VALID_SOURCE_TYPES,
+        sanitize_upload_filename,
+        validate_file_upload,
+    )
 
     inv = await _get_investigation_or_404(investigation_id, current_user, db)
     if inv.status not in ("draft",):
@@ -155,9 +187,8 @@ async def upload_file(
     if source_type not in VALID_SOURCE_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid source_type. Must be one of: {sorted(VALID_SOURCE_TYPES)}")
 
-    await validate_file_upload(file, current_user.tier)
-
-    filename = file.filename or "upload"
+    filename = sanitize_upload_filename(file.filename or "upload")
+    await validate_file_upload(file, current_user.tier, logical_filename=filename)
     file_id = uuid.uuid4()
     storage_key = f"uploads/{investigation_id}/{file_id}_{filename}"
 
@@ -209,9 +240,11 @@ async def delete_file(
 # ── POST /api/v1/investigations/{id}/analyze ─────────────────────────────────
 
 @router.post("/{investigation_id}/analyze")
+@limiter.limit("60/hour")
 async def analyze_investigation(
+    request: Request,
     investigation_id: uuid.UUID,
-    background_tasks: BackgroundTasks,
+    body: InvestigationAnalyzeRequest = Body(default_factory=InvestigationAnalyzeRequest),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -226,12 +259,18 @@ async def analyze_investigation(
             detail=f"Cannot analyze investigation with status '{inv.status}'. Must be draft or failed.",
         )
 
+    _ensure_pro_for_multi_source_correlation(inv, current_user)
+    require_cloud_ai_consent(body.cloud_ai_consent)
+
     inv.status = "queued"
     inv.progress_stage = "queued"
     await db.commit()
 
-    from app.tasks.process_investigation import _run_pipeline
-    background_tasks.add_task(_run_pipeline, str(investigation_id))
+    from app.tasks.dev_worker import ensure_dev_worker_running
+    from app.tasks.process_investigation import process_investigation
+
+    ensure_dev_worker_running()
+    process_investigation.delay(str(investigation_id), body.cloud_ai_consent)
 
     return {"status": "queued", "investigation_id": str(investigation_id)}
 

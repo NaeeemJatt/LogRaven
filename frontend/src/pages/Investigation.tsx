@@ -49,6 +49,8 @@ export default function Investigation() {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
+  const [cloudAiConsent, setCloudAiConsent] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   const { data: inv, isLoading } = useQuery<Investigation>({
     queryKey: ['investigation', id],
@@ -102,14 +104,15 @@ export default function Investigation() {
 
   const handleAnalyze = async () => {
     setAnalyzing(true)
+    setAnalysisError(null)
     try {
-      await investigationsApi.analyze(id!)
+      await investigationsApi.analyze(id!, inv?.cloud_ai_enabled ? cloudAiConsent : false)
       navigate(`/investigations/${id}/status`)
     } catch (err: unknown) {
       const detail = err && typeof err === 'object' && 'response' in err
         ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
         : undefined
-      alert(detail ?? 'Could not start analysis.')
+      setAnalysisError(detail ?? 'Could not start analysis.')
     } finally {
       setAnalyzing(false)
     }
@@ -296,12 +299,46 @@ export default function Investigation() {
           </div>
         )}
 
-        <div className="flex flex-wrap justify-end gap-3">
+        <div className="flex flex-col gap-4">
+          {canEdit && inv.files && inv.files.length > 0 && (
+            <div className="rounded-xl border border-raven-700 bg-raven-900/80 px-4 py-4">
+              {inv.cloud_ai_enabled ? (
+                <>
+                  <label className="flex items-start gap-3 text-sm text-raven-300">
+                    <input
+                      type="checkbox"
+                      checked={cloudAiConsent}
+                      onChange={(e) => setCloudAiConsent(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-raven-600 bg-raven-950 text-electric-500 focus:ring-electric-500"
+                    />
+                    <span>
+                      I consent to sending investigation event data to configured cloud AI providers during analysis.
+                    </span>
+                  </label>
+                  <p className="mt-2 text-xs text-raven-500">
+                    This deployment has cloud AI enabled. Consent is required before any log-derived data can be sent to external AI services.
+                  </p>
+                </>
+              ) : (
+                <p className="text-xs text-raven-500">
+                  Cloud AI is not configured for this deployment. Analysis can run without external AI consent.
+                </p>
+              )}
+            </div>
+          )}
+
+          {analysisError && (
+            <p className="rounded-lg border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs font-mono text-rose-400">
+              {analysisError}
+            </p>
+          )}
+
+          <div className="flex flex-wrap justify-end gap-3">
           {canEdit && inv.files && inv.files.length > 0 && (
             <button
               type="button"
               onClick={handleAnalyze}
-              disabled={analyzing}
+              disabled={analyzing || (inv.cloud_ai_enabled && !cloudAiConsent)}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-60 text-raven-950 text-sm font-semibold px-6 py-2.5 transition-colors"
             >
               {analyzing ? 'Starting…' : 'Run analysis'}
@@ -317,6 +354,7 @@ export default function Investigation() {
               <ArrowRight className="h-4 w-4" />
             </button>
           )}
+          </div>
         </div>
       </main>
     </div>

@@ -93,7 +93,7 @@ export default function Report() {
     setPdfLoading(true)
     try {
       const res = await investigationsApi.getReportDownload(id!)
-      window.open(res.data.download_url, '_blank')
+      window.open(res.data.download_url, '_blank', 'noopener,noreferrer')
     } catch {
       alert('PDF not ready. Run analysis first.')
     } finally {

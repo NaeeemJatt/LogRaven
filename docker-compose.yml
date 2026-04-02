@@ -12,12 +12,11 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - LICENSE_KEY=${LICENSE_KEY:-dev-license-bypass}
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - STORAGE_BACKEND=local
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-change-in-prod}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
     volumes:
       - ./backend:/app
       - ./local:/app/local
@@ -32,11 +31,11 @@ services:
       dockerfile: Dockerfile.dev
     container_name: lograven-worker
     environment:
-      - LICENSE_KEY=${LICENSE_KEY:-dev-license-bypass}
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - STORAGE_BACKEND=local
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
     volumes:
       - ./backend:/app
       - ./local:/app/local
@@ -54,14 +53,9 @@ services:
       - POSTGRES_USER=postgres
     volumes:
       - lograven_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
   lograven-redis:
     image: redis:7-alpine
     container_name: lograven-redis
-    ports:
-      - "6379:6379"
 
 volumes:
   lograven_data:

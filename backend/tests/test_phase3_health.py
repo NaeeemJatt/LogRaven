@@ -6,8 +6,13 @@ import sys, os
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+
+def _request(host: str = "127.0.0.1"):
+    return SimpleNamespace(client=SimpleNamespace(host=host))
 
 
 # ---------------------------------------------------------------------------
@@ -136,8 +141,9 @@ async def test_health_check_status_ok_when_all_pass():
     from app.api.health import routes as health_module
     with patch.object(health_module, "_check_db",    AsyncMock(return_value="ok")), \
          patch.object(health_module, "_check_redis", AsyncMock(return_value="ok")), \
-         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")):
-        result = await health_module.health_check()
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=True)):
+        result = await health_module.health_check(_request())
     assert result["status"] == "ok"
     assert result["db"]    == "ok"
     assert result["redis"] == "ok"
@@ -149,8 +155,9 @@ async def test_health_check_status_degraded_when_db_down():
     from app.api.health import routes as health_module
     with patch.object(health_module, "_check_db",    AsyncMock(return_value="error")), \
          patch.object(health_module, "_check_redis", AsyncMock(return_value="ok")), \
-         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")):
-        result = await health_module.health_check()
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=True)):
+        result = await health_module.health_check(_request())
     assert result["status"] == "degraded"
     assert result["db"]     == "error"
 
@@ -160,8 +167,9 @@ async def test_health_check_status_degraded_when_redis_down():
     from app.api.health import routes as health_module
     with patch.object(health_module, "_check_db",    AsyncMock(return_value="ok")), \
          patch.object(health_module, "_check_redis", AsyncMock(return_value="error")), \
-         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")):
-        result = await health_module.health_check()
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=True)):
+        result = await health_module.health_check(_request())
     assert result["status"] == "degraded"
 
 
@@ -171,10 +179,33 @@ async def test_health_check_ok_even_with_no_ai_key():
     from app.api.health import routes as health_module
     with patch.object(health_module, "_check_db",    AsyncMock(return_value="ok")), \
          patch.object(health_module, "_check_redis", AsyncMock(return_value="ok")), \
-         patch.object(health_module, "_check_ai",    MagicMock(return_value="no_key")):
-        result = await health_module.health_check()
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="no_key")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=True)):
+        result = await health_module.health_check(_request())
     assert result["status"] == "ok"
     assert result["ai"]     == "no_key"
+
+
+@pytest.mark.asyncio
+async def test_health_check_hides_dependency_detail_outside_debug():
+    from app.api.health import routes as health_module
+    with patch.object(health_module, "_check_db",    AsyncMock(return_value="ok")), \
+         patch.object(health_module, "_check_redis", AsyncMock(return_value="ok")), \
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=False)):
+        result = await health_module.health_check(_request())
+    assert result == {"status": "ok"}
+
+
+@pytest.mark.asyncio
+async def test_health_check_hides_dependency_detail_for_remote_clients_even_in_debug():
+    from app.api.health import routes as health_module
+    with patch.object(health_module, "_check_db",    AsyncMock(return_value="ok")), \
+         patch.object(health_module, "_check_redis", AsyncMock(return_value="ok")), \
+         patch.object(health_module, "_check_ai",    MagicMock(return_value="ok")), \
+         patch.object(health_module, "settings", MagicMock(DEBUG=True)):
+        result = await health_module.health_check(_request("203.0.113.10"))
+    assert result == {"status": "ok"}
 
 
 # ---------------------------------------------------------------------------

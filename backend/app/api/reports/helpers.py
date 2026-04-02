@@ -55,9 +55,20 @@ def build_download_response(report, storage) -> dict | None:
     if not report.pdf_storage_key:
         return None
 
-    url = storage.get_download_url(report.pdf_storage_key)
+    from app.config import settings
+    from app.utils.security import FILE_DOWNLOAD_TOKEN_EXPIRE_MINUTES, create_file_download_token
+
+    if settings.STORAGE_BACKEND == "local":
+        token = create_file_download_token(report.pdf_storage_key, str(report.user_id))
+        # Same-origin path so SPA + reverse proxy work without hard-coding API host
+        url = f"/api/v1/downloads/file?token={token}"
+        expires_in = FILE_DOWNLOAD_TOKEN_EXPIRE_MINUTES * 60
+    else:
+        url = storage.get_download_url(report.pdf_storage_key)
+        expires_in = settings.S3_DOWNLOAD_URL_EXPIRE_SECONDS
+
     return {
         "download_url": url,
         "filename":     f"lograven-report-{str(report.id)[:8]}.pdf",
-        "expires_in":   86400,
+        "expires_in":   expires_in,
     }

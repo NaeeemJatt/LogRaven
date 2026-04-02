@@ -9,9 +9,10 @@ from app.utils import security
 
 def create_token_pair(user_id: str, tier: str) -> TokenResponse:
     """Generate access + refresh token pair for a user."""
+    refresh_token, _ = security.create_refresh_token(user_id)
     return TokenResponse(
         access_token=security.create_access_token(user_id, tier),
-        refresh_token=security.create_refresh_token(user_id),
+        refresh_token=refresh_token,
     )
 
 

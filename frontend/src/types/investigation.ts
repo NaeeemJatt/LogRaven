@@ -14,6 +14,7 @@ export interface Investigation {
   name: string
   status: 'draft' | 'queued' | 'processing' | 'complete' | 'failed'
   correlation_enabled: boolean
+  cloud_ai_enabled: boolean
   files: InvestigationFile[]
   created_at: string
 }

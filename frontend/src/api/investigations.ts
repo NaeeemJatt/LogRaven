@@ -18,16 +18,16 @@ export const investigationsApi = {
     const form = new FormData()
     form.append('file', file)
     form.append('source_type', sourceType)
-    return client.post(`/api/v1/investigations/${id}/files`, form, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    return client.post(`/api/v1/investigations/${id}/files`, form)
   },
 
   deleteFile: (id: string, fileId: string) =>
     client.delete(`/api/v1/investigations/${id}/files/${fileId}`),
 
-  analyze: (id: string) =>
-    client.post(`/api/v1/investigations/${id}/analyze`),
+  analyze: (id: string, cloudAiConsent: boolean) =>
+    client.post(`/api/v1/investigations/${id}/analyze`, {
+      cloud_ai_consent: cloudAiConsent,
+    }),
 
   getStatus: (id: string) =>
     client.get(`/api/v1/investigations/${id}/status`),

@@ -1,6 +1,6 @@
 # LogRaven — Storage Backend Abstraction
 #
-# LocalStorageBackend: development — files under LOCAL_STORAGE_PATH, served at /files/
+# LocalStorageBackend: development — files under LOCAL_STORAGE_PATH (downloads via signed /api/v1/downloads/file)
 # S3StorageBackend: production — boto3 upload/download/presign
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ from pathlib import Path
 import aiofiles
 
 from app.config import settings
+from app.utils.storage_paths import resolved_file_under_storage_base
 
 
 class StorageBackend(ABC):
@@ -44,7 +45,7 @@ class StorageBackend(ABC):
 
 
 class LocalStorageBackend(StorageBackend):
-    """Development storage. Files served by FastAPI StaticFiles at /files/."""
+    """Development storage. Public URLs use signed download tokens (no open /files/ mount)."""
 
     def __init__(self, base_path: str = "./local", public_base_url: str | None = None):
         self.base = Path(base_path)
@@ -60,13 +61,13 @@ class LocalStorageBackend(StorageBackend):
         return key
 
     async def get_file_path(self, key: str) -> Path:
-        return self.base / key
+        return resolved_file_under_storage_base(self.base, key)
 
     def get_download_url(self, key: str) -> str:
-        return f"{self._public_base}/files/{key}"
+        raise RuntimeError("Local storage downloads must use signed download tokens.")
 
     async def delete_file(self, key: str) -> None:
-        path = self.base / key
+        path = resolved_file_under_storage_base(self.base, key)
         if path.exists():
             path.unlink()
 
@@ -133,7 +134,7 @@ class S3StorageBackend(StorageBackend):
         return self._client.generate_presigned_url(
             "get_object",
             Params={"Bucket": self.bucket, "Key": key},
-            ExpiresIn=86400,
+            ExpiresIn=settings.S3_DOWNLOAD_URL_EXPIRE_SECONDS,
         )
 
     async def delete_file(self, key: str) -> None:

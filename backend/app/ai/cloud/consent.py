@@ -1,13 +1,20 @@
-# LogRaven — Cloud AI Consent Check
-#
-# PURPOSE:
-#   Verifies the user has explicitly opted in to cloud AI analysis.
-#   Cloud AI sends event data to Anthropic servers.
-#   This must be explicitly opted in — never automatic.
-#
-# CONSENT CHECK:
-#   In LogRaven v1 (Docker delivery), consent is controlled by:
-#   - The client's own API key usage (they know their key goes to Anthropic)
-#   - An opt-in toggle in the UI per investigation
-#
-# TODO Month 3 Week 3: Implement this file.
+from fastapi import HTTPException, status
+
+from app.config import settings
+
+
+def cloud_ai_enabled() -> bool:
+    """Return True when any external AI provider is configured."""
+    return any([settings.GEMINI_API_KEY, settings.ANTHROPIC_API_KEY, settings.OPENAI_API_KEY])
+
+
+def require_cloud_ai_consent(consent_given: bool) -> None:
+    """
+    Enforce explicit opt-in before analysis is allowed to send log-derived
+    data to an external AI provider.
+    """
+    if cloud_ai_enabled() and not consent_given:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cloud AI analysis requires explicit consent.",
+        )

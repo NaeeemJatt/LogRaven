@@ -2,6 +2,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './store/authStore'
+import AuthBootstrap from './components/layout/AuthBootstrap'
 
 import Login           from './pages/Auth/Login'
 import Register        from './pages/Auth/Register'
@@ -21,6 +22,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <AuthBootstrap>
       <Routes>
         {/* Public */}
         <Route path="/"         element={<Landing />} />
@@ -47,6 +49,7 @@ export default function App() {
         {/* Unknown paths → home (marketing); authenticated users use /dashboard from UI */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </AuthBootstrap>
     </BrowserRouter>
   )
 }

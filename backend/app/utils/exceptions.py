@@ -52,12 +52,6 @@ class FileTooLargeError(LogRavenError):
         super().__init__(message, "FILE_TOO_LARGE")
 
 
-class LicenseError(LogRavenError):
-    status_code = 403
-    def __init__(self, message: str = "Invalid or expired license"):
-        super().__init__(message, "LICENSE_ERROR")
-
-
 class UnknownLogTypeError(LogRavenError):
     status_code = 400
     def __init__(self, message: str = "Cannot detect log file format"):

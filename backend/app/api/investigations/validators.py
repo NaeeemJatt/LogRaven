@@ -1,6 +1,8 @@
 # LogRaven — File Upload Validators
 
 import mimetypes
+import os
+import re
 
 from fastapi import UploadFile
 
@@ -13,6 +15,24 @@ TIER_SIZE_LIMITS = {
     "pro": 50 * 1024 * 1024,
     "team": 200 * 1024 * 1024,
 }
+
+def sanitize_upload_filename(name: str, max_len: int = 200) -> str:
+    """
+    Single path segment safe for storage keys: no slashes, no traversal, no control chars.
+    Preserves one extension when present.
+    """
+    base = os.path.basename((name or "").replace("\\", "/"))
+    base = base.replace("\x00", "")
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]", "_", base).strip("._")
+    if not cleaned:
+        cleaned = "upload"
+    if "." in cleaned:
+        stem, ext = cleaned.rsplit(".", 1)
+        ext = ext[:32]
+        stem = stem[: max(1, max_len - len(ext) - 1)] or "upload"
+        cleaned = f"{stem}.{ext}"
+    return cleaned[:max_len]
+
 
 VALID_SOURCE_TYPES = {
     "windows_endpoint",
@@ -49,12 +69,18 @@ def _mime_matches_extension(ext: str, content_type: str) -> bool:
     return False
 
 
-async def validate_file_upload(file: UploadFile, tier: str) -> None:
+async def validate_file_upload(
+    file: UploadFile,
+    tier: str,
+    *,
+    logical_filename: str | None = None,
+) -> None:
     """
     Validate extension, rough MIME alignment, and size (streaming when size unknown).
     Raises InvalidFileTypeError or FileTooLargeError.
+    *logical_filename* — use sanitized name for extension checks when uploads are renamed for storage.
     """
-    filename = file.filename or "upload"
+    filename = logical_filename or file.filename or "upload"
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if ext not in ALLOWED_EXTENSIONS:
         raise InvalidFileTypeError(

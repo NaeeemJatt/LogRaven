@@ -21,6 +21,10 @@ class InvestigationCreate(BaseModel):
     name: str  # 1-200 chars
 
 
+class InvestigationAnalyzeRequest(BaseModel):
+    cloud_ai_consent: bool = False
+
+
 class InvestigationFileResponse(BaseModel):
     id: UUID
     filename: str
@@ -37,6 +41,7 @@ class InvestigationResponse(BaseModel):
     name: str
     status: str
     correlation_enabled: bool
+    cloud_ai_enabled: bool = False
     files: List[InvestigationFileResponse] = []
     created_at: datetime
 

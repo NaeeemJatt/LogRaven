@@ -1,22 +1,24 @@
 # LogRaven — Security Utilities
 #
-# PURPOSE:
-#   JWT token creation/validation and bcrypt password hashing.
-#   Used by auth_service.py and dependencies.py.
+# JWT (PyJWT), bcrypt passwords, short-lived signed download tokens for local files.
 
 from datetime import datetime, timedelta, timezone
+import uuid
 
+import jwt
 from fastapi import HTTPException, status
-from jose import JWTError, ExpiredSignatureError, jwt
+from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
 from passlib.context import CryptContext
 
 from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+FILE_DOWNLOAD_TOKEN_EXPIRE_MINUTES = 15
+FILE_DOWNLOAD_TOKEN_AUDIENCE = "lograven-download"
+
 
 def hash_password(plain: str) -> str:
-    # Truncate to 72 bytes — bcrypt hard limit; safe for passwords
     truncated = plain.encode("utf-8")[:72].decode("utf-8", errors="ignore")
     return pwd_context.hash(truncated)
 
@@ -29,41 +31,93 @@ def verify_password(plain: str, hashed: str) -> bool:
 def create_access_token(user_id: str, tier: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     payload = {
-        "sub":  user_id,
+        "sub": user_id,
         "tier": tier,
         "type": "access",
-        "exp":  expire,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "exp": expire,
     }
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def create_refresh_token(user_id: str) -> str:
+def create_refresh_token(user_id: str) -> tuple[str, str]:
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    jti = str(uuid.uuid4())
     payload = {
-        "sub":  user_id,
+        "sub": user_id,
         "type": "refresh",
-        "exp":  expire,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
+        "jti": jti,
+        "exp": expire,
     }
-    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    return token, jti
 
 
 def decode_token(token: str) -> dict:
     """
-    Decode and validate a JWT token.
+    Decode and validate an access or refresh JWT.
     Raises HTTP 401 on any validation failure.
     """
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        return payload
+        return jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=settings.JWT_AUDIENCE,
+        )
     except ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except JWTError:
+    except InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate token",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+def create_file_download_token(storage_key: str, owner_user_id: str) -> str:
+    """Short-lived JWT: one download of *storage_key*, only for *owner_user_id* (with session cookie)."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=FILE_DOWNLOAD_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "typ": "file_dl",
+        "key": storage_key,
+        "dl_uid": owner_user_id,
+        "iss": settings.JWT_ISSUER,
+        "aud": FILE_DOWNLOAD_TOKEN_AUDIENCE,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_file_download_token(token: str) -> tuple[str, str]:
+    """Return (storage_key, owner_user_id)."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=FILE_DOWNLOAD_TOKEN_AUDIENCE,
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Download link expired")
+    except InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
+
+    if payload.get("typ") != "file_dl":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
+    key = payload.get("key")
+    owner = payload.get("dl_uid")
+    if not key or not isinstance(key, str):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
+    if not owner or not isinstance(owner, str):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
+    return key, owner

@@ -5,7 +5,7 @@
 //
 // BEHAVIOR:
 //   1. Call reports.getDownloadUrl(report_id) -> GET /api/v1/reports/{id}/download
-//   2. Response: {download_url: "http://localhost:8000/files/reports/..."}
+//   2. Response: { download_url: "/api/v1/downloads/file?token=..." } (local) or presigned S3 URL
 //   3. Open download_url in new tab (browser handles PDF download)
 //
 // TODO Month 4 Week 1: Implement.

@@ -14,19 +14,26 @@
 # AI key absence downgrades ai to "no_key" but does NOT affect overall status,
 # since analysis can be skipped and the app still functions.
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from sqlalchemy import text
+
+from app.config import settings
 
 router = APIRouter()
 
+_LOCAL_HOSTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
 
 @router.get("/health")
-async def health_check():
+async def health_check(request: Request):
     db_status    = await _check_db()
     redis_status = await _check_redis()
     ai_status    = _check_ai()
 
     overall = "ok" if db_status == "ok" and redis_status == "ok" else "degraded"
+
+    if not settings.DEBUG or not _is_local_request(request):
+        return {"status": overall}
 
     return {
         "status": overall,
@@ -73,3 +80,8 @@ def _check_ai() -> str:
     if any([settings.GEMINI_API_KEY, settings.ANTHROPIC_API_KEY, settings.OPENAI_API_KEY]):
         return "ok"
     return "no_key"
+
+
+def _is_local_request(request: Request) -> bool:
+    host = request.client.host if request.client else ""
+    return host in _LOCAL_HOSTS

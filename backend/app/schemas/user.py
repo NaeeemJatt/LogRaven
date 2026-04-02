@@ -40,3 +40,13 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    user: UserResponse | None = None
+
+
+class AuthSessionResponse(BaseModel):
+    """HTTP shape after login/register/refresh; tokens omitted unless INCLUDE_TOKENS_IN_AUTH_JSON."""
+
+    token_type: str = "bearer"
+    access_token: str | None = None
+    refresh_token: str | None = None
+    user: UserResponse | None = None
