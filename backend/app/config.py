@@ -91,6 +91,10 @@ class Settings(BaseSettings):
     DECODER_MAX_LINES_PER_FILE: int = 2000
     DECODER_PLAY_MAX_LINES: int = 200
 
+    # PlayParser: raw-vs-parsed line preview (POST /play-parser/preview)
+    PLAY_PARSER_PREVIEW_MAX_LINES: int = 100
+    PLAY_PARSER_PREVIEW_RAW_MAX_CHARS: int = 2000
+
     model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True)
 
     def model_post_init(self, __context) -> None:
@@ -111,6 +115,9 @@ class Settings(BaseSettings):
 
         if self.DECODER_MAX_LINES_PER_FILE <= 0 or self.DECODER_PLAY_MAX_LINES <= 0:
             raise ValueError("Decoder line caps must be positive integers.")
+
+        if self.PLAY_PARSER_PREVIEW_MAX_LINES <= 0 or self.PLAY_PARSER_PREVIEW_RAW_MAX_CHARS <= 0:
+            raise ValueError("PlayParser preview caps must be positive integers.")
 
 
 settings = Settings()
