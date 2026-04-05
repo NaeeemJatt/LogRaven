@@ -74,6 +74,34 @@ def test_meta_public_200():
     body = r.json()
     assert body.get("service") == "play-parser"
     assert "/evaluate" in str(body.get("endpoints"))
+    assert "evaluate-compare" in str(body.get("endpoints"))
+
+
+def test_evaluate_compare_shape_decoder_unreachable(client_authed, monkeypatch):
+    async def _no_mgr():
+        return False
+
+    monkeypatch.setattr(
+        "app.api.play_parser.routes.decoder_manager_is_healthy_cached",
+        _no_mgr,
+    )
+    client, _user = client_authed
+    body = (
+        b"Jan  2 12:00:00 web01 sshd[1234]: Failed password for root from 192.0.2.1 port 22 ssh2\n"
+    )
+    files = {"file": ("sample.log", io.BytesIO(body), "text/plain")}
+    data = {
+        "parser_keys": '["syslog"]',
+        "source_type": "linux_endpoint",
+        "include_decoders": "true",
+    }
+    r = client.post("/api/v1/play-parser/evaluate-compare", files=files, data=data)
+    assert r.status_code == 200, r.text
+    payload = r.json()
+    assert "parser_results" in payload
+    assert "decoders" in payload
+    assert payload["decoders"]["manager_reachable"] is False
+    assert payload["decoders"]["ok"] is False
 
 
 def test_evaluate_unauthenticated_401():

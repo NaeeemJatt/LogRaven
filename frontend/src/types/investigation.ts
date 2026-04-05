@@ -8,12 +8,17 @@ export interface ParserSelectionDetail {
   parse_warnings?: string[]
   ranked_candidates?: { log_type: string; confidence: number; reasons: string[] }[]
   attempts?: { log_type: string; parse_quality?: number; event_count?: number; error?: string; skipped?: string }[]
+  requested_ingestion_mode?: string
+  actual_ingestion_path?: string
+  fallback_reason?: string
+  user_warnings?: string[]
 }
 
 export interface InvestigationFile {
   id: string
   filename: string
   source_type: string
+  ingestion_mode?: string
   log_type: string | null
   status: 'pending' | 'parsing' | 'parsed' | 'failed'
   event_count: number | null

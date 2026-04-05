@@ -82,6 +82,15 @@ class Settings(BaseSettings):
     # Reliable for local uvicorn on Windows; set False when using a dedicated Celery worker (Docker/K8s).
     USE_ASYNCIO_INVESTIGATION_PIPELINE: bool = True
 
+    # Decoder manager (Logtest-compatible API, e.g. Wazuh Manager 4.7+). Optional — only required when using decoders.
+    DECODER_MANAGER_API_URL: str = ""
+    DECODER_MANAGER_USER: str = ""
+    DECODER_MANAGER_PASSWORD: str = ""
+    DECODER_MANAGER_VERIFY_TLS: bool = True
+    DECODER_MANAGER_HTTP_TIMEOUT_SEC: float = 60.0
+    DECODER_MAX_LINES_PER_FILE: int = 2000
+    DECODER_PLAY_MAX_LINES: int = 200
+
     model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True)
 
     def model_post_init(self, __context) -> None:
@@ -99,6 +108,9 @@ class Settings(BaseSettings):
 
         if self.MAX_PARSED_EVENTS_PER_FILE <= 0 or self.MAX_PARSED_EVENTS_PER_INVESTIGATION <= 0:
             raise ValueError("Parsed event caps must be positive integers.")
+
+        if self.DECODER_MAX_LINES_PER_FILE <= 0 or self.DECODER_PLAY_MAX_LINES <= 0:
+            raise ValueError("Decoder line caps must be positive integers.")
 
 
 settings = Settings()

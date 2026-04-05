@@ -9,14 +9,15 @@ import type { InvestigationFile } from '../types/investigation'
 interface UploadArgs {
   file: File
   sourceType: string
+  ingestionMode?: 'parsers' | 'decoders'
 }
 
 export function useFileUpload(investigationId: string) {
   const queryClient = useQueryClient()
 
   const mutation = useMutation<InvestigationFile, Error, UploadArgs>({
-    mutationFn: async ({ file, sourceType }) => {
-      const res = await investigationsApi.uploadFile(investigationId, file, sourceType)
+    mutationFn: async ({ file, sourceType, ingestionMode = 'parsers' }) => {
+      const res = await investigationsApi.uploadFile(investigationId, file, sourceType, ingestionMode)
       return res.data
     },
     onSuccess: () => {
@@ -26,8 +27,8 @@ export function useFileUpload(investigationId: string) {
   })
 
   return {
-    upload: (file: File, sourceType: string) =>
-      mutation.mutateAsync({ file, sourceType }),
+    upload: (file: File, sourceType: string, ingestionMode: 'parsers' | 'decoders' = 'parsers') =>
+      mutation.mutateAsync({ file, sourceType, ingestionMode }),
     isUploading: mutation.isPending,
     uploadError: mutation.error,
     reset: mutation.reset,

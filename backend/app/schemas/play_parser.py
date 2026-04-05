@@ -44,3 +44,29 @@ class PlayParserDetectCandidate(BaseModel):
 
 class PlayParserDetectResponse(BaseModel):
     candidates: list[PlayParserDetectCandidate]
+
+
+class PlayDecoderSummary(BaseModel):
+    ok: bool
+    manager_reachable: bool
+    event_count: int = 0
+    events_trimmed: bool = False
+    warning_codes: list[str] = Field(default_factory=list)
+    user_messages: list[str] = Field(default_factory=list)
+    error: str | None = None
+    sample_events: list[PlayParserSampleEvent] | None = None
+
+
+class PlayParserCompareMetrics(BaseModel):
+    native_event_count: int
+    decoder_event_count: int
+    count_delta: int
+    sample_pairs_compared: int
+    timestamp_agreement_ratio: float
+    source_ip_agreement_ratio: float
+
+
+class PlayParserEvaluateCompareResponse(BaseModel):
+    parser_results: list[PlayParserEvaluateItem]
+    decoders: PlayDecoderSummary
+    compare: PlayParserCompareMetrics | None = None

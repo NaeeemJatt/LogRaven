@@ -14,10 +14,11 @@ export const investigationsApi = {
   delete: (id: string) =>
     client.delete(`/api/v1/investigations/${id}`),
 
-  uploadFile: (id: string, file: File, sourceType: string) => {
+  uploadFile: (id: string, file: File, sourceType: string, ingestionMode: 'parsers' | 'decoders' = 'parsers') => {
     const form = new FormData()
     form.append('file', file)
     form.append('source_type', sourceType)
+    form.append('ingestion_mode', ingestionMode)
     return client.post(`/api/v1/investigations/${id}/files`, form)
   },
 

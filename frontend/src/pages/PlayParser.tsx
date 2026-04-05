@@ -7,6 +7,7 @@ import type { AxiosError } from 'axios'
 import {
   playParserApi,
   type PlayParserDetectCandidate,
+  type PlayParserEvaluateCompareResponse,
   type PlayParserEvaluateItem,
 } from '../api/playParser'
 
@@ -17,6 +18,15 @@ const PARSER_OPTIONS: { key: string; label: string }[] = [
   { key: 'nginx', label: 'Nginx / Apache' },
   { key: 'iis', label: 'IIS W3C' },
 ]
+
+const COMPARE_SOURCE_TYPES = [
+  { value: 'linux_endpoint', label: 'Linux endpoint' },
+  { value: 'windows_endpoint', label: 'Windows endpoint' },
+  { value: 'web_server', label: 'Web server' },
+  { value: 'cloudtrail', label: 'CloudTrail' },
+  { value: 'firewall', label: 'Firewall' },
+  { value: 'network', label: 'Network' },
+] as const
 
 function requestedUrl(ax: AxiosError): string {
   const cfg = ax.config
@@ -98,6 +108,10 @@ export default function PlayParser() {
   const [results, setResults] = useState<PlayParserEvaluateItem[] | null>(null)
   const [hints, setHints] = useState<PlayParserDetectCandidate[] | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [compareLoading, setCompareLoading] = useState(false)
+  const [compareResults, setCompareResults] = useState<PlayParserEvaluateCompareResponse | null>(null)
+  const [includeDecoders, setIncludeDecoders] = useState(true)
+  const [compareSourceType, setCompareSourceType] = useState<string>('linux_endpoint')
 
   const selectedKeys = useMemo(
     () => PARSER_OPTIONS.filter((p) => selected[p.key]).map((p) => p.key),
@@ -127,6 +141,31 @@ export default function PlayParser() {
       setError(apiErrorMessage(e))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const runParsersVsDecoders = async () => {
+    setError(null)
+    setCompareResults(null)
+    if (!file) {
+      setError('Choose a log file first.')
+      return
+    }
+    if (selectedKeys.length === 0) {
+      setError('Select at least one parser.')
+      return
+    }
+    setCompareLoading(true)
+    try {
+      const res = await playParserApi.evaluateCompare(file, selectedKeys, {
+        sourceType: compareSourceType,
+        includeDecoders,
+      })
+      setCompareResults(res.data)
+    } catch (e: unknown) {
+      setError(apiErrorMessage(e))
+    } finally {
+      setCompareLoading(false)
     }
   }
 
@@ -171,8 +210,8 @@ export default function PlayParser() {
               <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">PlayParser</h1>
             </div>
             <p className="text-raven-500 text-sm max-w-2xl">
-              Upload one file and run the same parsers the investigation pipeline uses. Compare event counts and
-              heuristic quality scores before you commit to a full investigation.
+              Upload one file and run the same parsers the investigation pipeline uses. Optionally run decoders on the
+              same file and compare counts and simple field agreement (PlayParser only).
             </p>
             <p className="text-amber-500/90 text-xs mt-2 font-mono">
               Tip: .evtx is binary and only meaningful for the Windows EVTX parser; other parsers may score low or error.
@@ -229,6 +268,34 @@ export default function PlayParser() {
             </p>
           )}
 
+          <div className="rounded-lg border border-raven-700/80 bg-raven-950/40 px-4 py-3 space-y-3">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-raven-500">
+              Parsers vs decoders (optional)
+            </span>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="inline-flex items-center gap-2 text-sm text-raven-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={includeDecoders}
+                  onChange={(e) => setIncludeDecoders(e.target.checked)}
+                  className="rounded border-raven-600 text-electric-500"
+                />
+                Include decoders
+              </label>
+              <select
+                value={compareSourceType}
+                onChange={(e) => setCompareSourceType(e.target.value)}
+                className="rounded-lg bg-raven-900 border border-raven-600 text-raven-200 text-xs px-3 py-1.5 font-mono"
+              >
+                {COMPARE_SOURCE_TYPES.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
@@ -237,7 +304,16 @@ export default function PlayParser() {
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-electric-600 hover:bg-electric-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 transition-colors"
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Run comparison
+              Run parsers only
+            </button>
+            <button
+              type="button"
+              disabled={compareLoading}
+              onClick={() => void runParsersVsDecoders()}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 transition-colors"
+            >
+              {compareLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Run parsers vs decoders
             </button>
             <button
               type="button"
@@ -271,6 +347,78 @@ export default function PlayParser() {
             </div>
           )}
         </div>
+
+        {compareResults && (
+          <div className="mt-10 space-y-4 rounded-xl border border-violet-500/30 bg-violet-950/20 p-5">
+            <h3 className="text-sm font-semibold text-violet-300">Parsers vs decoders result</h3>
+            <div className="grid sm:grid-cols-2 gap-4 text-sm">
+              <div className="rounded-lg border border-raven-700 bg-raven-900/50 p-3">
+                <p className="text-[11px] uppercase tracking-wider text-raven-500 mb-1">Decoders</p>
+                <p className="text-raven-300">
+                  Manager reachable:{' '}
+                  <span className={compareResults.decoders.manager_reachable ? 'text-emerald-400' : 'text-amber-400'}>
+                    {compareResults.decoders.manager_reachable ? 'yes' : 'no'}
+                  </span>
+                </p>
+                <p className="text-raven-300">
+                  Decoder run OK:{' '}
+                  <span className={compareResults.decoders.ok ? 'text-emerald-400' : 'text-raven-500'}>
+                    {compareResults.decoders.ok ? 'yes' : 'no'}
+                  </span>{' '}
+                  · events: {compareResults.decoders.event_count}
+                </p>
+                {compareResults.decoders.user_messages?.length ? (
+                  <ul className="mt-2 text-xs text-amber-400/90 list-disc pl-4">
+                    {compareResults.decoders.user_messages.map((m, i) => (
+                      <li key={i}>{m}</li>
+                    ))}
+                  </ul>
+                ) : null}
+                {compareResults.decoders.error ? (
+                  <p className="mt-2 text-xs text-rose-400 font-mono">{compareResults.decoders.error}</p>
+                ) : null}
+              </div>
+              {compareResults.compare ? (
+                <div className="rounded-lg border border-raven-700 bg-raven-900/50 p-3">
+                  <p className="text-[11px] uppercase tracking-wider text-raven-500 mb-1">Compare (sample)</p>
+                  <p className="text-raven-300 font-mono text-xs">
+                    Native events: {compareResults.compare.native_event_count}
+                    <br />
+                    Decoder events: {compareResults.compare.decoder_event_count}
+                    <br />
+                    Δ count: {compareResults.compare.count_delta}
+                    <br />
+                    Timestamp agreement: {(compareResults.compare.timestamp_agreement_ratio * 100).toFixed(0)}%
+                    <br />
+                    Source IP agreement: {(compareResults.compare.source_ip_agreement_ratio * 100).toFixed(0)}%
+                  </p>
+                </div>
+              ) : (
+                <p className="text-raven-500 text-xs self-center">No comparison metrics (need both paths to produce events).</p>
+              )}
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-raven-700">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-raven-700 text-left text-[11px] uppercase text-raven-500">
+                    <th className="px-3 py-2">Parser</th>
+                    <th className="px-3 py-2">OK</th>
+                    <th className="px-3 py-2">Events</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {compareResults.parser_results.map((row) => (
+                    <tr key={row.parser_key} className="border-b border-raven-800/80">
+                      <td className="px-3 py-2 font-mono text-raven-200">{row.parser_key}</td>
+                      <td className="px-3 py-2">{row.ok ? 'yes' : 'no'}</td>
+                      <td className="px-3 py-2 tabular-nums">{row.event_count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {results && results.length > 0 && (
           <div className="mt-10 overflow-x-auto rounded-xl border border-raven-700 bg-raven-900/40">

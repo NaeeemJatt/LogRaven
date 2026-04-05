@@ -35,6 +35,7 @@ const FILE_STATUS: Record<string, string> = {
 interface PendingFile {
   file: File
   sourceType: string
+  ingestionMode: 'parsers' | 'decoders'
 }
 
 const inputClass =
@@ -63,7 +64,10 @@ export default function Investigation() {
 
   const handleFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? [])
-    setPendingFiles((p) => [...p, ...files.map((f) => ({ file: f, sourceType: guessSourceType(f.name) }))])
+    setPendingFiles((p) => [
+      ...p,
+      ...files.map((f) => ({ file: f, sourceType: guessSourceType(f.name), ingestionMode: 'parsers' as const })),
+    ])
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -71,11 +75,17 @@ export default function Investigation() {
     e.preventDefault()
     if (!canEdit) return
     const files = Array.from(e.dataTransfer.files)
-    setPendingFiles((p) => [...p, ...files.map((f) => ({ file: f, sourceType: guessSourceType(f.name) }))])
+    setPendingFiles((p) => [
+      ...p,
+      ...files.map((f) => ({ file: f, sourceType: guessSourceType(f.name), ingestionMode: 'parsers' as const })),
+    ])
   }
 
   const updateSourceType = (idx: number, sourceType: string) =>
     setPendingFiles((p) => p.map((x, i) => (i === idx ? { ...x, sourceType } : x)))
+
+  const updateIngestionMode = (idx: number, ingestionMode: 'parsers' | 'decoders') =>
+    setPendingFiles((p) => p.map((x, i) => (i === idx ? { ...x, ingestionMode } : x)))
 
   const removePending = (idx: number) => setPendingFiles((p) => p.filter((_, i) => i !== idx))
 
@@ -83,8 +93,8 @@ export default function Investigation() {
     setUploading(true)
     setUploadError(null)
     try {
-      for (const { file, sourceType } of pendingFiles) {
-        await investigationsApi.uploadFile(id!, file, sourceType)
+      for (const { file, sourceType, ingestionMode } of pendingFiles) {
+        await investigationsApi.uploadFile(id!, file, sourceType, ingestionMode)
       }
       setPendingFiles([])
       queryClient.invalidateQueries({ queryKey: ['investigation', id] })
@@ -252,6 +262,17 @@ export default function Investigation() {
                         </option>
                       ))}
                     </select>
+                    <select
+                      value={pf.ingestionMode}
+                      onChange={(e) =>
+                        updateIngestionMode(idx, e.target.value as 'parsers' | 'decoders')
+                      }
+                      className={inputClass}
+                      title="Parsers use native LogRaven parsers. Decoders use the configured decoder manager when available."
+                    >
+                      <option value="parsers">Parsers</option>
+                      <option value="decoders">Decoders</option>
+                    </select>
                     <button
                       type="button"
                       onClick={() => removePending(idx)}
@@ -294,7 +315,15 @@ export default function Investigation() {
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-raven-700 bg-raven-800/40">
-                    {['Filename', 'Source type', 'Log format', 'Status', 'Events', ...(canEdit ? [''] : [])].map((h) => (
+                    {[
+                      'Filename',
+                      'Source type',
+                      'Ingestion',
+                      'Log format',
+                      'Status',
+                      'Events',
+                      ...(canEdit ? [''] : []),
+                    ].map((h) => (
                       <th
                         key={h || 'actions'}
                         className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-raven-500"
@@ -314,6 +343,23 @@ export default function Investigation() {
                         {f.filename}
                       </td>
                       <td className="px-4 py-3 text-raven-400 text-xs font-mono">{f.source_type}</td>
+                      <td className="px-4 py-3 text-raven-400 text-xs font-mono max-w-[140px]">
+                        <span className="text-raven-300">{f.ingestion_mode ?? 'parsers'}</span>
+                        {f.parser_selection_detail?.actual_ingestion_path &&
+                        f.parser_selection_detail.actual_ingestion_path !== (f.ingestion_mode ?? 'parsers') ? (
+                          <span className="block text-[10px] text-amber-500/90 mt-0.5">
+                            → {f.parser_selection_detail.actual_ingestion_path}
+                          </span>
+                        ) : null}
+                        {f.parser_selection_detail?.user_warnings?.length ? (
+                          <span
+                            className="block text-[10px] text-amber-400/90 mt-1"
+                            title={f.parser_selection_detail.user_warnings.join(' ')}
+                          >
+                            {f.parser_selection_detail.user_warnings[0]}
+                          </span>
+                        ) : null}
+                      </td>
                       <td
                         className="px-4 py-3 text-raven-400 text-xs font-mono max-w-[200px]"
                         title={

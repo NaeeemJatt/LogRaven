@@ -35,6 +35,8 @@ class InvestigationFile(Base):
     investigation_id: Mapped[uuid.UUID]       = mapped_column(UUID(as_uuid=True), ForeignKey("investigations.id"), nullable=False, index=True)
     filename:         Mapped[str]             = mapped_column(String(255), nullable=False)
     source_type:      Mapped[str]             = mapped_column(String(50), nullable=False)
+    # User choice: parsers (native) vs decoders (external decoder manager). Values: parsers | decoders.
+    ingestion_mode:   Mapped[str]             = mapped_column(String(20), nullable=False, insert_default="parsers")
     log_type:         Mapped[str | None]      = mapped_column(String(20), nullable=True)
     parser_detection_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
     parser_selection_detail:     Mapped[dict | None]  = mapped_column(JSON, nullable=True)

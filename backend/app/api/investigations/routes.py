@@ -172,6 +172,7 @@ async def upload_file(
     investigation_id: uuid.UUID,
     source_type: str = Form(...),
     file: UploadFile = File(...),
+    ingestion_mode: str = Form("parsers"),
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     storage: StorageBackend = Depends(get_storage),
@@ -189,6 +190,13 @@ async def upload_file(
     if source_type not in VALID_SOURCE_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid source_type. Must be one of: {sorted(VALID_SOURCE_TYPES)}")
 
+    im = (ingestion_mode or "parsers").strip().lower()
+    if im not in ("parsers", "decoders"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid ingestion_mode. Must be 'parsers' or 'decoders'.",
+        )
+
     filename = sanitize_upload_filename(file.filename or "upload")
     await validate_file_upload(file, current_user.tier, logical_filename=filename)
     file_id = uuid.uuid4()
@@ -201,6 +209,7 @@ async def upload_file(
         investigation_id=investigation_id,
         filename=filename,
         source_type=source_type,
+        ingestion_mode=im,
         storage_key=storage_key,
         status="pending",
     )
