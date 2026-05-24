@@ -19,6 +19,12 @@ Storage:    LocalStorageBackend (dev) / S3StorageBackend (prod)
 Frontend:   React 18, TypeScript 5.4, Vite 5.2, Tailwind 3.4, React Query 5
 Protection: PyArmor obfuscation + hardware-bound license keys
 
+## Decoder manager (optional)
+- Env: `DECODER_MANAGER_API_URL`, `DECODER_MANAGER_USER`, `DECODER_MANAGER_PASSWORD`, `DECODER_MANAGER_VERIFY_TLS`, `DECODER_MANAGER_HTTP_TIMEOUT_SEC`, `DECODER_MAX_LINES_PER_FILE`, `DECODER_PLAY_MAX_LINES` (`config.py`).
+- Client: `app/integrations/decoder_manager/` — JWT auth + `PUT /logtest` (Wazuh 4.7+ compatible).
+- Ingestion: `app/parsers/pipeline_ingest.py` — per-file `ingestion_mode` parsers|decoders, sniff + fallback.
+- Optional compose: repo root `docker-compose.wazuh.yml`.
+
 ## Critical Rules — Never Violate
 - SQLAlchemy 2.0 `select()` ONLY — never `session.query()`
 - Pydantic v2 syntax everywhere

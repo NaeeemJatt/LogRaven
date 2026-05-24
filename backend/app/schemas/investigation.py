@@ -29,6 +29,7 @@ class InvestigationFileResponse(BaseModel):
     id: UUID
     filename: str
     source_type: str
+    ingestion_mode: str = "parsers"
     log_type: Optional[str]
     status: str
     event_count: Optional[int]

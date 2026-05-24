@@ -19,8 +19,8 @@ Create investigation → upload files with source type tags
 → click Run Analysis → FastAPI enqueues Celery task
 → Worker:
     STEP 1: Fetch investigation + files from DB
-    STEP 2: Parse all files (pyevtx-rs / multi-pattern / JSON / regex)
-            NormalizedEvent.extra_fields populated by each parser
+    STEP 2: Parse all files — native parsers and/or decoders path (`pipeline_ingest.ingest_log_file`)
+            Per-file ingestion_mode (parsers | decoders) with bidirectional fallback; decoder output uses extra_fields.decoder_metadata
     STEP 3: Rule engine
             → 4 hardcoded rules (brute force, lateral movement, sensitive action, dedup)
             → YAML evaluator: 2,212 rules via event_id index (fast)
@@ -84,7 +84,7 @@ class NormalizedEvent:
     raw_message:      str
     flags:            list           # detection flags appended by rules
     severity_hint:    str            # "informational" / "low" / "medium" / "high" / "critical"
-    extra_fields:     dict           # source-specific metadata for YAML rule matching
+    extra_fields:     dict           # source-specific metadata; decoder path adds decoder_metadata
 ```
 
 ## Error Handling Patterns

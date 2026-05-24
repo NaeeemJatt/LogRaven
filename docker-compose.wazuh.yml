@@ -1,0 +1,28 @@
+# Optional: decoder manager (Wazuh Manager 4.7+ compatible API) for LogRaven decoders path.
+# Run: docker compose -f docker-compose.wazuh.yml up -d
+# Point LogRaven API at https://localhost:55000 (or host.docker.internal:55000 from another compose stack).
+
+services:
+  decoder-manager:
+    image: wazuh/wazuh-manager:4.7.3
+    container_name: lograven-decoder-manager
+    hostname: decoder-manager
+    ports:
+      - "55000:55000"
+      - "1514:1514/udp"
+      - "1515:1515"
+    environment:
+      # OS/admin-style vars; LogRaven uses the Wazuh API (Basic auth) with user wazuh-wui by default.
+      # Set DECODER_MANAGER_USER / DECODER_MANAGER_PASSWORD in LogRaven .env to the API user (see Wazuh "securing API" docs).
+      - WAZUH_MANAGER_ADMIN_USER=wazuh-manager
+      - WAZUH_MANAGER_ADMIN_PASSWORD=change-me-in-production
+    volumes:
+      - wazuh_data:/var/ossec/data
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+    restart: unless-stopped
+
+volumes:
+  wazuh_data:
+  wazuh_logs:
+  wazuh_queue:

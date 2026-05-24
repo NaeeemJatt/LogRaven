@@ -43,9 +43,6 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
     from app.models.investigation import Investigation
     from app.models.report import Report
     from app.models.user import User
-    from app.parsers.detector import detect_candidates
-    from app.parsers.quality import PARSE_QUALITY_SUFFICIENT, assess_parse_quality
-    from app.parsers.registry import PARSER_REGISTRY
     from app.config import settings
     from app.utils.storage import create_storage_backend
 
@@ -91,7 +88,7 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
 
             # ── Step 3: Parse files ───────────────────────────────────────────
             _banner("STEP 2 / 7  —  Parse Log Files")
-            parser_map = PARSER_REGISTRY
+            from app.parsers.pipeline_ingest import ingest_log_file
 
             for inv_file in investigation.files:
                 logger.info("  file  : %s", inv_file.filename)
@@ -99,87 +96,29 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
                     file_path = await storage.get_file_path(inv_file.storage_key)
                     file_path_str = str(file_path)
                     try:
-                        candidates = detect_candidates(file_path_str)
-                        best_events: list | None = None
-                        best_cand = None
-                        best_quality_score = -1.0
-                        best_qr = None
-                        attempts: list[dict] = []
+                        events, log_type, detail = await ingest_log_file(
+                            file_path_str=file_path_str,
+                            investigation_id=investigation.id,
+                            inv_file=inv_file,
+                        )
 
-                        for i, cand in enumerate(candidates[:4]):
-                            parser_cls = parser_map.get(cand.log_type)
-                            if parser_cls is None:
-                                attempts.append({"log_type": cand.log_type, "skipped": "no_parser"})
-                                continue
-                            try:
-                                evs = parser_cls().parse(file_path_str)
-                            except Exception as parse_exc:
-                                attempts.append(
-                                    {
-                                        "log_type": cand.log_type,
-                                        "error": str(parse_exc)[:200],
-                                        "events": 0,
-                                    }
-                                )
-                                continue
-                            qr = assess_parse_quality(evs)
-                            attempts.append(
-                                {
-                                    "log_type": cand.log_type,
-                                    "detection_confidence": cand.confidence,
-                                    "parse_quality": round(qr.score, 4),
-                                    "event_count": len(evs),
-                                }
-                            )
-                            if len(evs) == 0:
-                                continue
-                            if qr.score > best_quality_score:
-                                best_quality_score = qr.score
-                                best_events = evs
-                                best_cand = cand
-                                best_qr = qr
-                            if i == 0 and qr.score >= PARSE_QUALITY_SUFFICIENT:
-                                break
-
-                        if not best_events or best_cand is None:
-                            raise ValueError("Could not parse log file with any candidate parser")
-
-                        log_type = best_cand.log_type
-                        fallback_used = candidates[0].log_type != best_cand.log_type
-                        ranked_payload = [
-                            {
-                                "log_type": c.log_type,
-                                "confidence": c.confidence,
-                                "reasons": list(c.reasons),
-                            }
-                            for c in candidates
-                        ]
-                        detail = {
-                            "ranked_candidates": ranked_payload,
-                            "chosen_log_type": best_cand.log_type,
-                            "detection_confidence": best_cand.confidence,
-                            "parse_quality": round(best_qr.score, 4) if best_qr else None,
-                            "parse_warnings": list(best_qr.warnings) if best_qr else [],
-                            "fallback_used": fallback_used,
-                            "attempts": attempts,
-                        }
                         inv_file.log_type = log_type
-                        inv_file.parser_detection_confidence = best_cand.confidence
                         inv_file.parser_selection_detail = detail
+                        conf = detail.get("detection_confidence")
+                        inv_file.parser_detection_confidence = (
+                            float(conf) if isinstance(conf, (int, float)) else None
+                        )
                         await db.commit()
                         logger.info(
-                            "  type  : %s  →  chosen [%s] conf=%s quality=%.2f fallback=%s",
+                            "  type  : %s  →  [%s] requested=%s actual=%s",
                             inv_file.filename,
                             log_type,
-                            best_cand.confidence,
-                            best_qr.score if best_qr else 0.0,
-                            fallback_used,
+                            detail.get("requested_ingestion_mode"),
+                            detail.get("actual_ingestion_path"),
                         )
 
                         if primary_log_type is None:
                             primary_log_type = log_type
-
-                        events = best_events
                         if len(events) > settings.MAX_PARSED_EVENTS_PER_FILE:
                             raise ValueError(
                                 f"Parsed event count exceeded per-file security cap "

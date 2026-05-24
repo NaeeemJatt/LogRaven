@@ -57,3 +57,13 @@ Combined log format: 'IP - - [datetime] "METHOD /path HTTP/1.1" status bytes "re
 Also handles Apache combined log format (identical structure)
 Rate calculation: count requests per IP per 60-second window
 Flags: scanning (50+ requests/IP/60s), 4xx_spike (20+ errors/IP), injection_attempt (SQL/path traversal in URL)
+
+## Decoders path (optional external manager)
+- Each uploaded file has `ingestion_mode`: `parsers` (native registry) or `decoders` (line-oriented Logtest API).
+- **Sniff** (`parsers/sniff.py`): extension + magic + sample lines → `decoder_eligible`; `.evtx` and pcap-like binaries are not sent raw to decoders.
+- **Fallback**: decoders requested but manager down → parsers; parsers fail but manager up and file eligible → decoders. Per-file. User-facing messages use codes in `integrations/decoder_manager/messages.py` (no vendor names in UI copy).
+- Decoder output maps to `NormalizedEvent` with `extra_fields["decoder_metadata"]` for rule authors.
+- Env: `DECODER_MANAGER_*` in `config.py` / `.env.example`. Optional stack: `docker-compose.wazuh.yml`.
+
+## PlayParser
+- `POST /api/v1/play-parser/evaluate-compare` — parsers + optional decoders + comparison metrics when both produce events.

@@ -43,6 +43,15 @@ _mock_settings.COOKIE_SECURE       = False
 _mock_settings.PUBLIC_API_BASE_URL = "http://localhost:8000"
 _mock_settings.INCLUDE_TOKENS_IN_AUTH_JSON = False
 _mock_settings.TRUST_FORWARDED_FOR = False
+_mock_settings.DECODER_MANAGER_API_URL = ""
+_mock_settings.DECODER_MANAGER_USER = ""
+_mock_settings.DECODER_MANAGER_PASSWORD = ""
+_mock_settings.DECODER_MANAGER_VERIFY_TLS = True
+_mock_settings.DECODER_MANAGER_HTTP_TIMEOUT_SEC = 60.0
+_mock_settings.DECODER_MAX_LINES_PER_FILE = 2000
+_mock_settings.DECODER_PLAY_MAX_LINES = 200
+_mock_settings.PLAY_PARSER_PREVIEW_MAX_LINES = 100
+_mock_settings.PLAY_PARSER_PREVIEW_RAW_MAX_CHARS = 2000
 
 _cfg_stub = types.ModuleType("app.config")
 _cfg_stub.settings = _mock_settings

@@ -244,7 +244,7 @@ export default function JobStatus() {
                     <table className="w-full text-sm min-w-[480px]">
                       <thead className="sticky top-0 z-10 bg-raven-800/95 backdrop-blur-sm border-b border-raven-700">
                         <tr>
-                          {['Filename', 'Source type', 'Status', 'Events'].map((h) => (
+                          {['Filename', 'Source type', 'Ingestion', 'Status', 'Events'].map((h) => (
                             <th
                               key={h}
                               className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-raven-500"
@@ -264,6 +264,9 @@ export default function JobStatus() {
                               {f.filename}
                             </td>
                             <td className="px-4 py-3 text-raven-400 text-xs font-mono">{f.source_type}</td>
+                            <td className="px-4 py-3 text-raven-500 text-xs font-mono max-w-[100px]">
+                              {f.ingestion_mode ?? 'parsers'}
+                            </td>
                             <td className="px-4 py-3">
                               <span
                                 className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide ${
