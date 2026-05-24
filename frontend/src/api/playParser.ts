@@ -70,6 +70,25 @@ export interface PlayParserEvaluateCompareResponse {
   compare: PlayParserCompareMetrics | null
 }
 
+export type PlayParserPreviewMatch = 'exact' | 'substring' | 'index' | 'none'
+
+export interface PlayParserPreviewRow {
+  line_no: number
+  raw: string
+  parsed: Record<string, unknown> | null
+  match: PlayParserPreviewMatch
+}
+
+export interface PlayParserPreviewResponse {
+  preview_kind: 'parser' | 'decoder'
+  key: string
+  line_limit: number
+  rows: PlayParserPreviewRow[]
+  note: string | null
+}
+
+export type PlayParserRunMode = 'parsers_only' | 'decoders_only' | 'both'
+
 export const playParserApi = {
   evaluate: (file: File, parserKeys: string[]) => {
     const form = new FormData()
@@ -87,13 +106,31 @@ export const playParserApi = {
   evaluateCompare: (
     file: File,
     parserKeys: string[],
-    options?: { sourceType?: string; includeDecoders?: boolean },
+    options?: {
+      sourceType?: string
+      includeDecoders?: boolean
+      playMode?: PlayParserRunMode
+    },
   ) => {
     const form = new FormData()
     form.append('file', file)
     form.append('parser_keys', JSON.stringify(parserKeys))
     form.append('source_type', options?.sourceType ?? 'linux_endpoint')
     form.append('include_decoders', options?.includeDecoders === false ? 'false' : 'true')
+    form.append('play_mode', options?.playMode ?? 'both')
     return client.post<PlayParserEvaluateCompareResponse>('/api/v1/play-parser/evaluate-compare', form)
+  },
+
+  preview: (
+    file: File,
+    previewTarget: string,
+    options?: { sourceType?: string; lineLimit?: number },
+  ) => {
+    const form = new FormData()
+    form.append('file', file)
+    form.append('preview_target', previewTarget)
+    form.append('source_type', options?.sourceType ?? 'linux_endpoint')
+    form.append('line_limit', String(options?.lineLimit ?? 50))
+    return client.post<PlayParserPreviewResponse>('/api/v1/play-parser/preview', form)
   },
 }

@@ -1,5 +1,7 @@
 # LogRaven — PlayParser sandbox API schemas
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -70,3 +72,21 @@ class PlayParserEvaluateCompareResponse(BaseModel):
     parser_results: list[PlayParserEvaluateItem]
     decoders: PlayDecoderSummary
     compare: PlayParserCompareMetrics | None = None
+
+
+PreviewMatchKind = Literal["exact", "substring", "index", "none"]
+
+
+class PlayParserPreviewRow(BaseModel):
+    line_no: int
+    raw: str
+    parsed: dict | None = None
+    match: PreviewMatchKind
+
+
+class PlayParserPreviewResponse(BaseModel):
+    preview_kind: Literal["parser", "decoder"]
+    key: str
+    line_limit: int
+    rows: list[PlayParserPreviewRow]
+    note: str | None = None

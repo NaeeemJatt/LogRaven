@@ -75,6 +75,7 @@ def test_meta_public_200():
     assert body.get("service") == "play-parser"
     assert "/evaluate" in str(body.get("endpoints"))
     assert "evaluate-compare" in str(body.get("endpoints"))
+    assert "/preview" in str(body.get("endpoints"))
 
 
 def test_evaluate_compare_shape_decoder_unreachable(client_authed, monkeypatch):
@@ -94,6 +95,7 @@ def test_evaluate_compare_shape_decoder_unreachable(client_authed, monkeypatch):
         "parser_keys": '["syslog"]',
         "source_type": "linux_endpoint",
         "include_decoders": "true",
+        "play_mode": "both",
     }
     r = client.post("/api/v1/play-parser/evaluate-compare", files=files, data=data)
     assert r.status_code == 200, r.text
