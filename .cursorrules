@@ -1,10 +1,39 @@
-# LogRaven — Cursor AI Rules
-# Read memory-bank/ files at the start of every session.
+# LogRaven — Cursor Project Context
 
-PROJECT=LogRaven
-STACK=FastAPI + Python 3.11 + SQLAlchemy 2.0 + Celery + Redis + PostgreSQL + React 18 + TypeScript
+## Project
+LogRaven is a cybersecurity SIEM/log analysis platform with two modes:
+- Mode 1: Threat Detection (existing) — upload logs, AI finds threats, React dashboard
+- Mode 2: SOC 2 Compliance Audit (in progress) — connect AWS, collect evidence, AI maps to SOC 2 controls, generate PDF
 
-RULES:
+## Stack
+Backend: FastAPI + Celery + PostgreSQL (SQLAlchemy 2.0) + Redis + Python 3.11
+Frontend: React 18 + Vite + TypeScript + Tailwind CSS
+Dev: Windows + Docker Desktop + WSL2 + PowerShell 7
+Deploy: Oracle Cloud (backend) + AWS CloudFront (frontend)
+Domain: Namecheap
+
+## AI Integration — MANDATORY RULES
+- ALWAYS use: from google import genai
+- Client: client = genai.Client()  # reads GEMINI_API_KEY from env
+- Async: await client.aio.models.generate_content()
+- Model: gemini-2.5-flash
+- JSON output: response_mime_type="application/json"
+- NEVER use: anthropic, google-generativeai, openai
+
+## Compliance Module Location
+app/compliance/
+  aws_collector.py    — boto3 STS AssumeRole, CloudTrail, IAM, GuardDuty
+  sanitizer.py        — strips PII before AI call
+  soc2_mapper.py      — Gemini CC6/CC7 control mapping
+  report_generator.py — reportlab PDF builder
+  tasks.py            — Celery task pipeline
+
+## UI Colors
+Background: #0D1117 | Accent: #2F81F7 | Surface: #161B22
+Text: #E6EDF3 | Secondary: #8B949E | Border: #30363D
+PASS: #3FB950 | FAIL: #F85149 | PARTIAL: #D29922
+
+## Rules (all modes)
 - SQLAlchemy 2.0 select() ONLY — never session.query()
 - Pydantic v2 syntax everywhere
 - Always async/await in FastAPI routes
@@ -16,3 +45,12 @@ RULES:
 - mitreattack-python loaded ONCE at module startup — not per request
 - Never put business logic in route handlers — use services layer
 - JWT access tokens: 15 min expiry. Refresh tokens: 7 days
+- UUID primary keys on all new models
+- Follow existing patterns in the repo for imports, routers, and tasks
+- TypeScript: no any types in new components
+
+## Rules (compliance module only)
+- Never use HTML <form> tags — use div + button onClick
+- No print() — use the existing logger
+- No AWS credentials stored — STS AssumeRole only, time-limited sessions
+- No ARNs, IPs, or account IDs sent to Gemini — sanitizer.py handles this

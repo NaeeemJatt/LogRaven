@@ -13,6 +13,7 @@ import Investigation   from './pages/Investigation'
 import JobStatus       from './pages/JobStatus'
 import Report          from './pages/Report'
 import PlayParser      from './pages/PlayParser'
+import AuditPage       from './pages/AuditPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -48,6 +49,9 @@ export default function App() {
         } />
         <Route path="/play-parser" element={
           <ProtectedRoute><PlayParser /></ProtectedRoute>
+        } />
+        <Route path="/compliance" element={
+          <ProtectedRoute><AuditPage /></ProtectedRoute>
         } />
 
         {/* Unknown paths → home (marketing); authenticated users use /dashboard from UI */}

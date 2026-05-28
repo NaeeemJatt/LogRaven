@@ -12,7 +12,6 @@
 # ACTION VALUES:
 #   login | register | upload | analyze | report_view | download | failed_login
 #
-# TODO Month 1 Week 1: Implement this model.
 
 import uuid
 from datetime import datetime

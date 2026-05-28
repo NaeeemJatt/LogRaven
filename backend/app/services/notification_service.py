@@ -13,6 +13,7 @@ def send_job_complete(
     report_id: str,
     finding_count: int,
 ) -> None:
+    # TODO: wire to email/webhook when SMTP config is added
     logger.info(
         "[notification] analysis complete | user=%s | investigation=%s | report_id=%s | findings=%d",
         user_email,
@@ -27,6 +28,7 @@ def send_job_failed(
     investigation_name: str,
     error_message: str,
 ) -> None:
+    # TODO: wire to email/webhook when SMTP config is added
     logger.warning(
         "[notification] analysis failed | user=%s | investigation=%s | error=%s",
         user_email,

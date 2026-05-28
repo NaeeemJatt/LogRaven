@@ -1,6 +1,6 @@
 // LogRaven — Top navigation (matches dashboard chrome)
 import { Link } from 'react-router-dom'
-import { FlaskConical, LayoutDashboard, LogOut, Shield } from 'lucide-react'
+import { ClipboardCheck, FlaskConical, LayoutDashboard, LogOut, Shield } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useAuth } from '../../hooks/useAuth'
 
@@ -39,6 +39,13 @@ export default function Navbar() {
             >
               <FlaskConical className="h-4 w-4 opacity-70" aria-hidden />
               PlayParser
+            </Link>
+            <Link
+              to="/compliance"
+              className="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-raven-400 transition-colors hover:bg-white/5 hover:text-electric-400"
+            >
+              <ClipboardCheck className="h-4 w-4 opacity-70" aria-hidden />
+              Compliance
             </Link>
             <span
               className="hidden md:inline max-w-[200px] truncate text-xs font-mono text-raven-500"

@@ -14,7 +14,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - STORAGE_BACKEND=local
       - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
       - AUTO_START_DEV_WORKER=false
@@ -35,7 +35,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
       - REDIS_URL=redis://lograven-redis:6379
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - STORAGE_BACKEND=local
       - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
     volumes:
@@ -44,11 +44,13 @@ services:
     depends_on:
       - lograven-db
       - lograven-redis
-    command: celery -A app.tasks.process_investigation worker --loglevel=info
+    command: celery -A app.tasks.celery_app worker --loglevel=info
 
   lograven-db:
     image: postgres:15-alpine
     container_name: lograven-db
+    ports:
+      - "5432:5432"
     environment:
       - POSTGRES_PASSWORD=lgrpass
       - POSTGRES_DB=lograven
