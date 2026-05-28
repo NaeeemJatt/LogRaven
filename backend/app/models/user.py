@@ -10,8 +10,6 @@
 # RELATIONSHIPS:
 #   investigations — one-to-many
 #   audit_log      — one-to-many
-#
-# TODO Month 1 Week 1: Implement this model.
 
 import uuid
 from datetime import datetime

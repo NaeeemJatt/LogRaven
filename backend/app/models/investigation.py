@@ -12,7 +12,6 @@
 #   when 2+ files with different source_types are uploaded.
 #   Single file investigations always work regardless of this flag.
 #
-# TODO Month 1 Week 1: Implement this model.
 
 import uuid
 from datetime import datetime

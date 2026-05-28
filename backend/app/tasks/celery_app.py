@@ -10,6 +10,10 @@ celery_app = Celery(
     "lograven",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
+    include=[
+        "app.tasks.process_investigation",
+        "app.compliance.tasks",
+    ],
 )
 
 _conf = {
@@ -25,6 +29,3 @@ _conf = {
 if os.name != "nt":
     _conf["worker_max_tasks_per_child"] = 100
 celery_app.conf.update(_conf)
-
-# Tasks are registered by importing process_investigation from process_investigation.py.
-# Do NOT import here — celery_app is imported by process_investigation, circular otherwise.

@@ -1,8 +1,5 @@
-# LogRaven — OpenAI GPT-4o Engine (Fallback)
-#
-# PURPOSE:
-#   Fallback AI engine used when Claude API is unavailable.
-#   Same interface as claude engine.py — drop-in replacement.
-#   Only called by ai/router.py when Claude fails after retries.
-#
-# TODO Month 3 Week 3: Implement this file. (Lower priority than Claude engine)
+# LEGACY FILE — NOT USED IN PRODUCTION
+# This file contains the OpenAI and Anthropic fallback engine.
+# Per .cursorrules: the primary and only AI path is google-genai (Gemini 2.5 Flash).
+# Do not modify this file. Do not import from it in new code.
+# It is kept for reference only and may be removed in a future cleanup.

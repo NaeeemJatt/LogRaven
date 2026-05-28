@@ -14,7 +14,6 @@
 # STORAGE KEY FORMAT:
 #   uploads/{investigation_id}/{uuid}_{original_filename}
 #
-# TODO Month 1 Week 1: Implement this model.
 
 import uuid
 from datetime import datetime

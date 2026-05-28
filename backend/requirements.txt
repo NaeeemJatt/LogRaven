@@ -1,5 +1,5 @@
 # LogRaven — Backend Dependencies (Development)
-# NOTE: boto3 is NOT included — add to requirements.prod.txt for S3
+# NOTE: boto3 also used for S3 storage and SOC 2 AWS collector
 
 # Web framework
 fastapi==0.111.0
@@ -42,6 +42,7 @@ openai==1.35.0
 # PDF generation
 weasyprint==68.1      # best quality (Linux/Docker — needs GTK3)
 xhtml2pdf==0.2.17     # pure-Python fallback (Windows dev, no system deps needed)
+reportlab==4.0.9      # SOC 2 compliance report generation
 jinja2==3.1.6
 
 # Rule engine / YAML rule loading

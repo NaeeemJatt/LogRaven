@@ -9,5 +9,16 @@ from app.models.investigation_file import InvestigationFile
 from app.models.report import Report
 from app.models.finding import Finding
 from app.models.audit import AuditLog
+from app.models.soc2_audit import AuditJob, AuditResult
 
-__all__ = ["Base", "User", "Investigation", "InvestigationFile", "Report", "Finding", "AuditLog"]
+__all__ = [
+    "Base",
+    "User",
+    "Investigation",
+    "InvestigationFile",
+    "Report",
+    "Finding",
+    "AuditLog",
+    "AuditJob",
+    "AuditResult",
+]
