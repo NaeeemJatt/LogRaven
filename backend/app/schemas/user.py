@@ -15,6 +15,7 @@
 from pydantic import BaseModel, EmailStr, ConfigDict
 from uuid import UUID
 from datetime import datetime
+from typing import Optional
 
 
 class UserCreate(BaseModel):
@@ -31,9 +32,21 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     tier: str
+    name: Optional[str] = None
+    timezone: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = None
+    timezone: Optional[str] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 
 class TokenResponse(BaseModel):

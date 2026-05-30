@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "backend-architect": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/backend-architect/SKILL.md",
+      "computedHash": "bf1bf91a14af6a45a97393a358e7e3cd6b78b818bb881a441669a49d86801648"
+    },
+    "frontend-design": {
+      "source": "anthropics/claude-code",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
+      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
+    },
+    "frontend-security": {
+      "source": "schalkneethling/webdev-agent-skills",
+      "sourceType": "github",
+      "skillPath": "frontend-security/SKILL.md",
+      "computedHash": "e8d405042bb53c7b1a87523b01a6e7d219c31627679a4e92f8b32abbde4cbbc9"
+    },
+    "premium-frontend-ui": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/premium-frontend-ui/SKILL.md",
+      "computedHash": "e7f3d02a0233beafdd6fe5335427388109b9699ebcdc6a8782a8bada2826d916"
+    },
+    "security-audit": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-audit/SKILL.md",
+      "computedHash": "75c3d961f04992c2c7adcc453a3ecbf137d4756d914614d0a41a6a6126121991"
+    }
+  }
+}

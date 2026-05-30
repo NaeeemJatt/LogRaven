@@ -1,4 +1,3 @@
-// LogRaven — Register (dashboard-aligned; Login page unchanged)
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
@@ -23,7 +22,6 @@ export default function Register() {
       setError('Password must be at least 8 characters.')
       return
     }
-
     setLoading(true)
     try {
       await register(email, password)
@@ -38,18 +36,17 @@ export default function Register() {
     }
   }
 
-  const inputClass =
-    'w-full rounded-lg bg-raven-900 border border-raven-600 text-raven-200 text-sm px-3 py-2.5 font-mono focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500/30 transition-colors placeholder-raven-600'
-
   return (
-    <div className="min-h-screen bg-raven-950 text-raven-200 flex flex-col">
-      <header className="border-b border-raven-800/90 bg-raven-950/95">
-        <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
-          <Link to="/" className="group flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-electric-500/35 bg-electric-500/10 text-electric-400">
-              <Shield className="h-4 w-4" strokeWidth={2} aria-hidden />
+    <div className="min-h-screen bg-void text-text-primary flex flex-col">
+      <header className="border-b border-white/[0.05] bg-void/95">
+        <div className="flex h-14 items-center px-6">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-indigo-400" strokeWidth={2} />
+            </div>
+            <span className="font-display font-bold text-base text-text-primary tracking-tight">
+              Log<span className="text-indigo-400">Raven</span>
             </span>
-            <span className="text-base font-bold tracking-tight text-white">LogRaven</span>
           </Link>
         </div>
       </header>
@@ -57,14 +54,15 @@ export default function Register() {
       <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8 text-center">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">Create account</h1>
-            <p className="text-raven-500 text-sm">Watch your logs. Find the threat.</p>
+            <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-2">Security Workspace</div>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary tracking-tight mb-1">Create account</h1>
+            <p className="text-text-muted text-sm">Watch your logs. Find the threat.</p>
           </div>
 
-          <div className="rounded-xl border border-raven-700 bg-raven-900/80 p-6 sm:p-8 shadow-lg shadow-black/20">
+          <div className="rounded-2xl border border-white/[0.06] bg-surface/60 backdrop-blur-xl p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-raven-500 mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Email
                 </label>
                 <input
@@ -73,13 +71,13 @@ export default function Register() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="operator@example.com"
-                  className={inputClass}
+                  className="sovereign-input w-full text-sm px-3 py-2.5 font-mono"
                   autoComplete="email"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-raven-500 mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Password
                 </label>
                 <input
@@ -88,13 +86,13 @@ export default function Register() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
-                  className={inputClass}
+                  className="sovereign-input w-full text-sm px-3 py-2.5 font-mono"
                   autoComplete="new-password"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-raven-500 mb-1.5">
+                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Confirm password
                 </label>
                 <input
@@ -103,13 +101,13 @@ export default function Register() {
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Repeat password"
-                  className={inputClass}
+                  className="sovereign-input w-full text-sm px-3 py-2.5 font-mono"
                   autoComplete="new-password"
                 />
               </div>
 
               {error && (
-                <p className="text-rose-400 text-xs font-mono border border-rose-900/50 bg-rose-950/30 px-3 py-2 rounded-lg">
+                <p className="text-rose-400 text-xs font-mono border border-rose-500/20 bg-rose-500/5 px-3 py-2 rounded-lg">
                   {error}
                 </p>
               )}
@@ -117,15 +115,15 @@ export default function Register() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full inline-flex items-center justify-center rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-60 text-raven-950 text-sm font-semibold py-2.5 transition-colors"
+                className="btn-sovereign w-full text-sm font-semibold py-2.5 rounded-lg transition-colors"
               >
                 {loading ? 'Creating account…' : 'Create account'}
               </button>
             </form>
 
-            <p className="text-raven-500 text-sm mt-6 text-center">
+            <p className="text-text-muted text-sm mt-6 text-center">
               Already have an account?{' '}
-              <Link to="/login" className="text-electric-400 hover:text-electric-300 font-medium transition-colors">
+              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
                 Sign in
               </Link>
             </p>

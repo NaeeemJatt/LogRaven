@@ -1,293 +1,283 @@
-// LogRaven — Dashboard (21st.dev-inspired layout + LogRaven data layer)
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { animate, motion, useInView, useMotionValue, useMotionValueEvent } from 'framer-motion'
+import { motion, useInView } from 'framer-motion'
 import {
-  Activity,
-  AlertCircle,
-  CircleCheck,
-  CircleDashed,
-  FileBarChart,
-  FileText,
-  Eye,
-  Loader2,
-  Plus,
-  Search,
-  Trash2,
+  Plus, Search, AlertTriangle, CheckCircle2,
+  Clock, XCircle, FileText, Trash2,
+  Activity, ChevronRight, Loader2,
+  ArrowUpDown, BarChart2
 } from 'lucide-react'
-
-import Navbar from '../components/layout/Navbar'
-import ConfirmModal from '../components/ui/ConfirmModal'
 import { investigationsApi } from '../api/investigations'
+import ConfirmModal from '../components/ui/ConfirmModal'
 import type { Investigation } from '../types/investigation'
 
-// ── Animated stat figure (framer-motion animate API) ────────────────────────
-
-function AnimatedValue({ value }: { value: number }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const isInView = useInView(ref, { once: true, amount: 0.5 })
-  const mv = useMotionValue(0)
-  const [display, setDisplay] = useState(0)
-
-  useMotionValueEvent(mv, 'change', (v) => {
-    setDisplay(Math.floor(v))
-  })
-
-  useEffect(() => {
-    if (!isInView) return
-    const ctrl = animate(mv, value, { duration: 0.75, ease: [0.22, 1, 0.36, 1] })
-    return () => ctrl.stop()
-  }, [isInView, value, mv])
-
-  return (
-    <span ref={ref} className="tabular-nums">
-      {display.toLocaleString('en-GB')}
-    </span>
-  )
-}
-
-// ── Stats card ───────────────────────────────────────────────────────────────
-
-function StatsCard({
-  title,
-  value,
-  icon,
-}: {
-  title: string
-  value: number
-  icon: ReactNode
+// ── Stat card ─────────────────────────────────────────────
+function StatCard({ label, value, color, sub, index }: {
+  label: string; value: string | number; color: string; sub: string; index: number
 }) {
-  const cardRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(cardRef, { once: true, amount: 0.35 })
+  const ref = useRef<HTMLDivElement>(null)
+  const inView = useInView(ref, { once: true })
 
   return (
     <motion.div
-      ref={cardRef}
-      initial={{ opacity: 0, y: 16 }}
-      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 16 }}
-      transition={{ duration: 0.45 }}
-      whileHover={{ scale: 1.02, y: -2 }}
-      className="bg-raven-800 border border-raven-700 rounded-lg p-5 shadow-lg"
+      ref={ref}
+      initial={{ opacity: 0, y: 24 }}
+      animate={inView ? { opacity: 1, y: 0 } : {}}
+      transition={{ duration: 0.5, delay: index * 0.08 }}
+      className="p-5 rounded-xl border border-white/[0.06] bg-surface/60 backdrop-blur overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-raven-400">{title}</h3>
-        <div className="text-electric-400">{icon}</div>
-      </div>
-      <div className="text-3xl font-bold text-raven-200">
-        <AnimatedValue value={value} />
-      </div>
+      <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mb-2">{sub} · {label}</div>
+      <div className="font-display font-bold text-3xl" style={{ color }}>{value}</div>
     </motion.div>
   )
 }
 
-// ── Status pill (maps backend investigation statuses) ──────────────────────
+// ── Activity histogram (7-day placeholder) ─────────────────
+function ActivityHistogram({ data }: { data: Investigation[] }) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  const now = new Date()
 
-const STATUS_STYLE: Record<
-  Investigation['status'],
-  { bg: string; text: string; label: string }
-> = {
-  draft: {
-    bg: 'bg-raven-700/50',
-    text: 'text-raven-400',
-    label: 'Draft',
-  },
-  queued: {
-    bg: 'bg-amber-500/10',
-    text: 'text-amber-400',
-    label: 'Queued',
-  },
-  processing: {
-    bg: 'bg-electric-500/10',
-    text: 'text-electric-400',
-    label: 'Processing',
-  },
-  complete: {
-    bg: 'bg-emerald-500/10',
-    text: 'text-emerald-400',
-    label: 'Complete',
-  },
-  failed: {
-    bg: 'bg-rose-500/10',
-    text: 'text-rose-400',
-    label: 'Failed',
-  },
-}
+  const counts = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now)
+    d.setDate(d.getDate() - (6 - i))
+    const dayStr = d.toISOString().slice(0, 10)
+    return {
+      label: days[(d.getDay() + 6) % 7],
+      count: data.filter((inv) => inv.created_at?.slice(0, 10) === dayStr).length,
+    }
+  })
 
-function DashboardStatusBadge({ status }: { status: Investigation['status'] }) {
-  const cfg = STATUS_STYLE[status]
-  const Icon =
-    status === 'complete'
-      ? CircleCheck
-      : status === 'failed'
-        ? AlertCircle
-        : status === 'processing' || status === 'queued'
-          ? CircleDashed
-          : FileText
+  const max = Math.max(...counts.map((c) => c.count), 1)
 
   return (
-    <div
-      className={`inline-flex items-center justify-center px-3 py-1.5 rounded-lg ${cfg.bg}`}
-    >
-      <span className={`flex items-center gap-2 ${cfg.text} font-semibold text-xs uppercase tracking-wide`}>
-        <Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
-        {cfg.label}
-      </span>
+    <div className="p-5 rounded-xl border border-white/[0.06] bg-surface/40 backdrop-blur">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Activity</div>
+          <div className="text-sm font-semibold text-text-primary mt-0.5">7-day investigation trend</div>
+        </div>
+        <BarChart2 className="w-4 h-4 text-text-muted" />
+      </div>
+      <div className="flex items-end gap-1.5 h-12">
+        {counts.map((c, i) => (
+          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+            <motion.div
+              initial={{ scaleY: 0 }}
+              animate={{ scaleY: 1 }}
+              transition={{ delay: i * 0.04, duration: 0.4, ease: 'easeOut' }}
+              style={{
+                height: `${Math.max((c.count / max) * 100, 8)}%`,
+                background: c.count > 0 ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)',
+                transformOrigin: 'bottom',
+              }}
+              className="w-full rounded-sm"
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5 mt-2">
+        {counts.map((c, i) => (
+          <div key={i} className="flex-1 text-center">
+            <span className="font-mono text-[9px] text-text-ghost">{c.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
 
-// ── Investigation row (card layout) ────────────────────────────────────────────
+// ── Status cell ───────────────────────────────────────────
+const STATUS_CFG: Record<Investigation['status'], { icon: React.ElementType; badge: string; text: string; label: string }> = {
+  complete:   { icon: CheckCircle2, badge: 'bg-teal-500/10 border-teal-500/20',   text: 'text-teal-400',   label: 'Complete'   },
+  processing: { icon: Activity,     badge: 'bg-indigo-500/10 border-indigo-500/20', text: 'text-indigo-400', label: 'Processing' },
+  failed:     { icon: XCircle,      badge: 'bg-rose-500/10 border-rose-500/20',   text: 'text-rose-400',   label: 'Failed'     },
+  queued:     { icon: Clock,        badge: 'bg-amber-500/10 border-amber-500/20', text: 'text-amber-400',  label: 'Queued'     },
+  draft:      { icon: FileText,     badge: 'bg-white/[0.04] border-white/[0.06]', text: 'text-text-muted', label: 'Draft'      },
+}
 
-function InvestigationRowCard({
-  inv,
-  onDelete,
-  onNavigate,
-}: {
-  inv: Investigation
-  onDelete: (inv: Investigation) => void
-  onNavigate: (path: string) => void
-}) {
-  const fileCount = inv.files?.length ?? 0
-  const created = new Date(inv.created_at).toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
+function StatusBadge({ status }: { status: Investigation['status'] }) {
+  const cfg = STATUS_CFG[status]
+  const Icon = cfg.icon
+  return (
+    <span className={`inline-flex items-center gap-1 font-mono text-[10px] px-2 py-0.5 rounded border tracking-wide ${cfg.badge} ${cfg.text}`}>
+      <Icon className="w-2.5 h-2.5" />
+      {cfg.label}
+    </span>
+  )
+}
 
-  const titleNav =
-    ['queued', 'processing', 'failed'].includes(inv.status)
-      ? `/investigations/${inv.id}/status`
-      : `/investigations/${inv.id}`
+// ── Severity pills ────────────────────────────────────────
+function SeverityPills({ inv }: { inv: Investigation }) {
+  const summary = (inv as any).severity_summary
+  if (!summary && !(inv as any).findings_count) {
+    if (inv.status !== 'complete') return <span className="text-text-ghost font-mono text-[10px]">—</span>
+  }
 
-  const openTitleNav = () => onNavigate(titleNav)
+  const critical = summary?.critical ?? 0
+  const high = summary?.high ?? 0
+  const total = (inv as any).findings_count ?? 0
+
+  if (!critical && !high && !total) return <span className="text-text-ghost font-mono text-[10px]">—</span>
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28 }}
-      className="bg-raven-800 border border-raven-700 rounded-lg p-4 hover:border-electric-500/40 transition-colors"
+    <div className="flex items-center gap-1">
+      {critical > 0 && (
+        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400">
+          {critical}C
+        </span>
+      )}
+      {high > 0 && (
+        <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-orange-500/10 border border-orange-500/20 text-orange-400">
+          {high}H
+        </span>
+      )}
+      {!critical && !high && total > 0 && (
+        <span className="font-mono text-[10px] text-text-muted">{total} findings</span>
+      )}
+    </div>
+  )
+}
+
+// ── Table row ─────────────────────────────────────────────
+function InvTableRow({
+  inv, index, onDelete,
+}: {
+  inv: Investigation; index: number; onDelete: (inv: Investigation) => void
+}) {
+  const navigate = useNavigate()
+  const fileCount = (inv as any).file_count ?? inv.files?.length ?? 0
+  const canView = inv.status === 'complete'
+  const isProcessing = inv.status === 'processing' || inv.status === 'queued'
+  const titleNav = isProcessing || inv.status === 'failed'
+    ? `/investigations/${inv.id}/status`
+    : `/investigations/${inv.id}`
+
+  return (
+    <motion.tr
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, delay: index * 0.04 }}
+      className="group border-b border-white/[0.04] last:border-b-0 hover:bg-elevated/30 transition-colors"
     >
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <h3
-            role="link"
-            tabIndex={0}
-            onClick={openTitleNav}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                openTitleNav()
-              }
-            }}
-            className="text-raven-100 font-semibold text-base mb-1.5 truncate cursor-pointer hover:text-electric-300 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-electric-500/50 rounded"
-            title={
-              ['queued', 'processing', 'failed'].includes(inv.status)
-                ? 'Open analysis progress'
-                : 'Open investigation'
-            }
+      {/* Name */}
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(titleNav)}
+            className="text-sm font-medium text-text-primary hover:text-indigo-300 transition-colors text-left truncate max-w-[260px]"
           >
             {inv.name}
-          </h3>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-raven-500">
-            <span className="inline-flex items-center gap-1">
-              <FileText className="w-3.5 h-3.5" />
-              {fileCount} file{fileCount === 1 ? '' : 's'}
-            </span>
-            <span className="text-raven-700 hidden sm:inline">·</span>
-            <span className="font-mono text-xs">{created}</span>
-          </div>
+          </button>
+          {inv.status === 'processing' && (
+            <motion.span
+              animate={{ opacity: [1, 0.4, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5 }}
+              className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-400"
+            />
+          )}
         </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="font-mono text-[10px] text-text-ghost">{inv.id.slice(0, 8)}</span>
+        </div>
+      </td>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <DashboardStatusBadge status={inv.status} />
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => onNavigate(`/investigations/${inv.id}`)}
-              className="p-2 rounded-lg bg-electric-500/10 text-electric-400 hover:bg-electric-500/20 transition-colors"
-              title="Files & setup"
+      {/* Status */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <StatusBadge status={inv.status} />
+      </td>
+
+      {/* Severity */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <SeverityPills inv={inv} />
+      </td>
+
+      {/* Files */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="font-mono text-xs text-text-muted">{fileCount}</span>
+      </td>
+
+      {/* Date */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <span className="font-mono text-[11px] text-text-muted">
+          {new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+        </span>
+      </td>
+
+      {/* Actions */}
+      <td className="px-4 py-3 whitespace-nowrap">
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {canView && (
+            <Link
+              to={`/investigations/${inv.id}/report`}
+              className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
+              title="View report"
             >
-              <Eye className="w-4 h-4" />
-            </button>
-            {['queued', 'processing', 'failed'].includes(inv.status) && (
-              <button
-                type="button"
-                onClick={() => onNavigate(`/investigations/${inv.id}/status`)}
-                className="p-2 rounded-lg bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-colors"
-                title="Analysis progress — live pipeline"
-              >
-                {inv.status === 'processing' ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Activity className="w-4 h-4" />
-                )}
-              </button>
-            )}
-            {inv.status === 'complete' && (
-              <button
-                type="button"
-                onClick={() => onNavigate(`/investigations/${inv.id}/report`)}
-                className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                title="Open report"
-              >
-                <FileBarChart className="w-4 h-4" />
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => onDelete(inv)}
-              className="p-2 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 transition-colors"
-              title="Delete investigation"
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          )}
+          {isProcessing && (
+            <Link
+              to={`/investigations/${inv.id}/status`}
+              className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
+              title="View status"
             >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+              {inv.status === 'processing'
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Activity className="w-3.5 h-3.5" />}
+            </Link>
+          )}
+          <button
+            onClick={() => onDelete(inv)}
+            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-all"
+            title="Delete"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
         </div>
-      </div>
-    </motion.div>
+      </td>
+    </motion.tr>
   )
 }
 
-// ── Empty state ──────────────────────────────────────────────────────────────
-
-function EmptyState({ onNew }: { onNew: () => void }) {
+// ── Empty state ───────────────────────────────────────────
+function EmptyState() {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col items-center justify-center py-16 px-4"
-    >
-      <div className="bg-raven-800 border border-raven-700 rounded-full p-6 mb-6">
-        <Search className="w-12 h-12 text-raven-600" strokeWidth={1.25} />
-      </div>
-      <h3 className="text-xl font-semibold text-raven-100 mb-2">No investigations yet</h3>
-      <p className="text-raven-500 text-center mb-6 max-w-md text-sm">
-        Upload logs from Windows, web servers, or cloud — correlate across sources and export a PDF report.
-      </p>
-      <button
-        type="button"
-        onClick={onNew}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-electric-500 text-raven-950 font-semibold rounded-lg hover:bg-electric-400 transition-colors"
-      >
-        <Plus className="w-5 h-5" />
-        New investigation
-      </button>
-    </motion.div>
+    <tr>
+      <td colSpan={6}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center py-20 px-4"
+        >
+          <AlertTriangle className="w-10 h-10 text-text-muted mb-4" strokeWidth={1.25} />
+          <h3 className="font-display text-lg font-semibold text-text-primary mb-2">No investigations yet</h3>
+          <p className="text-text-muted text-center mb-6 max-w-sm text-sm">
+            Upload logs from Windows, web servers, or cloud — correlate across sources and export a PDF report.
+          </p>
+          <Link
+            to="/investigations/new"
+            className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+          >
+            <Plus className="w-4 h-4" /> New investigation
+          </Link>
+        </motion.div>
+      </td>
+    </tr>
   )
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Main Dashboard ────────────────────────────────────────
+type SortField = 'name' | 'status' | 'created_at'
+type SortDir = 'asc' | 'desc'
 
 export default function Dashboard() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
-
   const [deleteTarget, setDeleteTarget] = useState<Investigation | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [search, setSearch] = useState('')
+  const [sortField, setSortField] = useState<SortField>('created_at')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
 
   const { data, isLoading, error } = useQuery<Investigation[]>({
     queryKey: ['investigations'],
@@ -298,11 +288,27 @@ export default function Dashboard() {
   })
 
   const list = data ?? []
+  const filtered = list
+    .filter((i) => !search || i.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => {
+      let cmp = 0
+      if (sortField === 'name') cmp = a.name.localeCompare(b.name)
+      else if (sortField === 'status') cmp = a.status.localeCompare(b.status)
+      else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+
   const total = list.length
-  const activeCount = list.filter((i) =>
-    ['draft', 'queued', 'processing'].includes(i.status),
-  ).length
+  const activeCount = list.filter((i) => ['queued', 'processing'].includes(i.status)).length
   const completeCount = list.filter((i) => i.status === 'complete').length
+  const failedCount = list.filter((i) => i.status === 'failed').length
+
+  const stats = [
+    { label: 'Investigations', value: total,         color: '#6366F1', sub: 'total',    index: 0 },
+    { label: 'Active',         value: activeCount,   color: '#F97316', sub: 'running',  index: 1 },
+    { label: 'Complete',       value: completeCount, color: '#14B8A6', sub: 'finished', index: 2 },
+    { label: 'Failed',         value: failedCount,   color: '#F43F5E', sub: 'errored',  index: 3 },
+  ]
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return
@@ -316,80 +322,145 @@ export default function Dashboard() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-raven-950 text-raven-200">
-      <Navbar />
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortField(field); setSortDir('desc') }
+  }
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between mb-8">
+  const SortIcon = ({ field }: { field: SortField }) => (
+    <ArrowUpDown className={`w-3 h-3 ml-1 inline transition-colors ${sortField === field ? 'text-indigo-400' : 'text-text-ghost'}`} />
+  )
+
+  return (
+    <div className="pt-16 min-h-screen">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
+
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-1">
-              Investigations
-            </h1>
-            <p className="text-raven-500 text-sm">
-              Monitor log analysis jobs and open reports when ready.
-            </p>
+            <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">Workspace</div>
+            <h1 className="font-display font-bold text-text-primary text-3xl">Investigations</h1>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate('/investigations/new')}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-electric-500 text-raven-950 font-semibold text-sm rounded-lg hover:bg-electric-400 transition-colors shrink-0"
+          <Link
+            to="/investigations/new"
+            className="btn-sovereign flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start sm:self-auto"
           >
-            <Plus className="w-4 h-4" />
-            New investigation
-          </button>
-        </div>
+            <Plus className="w-4 h-4" /> New investigation
+          </Link>
+        </motion.div>
 
         {error && (
-          <p className="text-rose-400 text-xs font-mono mb-4 border border-rose-900/50 bg-rose-950/30 px-3 py-2 rounded-lg">
+          <div className="mb-6 px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-xs font-mono">
             Failed to load investigations. Check the API and try again.
-          </p>
+          </div>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8">
-          <StatsCard title="Total" value={total} icon={<FileText className="w-6 h-6" />} />
-          <StatsCard
-            title="Active"
-            value={activeCount}
-            icon={<CircleDashed className="w-6 h-6" />}
-          />
-          <StatsCard
-            title="Complete"
-            value={completeCount}
-            icon={<CircleCheck className="w-6 h-6" />}
-          />
+        {/* Stats + histogram row */}
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 mb-8">
+          <div className="xl:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {stats.map((s) => <StatCard key={s.label} {...s} />)}
+          </div>
+          <div className="xl:col-span-1">
+            <ActivityHistogram data={list} />
+          </div>
         </div>
 
-        <div className="bg-raven-900/80 border border-raven-700 rounded-xl p-4 sm:p-6">
-          <h2 className="text-lg font-semibold text-white mb-5">Recent investigations</h2>
+        {/* Dense investigations table */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
+          className="rounded-xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden"
+        >
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <h2 className="font-display font-semibold text-text-primary text-sm">
+                Investigations
+              </h2>
+              <span className="font-mono text-[10px] text-text-muted bg-white/[0.04] px-2 py-0.5 rounded">
+                {filtered.length}/{total}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02]">
+                <Search className="w-3 h-3 text-text-muted" />
+                <input
+                  type="text"
+                  placeholder="Filter..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="bg-transparent text-xs text-text-secondary placeholder-text-muted outline-none w-28"
+                />
+              </div>
+            </div>
+          </div>
 
           {isLoading && (
             <div className="flex items-center justify-center py-16">
-              <div
-                className="h-10 w-10 rounded-full border-2 border-raven-700 border-t-electric-500 animate-spin"
-                aria-hidden
-              />
+              <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
             </div>
           )}
 
-          {!isLoading && list.length === 0 && (
-            <EmptyState onNew={() => navigate('/investigations/new')} />
-          )}
-
-          {!isLoading && list.length > 0 && (
-            <div className="space-y-3">
-              {list.map((inv) => (
-                <InvestigationRowCard
-                  key={inv.id}
-                  inv={inv}
-                  onDelete={setDeleteTarget}
-                  onNavigate={(path) => navigate(path)}
-                />
-              ))}
+          {!isLoading && (
+            <div className="overflow-x-auto">
+              <table className="sovereign-table w-full">
+                <thead>
+                  <tr>
+                    <th onClick={() => toggleSort('name')} className="cursor-pointer select-none px-4 py-2.5 text-left">
+                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                        Name <SortIcon field="name" />
+                      </span>
+                    </th>
+                    <th onClick={() => toggleSort('status')} className="cursor-pointer select-none px-4 py-2.5 text-left">
+                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                        Status <SortIcon field="status" />
+                      </span>
+                    </th>
+                    <th className="px-4 py-2.5 text-left">
+                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Findings</span>
+                    </th>
+                    <th className="px-4 py-2.5 text-left">
+                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Files</span>
+                    </th>
+                    <th onClick={() => toggleSort('created_at')} className="cursor-pointer select-none px-4 py-2.5 text-left">
+                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                        Date <SortIcon field="created_at" />
+                      </span>
+                    </th>
+                    <th className="px-4 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 && list.length === 0 && <EmptyState />}
+                  {filtered.length === 0 && list.length > 0 && (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-text-muted text-sm">
+                        No investigations match your filter.
+                      </td>
+                    </tr>
+                  )}
+                  {filtered.map((inv, i) => (
+                    <InvTableRow key={inv.id} inv={inv} index={i} onDelete={setDeleteTarget} />
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-      </main>
+
+          {list.length > 0 && (
+            <div className="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-between">
+              <span className="font-mono text-[10px] text-text-muted">
+                {filtered.length} of {total} investigations
+              </span>
+              <Link to="/compliance" className="font-mono text-[10px] text-indigo-400/70 hover:text-indigo-400 transition-colors flex items-center gap-1">
+                SOC 2 compliance <ChevronRight className="w-2.5 h-2.5" />
+              </Link>
+            </div>
+          )}
+        </motion.div>
+      </div>
 
       <ConfirmModal
         isOpen={deleteTarget !== null}

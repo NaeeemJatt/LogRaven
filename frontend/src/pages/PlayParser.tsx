@@ -343,13 +343,13 @@ export default function PlayParser() {
     compareIdle ? 'Decoders idle' : lastRunMode === 'both' && compareResults?.compare ? 'Compared' : 'Decoders run'
 
   return (
-    <div className={`${playPageBg} relative`}>
+    <div className={`${playPageBg} relative pt-16`}>
       <div
         className={`pointer-events-none absolute inset-0 z-0 opacity-[0.28] ${playPageGrid}`}
         aria-hidden
       />
       <div className="relative z-10">
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <main className="px-4 sm:px-6 lg:px-8 py-8">
           <span id={EVTX_DECODERS_HINT_ID} className="sr-only">
             {EVTX_FORMAT_TOOLTIP}
           </span>
