@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, LayoutDashboard, Terminal, CheckSquare,
-  LogOut, ChevronDown, Menu, X, ChevronRight, Key,
-  User, Settings, CreditCard, Activity, Radio
+  LogOut, ChevronDown, Menu, X, ChevronRight, Radio
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useAuth } from '../../hooks/useAuth'
@@ -15,77 +14,6 @@ const navLinks = [
   { label: 'PlayParser', href: '/play-parser', icon: Terminal },
   { label: 'Compliance', href: '/compliance',  icon: CheckSquare },
 ]
-
-// ── Profile Dropdown ──────────────────────────────────────
-function ProfileDropdown({
-  onClose,
-  onSignOut,
-}: {
-  onClose: () => void
-  onSignOut: () => void
-}) {
-  const navigate = useNavigate()
-
-  const menuItems = [
-    { label: 'Profile', sub: 'Account details & preferences', href: '/profile' },
-    { label: 'Activity log', sub: 'Your recent investigations', href: '/profile' },
-    { label: 'Billing & plan', sub: 'Manage subscription', href: '/profile' },
-    { label: 'API Keys', sub: 'Manage API credentials', href: '/profile' },
-    { label: 'Settings', sub: 'Integrations & preferences', href: '/profile' },
-  ]
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.97 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl border border-white/[0.08] overflow-hidden z-50"
-      style={{
-        background: 'rgba(13, 17, 28, 0.97)',
-        backdropFilter: 'blur(24px)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-      }}
-    >
-      {/* Identity header — rendered by parent via props */}
-      <div className="p-1.5">
-        {menuItems.map(({ label, sub, href }) => (
-          <button
-            key={label}
-            onClick={() => { onClose(); navigate(href) }}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-          >
-            <div className="min-w-0">
-              <div className="text-xs font-medium text-text-primary group-hover:text-white transition-colors">{label}</div>
-              <div className="font-mono text-[9px] text-text-muted truncate">{sub}</div>
-            </div>
-            <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors flex-shrink-0 ml-2" />
-          </button>
-        ))}
-      </div>
-
-      <div className="mx-3 h-px bg-white/[0.05]" />
-
-      <div className="p-1.5">
-        <button
-          onClick={onClose}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-        >
-          <div className="text-xs font-medium text-text-secondary group-hover:text-text-primary transition-colors">Help &amp; documentation</div>
-          <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors" />
-        </button>
-
-        <button
-          onClick={onSignOut}
-          className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all duration-150 group text-left gap-2"
-        >
-          <LogOut className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-400 transition-colors flex-shrink-0" />
-          <div className="text-xs font-medium text-rose-400/80 group-hover:text-rose-400 transition-colors">Sign out</div>
-        </button>
-      </div>
-    </motion.div>
-  )
-}
 
 // ── Main Navbar ───────────────────────────────────────────
 export default function Navbar() {

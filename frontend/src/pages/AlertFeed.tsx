@@ -64,7 +64,7 @@ async function fetchAllFindings(investigations: Investigation[]): Promise<Array<
 }
 
 // ── Inline finding row ────────────────────────────────────
-function FindingRow({ finding, index }: { finding: Finding & { invName: string; invId: string }; index: number }) {
+function FindingRow({ finding }: { finding: Finding & { invName: string; invId: string } }) {
   const [expanded, setExpanded] = useState(false)
   const color = SEV_COLOR[finding.severity] ?? '#94A3B8'
 
@@ -326,7 +326,7 @@ export default function AlertFeed() {
                     </tr>
                   ) : (
                     filtered.map((f, i) => (
-                      <FindingRow key={`${f.invId}-${f.id ?? i}`} finding={f} index={i} />
+                      <FindingRow key={`${f.invId}-${f.id ?? i}`} finding={f} />
                     ))
                   )}
                 </tbody>

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   User, Lock, Key, CreditCard, Trash2,
-  Shield, Save, Eye, EyeOff, Copy, Check,
+  Save, Eye, EyeOff, Copy, Check,
   AlertTriangle, ChevronRight, Activity,
   Zap, Clock, CheckCircle2, X
 } from 'lucide-react'
