@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.dependencies import get_current_user, get_db
 from app.limiter import limiter
-from app.schemas.user import AuthSessionResponse, UserCreate, UserLogin, UserResponse
+from app.schemas.user import AuthSessionResponse, UserCreate, UserLogin, UserResponse, UpdateProfileRequest, ChangePasswordRequest
 from app.services import auth_service
 from app.utils.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.utils.refresh_tokens import revoke_refresh_token
@@ -110,3 +110,48 @@ async def logout(request: Request, response: Response) -> dict:
 @router.get("/me", response_model=UserResponse)
 async def me(current_user=Depends(get_current_user)) -> UserResponse:
     return current_user
+
+
+@router.patch("/me", response_model=UserResponse)
+async def update_profile(
+    body: UpdateProfileRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> UserResponse:
+    """Update display name and/or timezone for the authenticated user."""
+    from datetime import datetime
+
+    if body.name is not None:
+        name = body.name.strip()
+        if len(name) > 120:
+            raise HTTPException(status_code=400, detail="name must be 120 characters or fewer")
+        current_user.name = name or None
+
+    if body.timezone is not None:
+        current_user.timezone = body.timezone.strip() or None
+
+    current_user.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+
+@router.post("/password/change", status_code=204)
+async def change_password(
+    body: ChangePasswordRequest,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Change password after verifying the current one."""
+    from datetime import datetime
+    from app.utils.security import verify_password, hash_password
+
+    if not verify_password(body.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    current_user.password_hash = hash_password(body.new_password)
+    current_user.updated_at = datetime.utcnow()
+    await db.commit()

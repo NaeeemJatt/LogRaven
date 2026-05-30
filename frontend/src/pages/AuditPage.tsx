@@ -5,7 +5,6 @@
 // All transitions handled here; no sub-routes.
 
 import { useState, useCallback } from 'react'
-import Navbar from '../components/layout/Navbar'
 import AuditForm from '../components/audit/AuditForm'
 import AuditProgress from '../components/audit/AuditProgress'
 import AuditResults from '../components/audit/AuditResults'
@@ -74,16 +73,15 @@ export default function AuditPage() {
   }
 
   return (
-    <div className="min-h-screen bg-raven-950 text-raven-200">
-      <Navbar />
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+    <div className="pt-16 min-h-screen">
+      <main className="px-4 sm:px-6 lg:px-8 py-8">
         {/* ── Page title ─────────────────────────────────────────────────── */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#E6EDF3' }}>
+          <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">Compliance</div>
+          <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
             SOC 2 Compliance Audit
           </h1>
-          <p className="text-sm mt-1" style={{ color: '#8B949E' }}>
+          <p className="text-sm mt-1 text-text-muted">
             Automated evidence collection and control mapping
           </p>
         </div>
@@ -99,10 +97,11 @@ export default function AuditPage() {
               <div key={step} className="flex items-center gap-2">
                 <div className="flex items-center gap-2">
                   <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 font-mono"
                     style={{
-                      backgroundColor: isComplete ? '#3FB950' : isActive ? '#2F81F7' : '#30363D',
-                      color: isComplete || isActive ? '#0D1117' : '#8B949E',
+                      backgroundColor: isComplete ? 'rgba(20,184,166,0.2)' : isActive ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
+                      color: isComplete ? '#14B8A6' : isActive ? '#818CF8' : '#475569',
+                      border: isComplete ? '1px solid rgba(20,184,166,0.4)' : isActive ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.08)',
                     }}
                   >
                     {isComplete ? '✓' : idx + 1}
@@ -110,16 +109,14 @@ export default function AuditPage() {
                   <span
                     className="text-sm font-medium"
                     style={{
-                      color: isActive ? '#E6EDF3' : isComplete ? '#3FB950' : '#8B949E',
+                      color: isActive ? '#F1F5F9' : isComplete ? '#14B8A6' : '#475569',
                     }}
                   >
                     {STEP_LABELS[step]}
                   </span>
                 </div>
                 {idx < STEP_ORDER.length - 1 && (
-                  <span className="mx-1 text-xs" style={{ color: '#30363D' }}>
-                    —
-                  </span>
+                  <span className="mx-1 text-text-ghost">—</span>
                 )}
               </div>
             )
@@ -128,17 +125,11 @@ export default function AuditPage() {
 
         {/* ── Error banner ───────────────────────────────────────────────── */}
         {errorMessage && (
-          <div
-            className="mb-6 px-4 py-3 rounded border flex items-start justify-between gap-3"
-            style={{ backgroundColor: '#1a0a0a', borderColor: '#F85149' }}
-          >
-            <p className="text-sm" style={{ color: '#F85149' }}>
-              {errorMessage}
-            </p>
+          <div className="mb-6 px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 flex items-start justify-between gap-3">
+            <p className="text-sm text-rose-400">{errorMessage}</p>
             <button
               onClick={() => setErrorMessage(null)}
-              className="text-xs flex-shrink-0 hover:opacity-70 transition-opacity"
-              style={{ color: '#F85149' }}
+              className="text-xs flex-shrink-0 text-rose-400/70 hover:text-rose-400 transition-colors"
               aria-label="Dismiss error"
             >
               ✕

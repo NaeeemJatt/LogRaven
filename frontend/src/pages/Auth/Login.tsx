@@ -253,20 +253,20 @@ export default function Login() {
   }
 
   const inputClass =
-    'w-full bg-raven-900 border border-raven-600 text-raven-200 text-sm px-3 py-3 rounded-none font-mono focus:outline-none focus:border-electric-500 transition-colors placeholder-raven-600'
+    'sovereign-input w-full text-sm px-3 py-3 font-mono'
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-void">
 
       {/* ── Left panel — dark + characters ─────────────────────────────────── */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-gradient-to-br from-raven-800 via-raven-900 to-raven-950 p-12">
+      <div className="relative hidden lg:flex flex-col justify-between bg-deep p-12 border-r border-white/[0.04]">
 
         {/* Brand */}
         <div className="relative z-20">
-          <p className="font-mono font-bold tracking-widest text-electric-500 text-lg uppercase">
+          <p className="font-mono font-bold tracking-widest text-indigo-400 text-lg uppercase">
             LOGRAVEN
           </p>
-          <p className="text-raven-400 text-xs tracking-widest uppercase mt-0.5">
+          <p className="text-text-muted text-xs tracking-widest uppercase mt-0.5">
             Watch your logs. Find the threat.
           </p>
         </div>
@@ -419,47 +419,47 @@ export default function Login() {
         </div>
 
         {/* Footer links */}
-        <div className="relative z-20 flex items-center gap-8 text-xs text-raven-600 font-mono uppercase tracking-widest">
-          <a href="#" className="hover:text-raven-400 transition-colors">Privacy</a>
-          <a href="#" className="hover:text-raven-400 transition-colors">Terms</a>
-          <a href="#" className="hover:text-raven-400 transition-colors">Contact</a>
+        <div className="relative z-20 flex items-center gap-8 text-xs text-text-ghost font-mono uppercase tracking-widest">
+          <a href="#" className="hover:text-text-muted transition-colors">Privacy</a>
+          <a href="#" className="hover:text-text-muted transition-colors">Terms</a>
+          <a href="#" className="hover:text-text-muted transition-colors">Contact</a>
         </div>
 
         {/* Decorative blobs */}
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-electric-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-electric-500/3 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-500/3 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* ── Right panel — login form ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-center p-8 bg-raven-950">
+      <div className="flex items-center justify-center p-8 bg-void">
         <div className="w-full max-w-sm">
 
           {/* Mobile brand */}
           <div className="lg:hidden text-center mb-10">
-            <p className="font-mono font-bold tracking-widest text-electric-500 text-lg uppercase">
+            <p className="font-mono font-bold tracking-widest text-indigo-400 text-lg uppercase">
               LOGRAVEN
             </p>
-            <p className="text-raven-400 text-xs tracking-widest uppercase mt-1">
+            <p className="text-text-muted text-xs tracking-widest uppercase mt-1">
               Watch your logs. Find the threat.
             </p>
           </div>
 
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-raven-200 text-2xl font-semibold tracking-tight mb-1">
+            <h1 className="text-text-primary text-2xl font-semibold tracking-tight mb-1">
               Welcome back
             </h1>
-            <p className="text-raven-400 text-xs font-mono uppercase tracking-widest">
+            <p className="text-text-muted text-xs font-mono uppercase tracking-widest">
               Sign in to your workspace
             </p>
-            <div className="mt-4 border-t border-raven-700" />
+            <div className="mt-4 border-t border-white/[0.06]" />
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-raven-400 mb-1">
+              <label className="block text-xs uppercase tracking-widest text-text-muted mb-1">
                 Email
               </label>
               <input
@@ -476,7 +476,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-raven-400 mb-1">
+              <label className="block text-xs uppercase tracking-widest text-text-muted mb-1">
                 Password
               </label>
               <div className="relative">
@@ -491,7 +491,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-raven-600 hover:text-raven-400 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-ghost hover:text-text-muted transition-colors"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -503,17 +503,17 @@ export default function Login() {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  className="w-3.5 h-3.5 accent-electric-500 bg-raven-900 border-raven-600 rounded-none"
+                  className="w-3.5 h-3.5 bg-surface border-white/[0.12] rounded-none"
                 />
-                <span className="text-raven-400 text-xs font-mono">Remember me</span>
+                <span className="text-text-muted text-xs font-mono">Remember me</span>
               </label>
-              <a href="#" className="text-xs text-electric-500 hover:text-electric-400 font-mono transition-colors">
+              <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 font-mono transition-colors">
                 Forgot password?
               </a>
             </div>
 
             {error && (
-              <p className="text-red-400 text-xs font-mono border border-red-900/40 bg-red-950/20 px-3 py-2">
+              <p className="text-rose-400 text-xs font-mono border border-rose-500/20 bg-rose-500/5 px-3 py-2 rounded">
                 — {error}
               </p>
             )}
@@ -521,16 +521,16 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-electric-500 hover:bg-electric-400 disabled:opacity-60 text-white text-sm font-medium tracking-wide py-3 rounded-none transition-colors uppercase mt-2"
+              className="btn-sovereign w-full text-sm font-medium tracking-wide py-3 rounded transition-colors uppercase mt-2"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
 
           {/* Register link */}
-          <p className="text-raven-400 text-xs font-mono mt-8 text-center">
+          <p className="text-text-muted text-xs font-mono mt-8 text-center">
             No account?{' '}
-            <Link to="/register" className="text-electric-500 hover:text-electric-400 transition-colors">
+            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors">
               Register
             </Link>
           </p>

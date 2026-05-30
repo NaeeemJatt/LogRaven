@@ -51,3 +51,8 @@ logs/
 *.key
 
 test-data/
+
+# Agent / AI tooling
+.agents/
+frontend-mockup/
+memory-bank/

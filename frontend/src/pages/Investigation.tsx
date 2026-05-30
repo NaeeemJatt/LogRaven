@@ -1,21 +1,23 @@
-// LogRaven — Investigation detail (matches dashboard chrome)
 import React, { useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, ChevronLeft } from 'lucide-react'
-import Navbar from '../components/layout/Navbar'
-import { InvestigationSubNav } from '../components/investigation/InvestigationSubNav'
-import Badge from '../components/ui/Badge'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ChevronLeft, Upload, X, FileText, AlertCircle,
+  Play, Settings2, GitMerge, CheckCircle2,
+  Cloud, Monitor, Wifi, Globe, Server, ArrowRight,
+  Loader2, Cpu
+} from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
 import type { Investigation, InvestigationFile } from '../types/investigation'
 
 const SOURCE_TYPES = [
-  { value: 'windows_endpoint', label: 'Windows Endpoint' },
-  { value: 'linux_endpoint', label: 'Linux Endpoint' },
-  { value: 'firewall', label: 'Firewall' },
-  { value: 'network', label: 'Network' },
-  { value: 'web_server', label: 'Web Server' },
-  { value: 'cloudtrail', label: 'AWS CloudTrail' },
+  { value: 'windows_endpoint', label: 'Windows Endpoint', icon: Monitor, color: '#818CF8', extensions: '.evtx, .xml' },
+  { value: 'linux_endpoint', label: 'Linux / Syslog', icon: Server, color: '#14B8A6', extensions: '.log, .gz' },
+  { value: 'firewall', label: 'Firewall', icon: AlertCircle, color: '#F97316', extensions: '.log, .txt' },
+  { value: 'network', label: 'Network', icon: Wifi, color: '#FBBF24', extensions: '.pcap, .log' },
+  { value: 'web_server', label: 'Web / Nginx', icon: Globe, color: '#F43F5E', extensions: '.log, .txt' },
+  { value: 'cloudtrail', label: 'AWS CloudTrail', icon: Cloud, color: '#A5B4FC', extensions: '.json, .gz' },
 ]
 
 function guessSourceType(filename: string): string {
@@ -25,11 +27,11 @@ function guessSourceType(filename: string): string {
   return 'linux_endpoint'
 }
 
-const FILE_STATUS: Record<string, string> = {
-  pending: 'bg-raven-700/50 text-raven-400 border border-raven-600',
-  parsing: 'bg-electric-500/10 text-electric-400 border border-electric-500/30',
-  parsed: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30',
-  failed: 'bg-red-500/10 text-red-400 border border-red-500/30',
+const FILE_STATUS_STYLE: Record<string, string> = {
+  pending: 'bg-white/[0.04] border-white/[0.08] text-text-muted',
+  parsing: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
+  parsed:  'bg-teal-500/10 border-teal-500/20 text-teal-400',
+  failed:  'bg-rose-500/10 border-rose-500/20 text-rose-400',
 }
 
 interface PendingFile {
@@ -38,15 +40,13 @@ interface PendingFile {
   ingestionMode: 'parsers' | 'decoders'
 }
 
-const inputClass =
-  'rounded-lg bg-raven-900 border border-raven-600 text-raven-200 text-xs px-3 py-1.5 font-mono focus:outline-none focus:border-electric-500 focus:ring-1 focus:ring-electric-500/30 transition-colors'
-
 export default function Investigation() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [dragOver, setDragOver] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -73,6 +73,7 @@ export default function Investigation() {
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
+    setDragOver(false)
     if (!canEdit) return
     const files = Array.from(e.dataTransfer.files)
     setPendingFiles((p) => [
@@ -131,350 +132,402 @@ export default function Investigation() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-raven-950">
-        <Navbar />
-        <div className="flex items-center justify-center py-32">
-          <div
-            className="h-10 w-10 rounded-full border-2 border-raven-700 border-t-electric-500 animate-spin"
-            aria-hidden
-          />
-        </div>
+      <div className="pt-16 min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
       </div>
     )
   }
 
   if (!inv) {
     return (
-      <div className="min-h-screen bg-raven-950">
-        <Navbar />
-        <div className="flex items-center justify-center py-32 text-red-400 text-sm font-mono">
-          Investigation not found.
-        </div>
+      <div className="pt-16 min-h-screen flex items-center justify-center">
+        <div className="text-rose-400 text-sm font-mono">Investigation not found.</div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-raven-950 text-raven-200">
-      <Navbar />
+    <div className="pt-16 min-h-screen">
+      <div className="px-4 sm:px-6 lg:px-8 py-8">
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-        <Link
-          to="/dashboard"
-          className="inline-flex items-center gap-1 text-sm text-raven-500 hover:text-electric-400 transition-colors mb-4"
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
         >
-          <ChevronLeft className="h-4 w-4" />
-          Investigations
-        </Link>
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 text-text-muted hover:text-text-secondary text-sm mb-4 transition-colors"
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+            Back to investigations
+          </Link>
 
-        {id && <InvestigationSubNav investigationId={id} active="files" />}
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h1 className="font-display font-bold text-text-primary text-2xl">{inv.name}</h1>
+              <p className="text-text-secondary text-sm mt-0.5">
+                {canEdit
+                  ? 'Upload logs, set source types, then run analysis.'
+                  : inv.status === 'complete'
+                    ? 'Analysis finished. View the report or review files below.'
+                    : 'Pipeline is running. Track progress on the status page.'}
+              </p>
+            </div>
 
-        <div className="mb-8">
-          <div className="flex flex-wrap items-center gap-3 mb-1">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">{inv.name}</h1>
-            <Badge value={inv.status} variant="status" />
-          </div>
-          <p className="text-raven-500 text-sm">
-            {inv.status === 'draft' || inv.status === 'failed'
-              ? 'Upload logs, set source types, then run analysis.'
-              : inv.status === 'complete'
-                ? 'Analysis finished. Open the report or review files below.'
-                : 'Pipeline is running or queued. Use Analysis progress to watch stages through report generation.'}
-          </p>
-        </div>
-
-        {['queued', 'processing', 'failed'].includes(inv.status) && (
-          <div className="mb-8 rounded-xl border border-electric-500/35 bg-gradient-to-r from-electric-500/10 to-raven-900/80 px-4 py-4 sm:px-5 sm:py-5 shadow-lg shadow-black/20">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-electric-300">
-                  {inv.status === 'failed' ? 'Analysis needs attention' : 'Analysis pipeline active'}
-                </p>
-                <p className="text-xs text-raven-500 mt-1 max-w-xl">
-                  {inv.status === 'failed'
-                    ? 'Open the progress view for the error detail and file states. You can retry from files & setup when the investigation is failed.'
-                    : 'Follow live stages (parsing → rules → correlation → AI → report) on the status page until the PDF is ready.'}
-                </p>
-              </div>
+            {['queued', 'processing', 'failed'].includes(inv.status) && (
               <Link
                 to={`/investigations/${id}/status`}
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-electric-500 hover:bg-electric-400 text-raven-950 text-sm font-semibold px-5 py-2.5 transition-colors shrink-0"
+                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start"
               >
+                {inv.status === 'processing' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 View analysis progress
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
-            </div>
+            )}
+
+            {inv.status === 'complete' && (
+              <Link
+                to={`/investigations/${id}/report`}
+                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start"
+              >
+                View report <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
           </div>
-        )}
+        </motion.div>
 
-        {inv.status === 'complete' && (
-          <div className="mb-8 flex flex-wrap gap-3">
-            <Link
-              to={`/investigations/${id}/status`}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-raven-600 bg-raven-800/60 px-4 py-2 text-sm font-medium text-raven-200 hover:border-electric-500/40 hover:text-electric-300 transition-colors"
-            >
-              View last run progress
-            </Link>
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left: file upload */}
+          <div className="lg:col-span-2 space-y-4">
 
-        {canEdit && (
-          <div className="mb-8">
-            <div
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className="cursor-pointer rounded-xl border-2 border-dashed border-raven-600 bg-raven-800/40 p-10 text-center transition-colors hover:border-electric-500/50 hover:bg-raven-800/60"
-            >
-              <p className="text-raven-300 text-sm">Drop log files here or click to browse</p>
-              <p className="text-raven-600 text-xs font-mono mt-2">.evtx · .log · .csv · .json · .txt</p>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              accept=".evtx,.csv,.log,.txt,.json"
-              onChange={handleFilePick}
-            />
+            {/* Drop zone — only when editable */}
+            {canEdit && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`relative rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-300 cursor-pointer ${
+                  dragOver
+                    ? 'border-indigo-500/50 bg-indigo-500/[0.08]'
+                    : 'border-white/[0.08] hover:border-indigo-500/25 hover:bg-indigo-500/[0.04]'
+                }`}
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-6 h-6 text-indigo-400" />
+                </div>
+                <p className="font-medium text-text-primary mb-1">Drop log files here</p>
+                <p className="text-sm text-text-muted mb-4">EVTX, syslog, CloudTrail, Nginx, firewall — any format</p>
+                <span className="btn-ghost px-4 py-2 rounded-lg text-sm font-medium text-text-secondary pointer-events-none">
+                  Browse files
+                </span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  accept=".evtx,.csv,.log,.txt,.json,.gz"
+                  onChange={handleFilePick}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </motion.div>
+            )}
 
-            {pendingFiles.length > 0 && (
-              <div className="mt-4 overflow-hidden rounded-xl border border-raven-700 bg-raven-900/80">
-                {pendingFiles.map((pf, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-raven-700 last:border-b-0 bg-raven-800/50"
-                  >
-                    <span className="flex-1 min-w-[8rem] text-electric-400 font-mono text-xs truncate">
-                      {pf.file.name}
+            {/* Pending uploads */}
+            <AnimatePresence>
+              {pendingFiles.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 overflow-hidden"
+                >
+                  <div className="px-5 py-3 border-b border-indigo-500/10 flex items-center justify-between">
+                    <span className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase">
+                      Pending upload ({pendingFiles.length})
                     </span>
-                    <span className="text-raven-600 font-mono text-xs">
-                      {(pf.file.size / 1024).toFixed(0)} KB
-                    </span>
-                    <select
-                      value={pf.sourceType}
-                      onChange={(e) => updateSourceType(idx, e.target.value)}
-                      className={inputClass}
-                    >
-                      {SOURCE_TYPES.map((st) => (
-                        <option key={st.value} value={st.value}>
-                          {st.label}
-                        </option>
-                      ))}
-                    </select>
-                    <select
-                      value={pf.ingestionMode}
-                      onChange={(e) =>
-                        updateIngestionMode(idx, e.target.value as 'parsers' | 'decoders')
-                      }
-                      className={inputClass}
-                      title="Parsers use native LogRaven parsers. Decoders use the configured decoder manager when available."
-                    >
-                      <option value="parsers">Parsers</option>
-                      <option value="decoders">Decoders</option>
-                    </select>
                     <button
-                      type="button"
-                      onClick={() => removePending(idx)}
-                      className="text-raven-600 hover:text-red-400 text-xs transition-colors font-mono"
+                      onClick={() => setPendingFiles([])}
+                      className="font-mono text-[10px] text-text-muted hover:text-rose-400 transition-colors"
                     >
-                      ✕
+                      Clear
                     </button>
                   </div>
-                ))}
+                  <div className="divide-y divide-white/[0.04]">
+                    {pendingFiles.map((pf, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                        <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                        <span className="flex-1 min-w-[8rem] font-mono text-xs text-text-secondary truncate">
+                          {pf.file.name}
+                        </span>
+                        <span className="font-mono text-[10px] text-text-muted">
+                          {(pf.file.size / 1024).toFixed(0)} KB
+                        </span>
+                        <select
+                          value={pf.sourceType}
+                          onChange={(e) => updateSourceType(idx, e.target.value)}
+                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs font-mono text-sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {SOURCE_TYPES.map((st) => (
+                            <option key={st.value} value={st.value}>{st.label}</option>
+                          ))}
+                        </select>
+                        <select
+                          value={pf.ingestionMode}
+                          onChange={(e) => updateIngestionMode(idx, e.target.value as 'parsers' | 'decoders')}
+                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs font-mono text-sm"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <option value="parsers">Parsers</option>
+                          <option value="decoders">Decoders</option>
+                        </select>
+                        <button
+                          onClick={() => removePending(idx)}
+                          className="p-1 rounded hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  {uploadError && (
+                    <div className="px-5 py-2.5 border-t border-white/[0.04] font-mono text-xs text-rose-400">
+                      {uploadError}
+                    </div>
+                  )}
+                  <div className="px-5 py-3 border-t border-indigo-500/10 flex justify-end">
+                    <button
+                      onClick={handleUploadAll}
+                      disabled={uploading}
+                      className="btn-sovereign flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                      {uploading ? 'Uploading…' : `Upload ${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''}`}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                {uploadError && (
-                  <p className="text-red-400 text-xs font-mono px-4 py-2 border-t border-raven-700">
-                    {uploadError}
-                  </p>
-                )}
-
-                <div className="px-4 py-3 flex justify-end bg-raven-950/50 border-t border-raven-700">
-                  <button
-                    type="button"
-                    onClick={handleUploadAll}
-                    disabled={uploading}
-                    className="inline-flex items-center justify-center rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-60 text-raven-950 text-sm font-semibold px-5 py-2.5 transition-colors"
-                  >
-                    {uploading ? 'Uploading…' : `Upload ${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''}`}
-                  </button>
+            {/* Uploaded files */}
+            {inv.files && inv.files.length > 0 && (
+              <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
+                <div className="px-5 py-3 border-b border-white/[0.06]">
+                  <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                    Uploaded files ({inv.files.length})
+                  </span>
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                  {inv.files.map((f: InvestigationFile, i: number) => {
+                    const src = SOURCE_TYPES.find(s => s.value === f.source_type)
+                    const SrcIcon = src?.icon ?? FileText
+                    const srcColor = src?.color ?? '#94A3B8'
+                    return (
+                      <motion.div
+                        key={f.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        className="flex items-center gap-4 px-5 py-3.5 group hover:bg-elevated/30 transition-all"
+                      >
+                        <div
+                          className="w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0"
+                          style={{ background: `${srcColor}10`, borderColor: `${srcColor}25` }}
+                        >
+                          <FileText className="w-4 h-4" style={{ color: srcColor }} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-mono text-sm text-text-primary truncate">{f.filename}</div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <SrcIcon className="w-2.5 h-2.5" style={{ color: srcColor }} />
+                            <span className="font-mono text-[10px] text-text-muted">{f.source_type}</span>
+                            {f.event_count != null && (
+                              <>
+                                <span className="text-text-ghost">·</span>
+                                <span className="font-mono text-[10px] text-text-muted">{f.event_count.toLocaleString()} events</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <span className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase tracking-wider flex-shrink-0 ${FILE_STATUS_STYLE[f.status] ?? FILE_STATUS_STYLE.pending}`}>
+                          {f.status}
+                        </span>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDeleteFile(f.id)}
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-all"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </motion.div>
+                    )
+                  })}
                 </div>
               </div>
             )}
-          </div>
-        )}
 
-        {inv.files && inv.files.length > 0 && (
-          <div className="rounded-xl border border-raven-700 bg-raven-900/80 overflow-hidden mb-8 shadow-lg shadow-black/20">
-            <div className="px-4 sm:px-5 py-3 border-b border-raven-700 bg-raven-950/80">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-electric-400/90">
-                Uploaded files
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
-                <thead>
-                  <tr className="border-b border-raven-700 bg-raven-800/40">
-                    {[
-                      'Filename',
-                      'Source type',
-                      'Ingestion',
-                      'Log format',
-                      'Status',
-                      'Events',
-                      ...(canEdit ? [''] : []),
-                    ].map((h) => (
-                      <th
-                        key={h || 'actions'}
-                        className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-raven-500"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {inv.files.map((f: InvestigationFile) => (
-                    <tr
-                      key={f.id}
-                      className="border-t border-raven-700/80 hover:bg-raven-800/40 transition-colors"
-                    >
-                      <td className="px-4 py-3 text-electric-400 font-mono text-xs truncate max-w-[220px]">
-                        {f.filename}
-                      </td>
-                      <td className="px-4 py-3 text-raven-400 text-xs font-mono">{f.source_type}</td>
-                      <td className="px-4 py-3 text-raven-400 text-xs font-mono max-w-[140px]">
-                        <span className="text-raven-300">{f.ingestion_mode ?? 'parsers'}</span>
-                        {f.parser_selection_detail?.actual_ingestion_path &&
-                        f.parser_selection_detail.actual_ingestion_path !== (f.ingestion_mode ?? 'parsers') ? (
-                          <span className="block text-[10px] text-amber-500/90 mt-0.5">
-                            → {f.parser_selection_detail.actual_ingestion_path}
-                          </span>
-                        ) : null}
-                        {f.parser_selection_detail?.user_warnings?.length ? (
-                          <span
-                            className="block text-[10px] text-amber-400/90 mt-1"
-                            title={f.parser_selection_detail.user_warnings.join(' ')}
-                          >
-                            {f.parser_selection_detail.user_warnings[0]}
-                          </span>
-                        ) : null}
-                      </td>
-                      <td
-                        className="px-4 py-3 text-raven-400 text-xs font-mono max-w-[200px]"
-                        title={
-                          f.parser_selection_detail
-                            ? [
-                                `Parser: ${f.log_type ?? '—'}`,
-                                f.parser_detection_confidence != null
-                                  ? `Detection confidence: ${f.parser_detection_confidence}`
-                                  : null,
-                                f.parser_selection_detail.parse_quality != null &&
-                                f.parser_selection_detail.parse_quality !== undefined
-                                  ? `Parse quality: ${f.parser_selection_detail.parse_quality}`
-                                  : null,
-                                f.parser_selection_detail.fallback_used ? 'Fallback: yes (first-ranked parser had low parse quality)' : null,
-                                f.parser_selection_detail.parse_warnings?.length
-                                  ? `Warnings: ${f.parser_selection_detail.parse_warnings.join(', ')}`
-                                  : null,
-                              ]
-                                .filter(Boolean)
-                                .join('\n')
-                            : f.log_type ?? undefined
-                        }
-                      >
-                        <span className="text-electric-400/90">{f.log_type ?? '—'}</span>
-                        {f.parser_selection_detail?.fallback_used ? (
-                          <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-500/90">fallback</span>
-                        ) : null}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wide ${FILE_STATUS[f.status] ?? FILE_STATUS.pending}`}
-                        >
-                          {f.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-raven-300 font-mono text-xs tabular-nums">
-                        {f.event_count ?? '—'}
-                      </td>
-                      {canEdit && (
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFile(f.id)}
-                            className="text-raven-500 hover:text-red-400 text-xs font-mono transition-colors"
-                          >
-                            Remove
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Source type guide */}
+            <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
+              <div className="px-5 py-3 border-b border-white/[0.06]">
+                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Source type guide</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-y divide-white/[0.04]">
+                {SOURCE_TYPES.map(({ value, label, icon: Icon, color, extensions }) => (
+                  <div key={value} className="flex items-center gap-2.5 p-4 hover:bg-elevated/30 transition-colors">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: `${color}12`, border: `1px solid ${color}25` }}>
+                      <Icon className="w-3.5 h-3.5" style={{ color }} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-text-primary">{label}</div>
+                      <div className="font-mono text-[10px] text-text-muted">{extensions}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        )}
 
-        <div className="flex flex-col gap-4">
-          {canEdit && inv.files && inv.files.length > 0 && (
-            <div className="rounded-xl border border-raven-700 bg-raven-900/80 px-4 py-4">
-              {inv.cloud_ai_enabled ? (
-                <>
-                  <label className="flex items-start gap-3 text-sm text-raven-300">
-                    <input
-                      type="checkbox"
-                      checked={cloudAiConsent}
-                      onChange={(e) => setCloudAiConsent(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-raven-600 bg-raven-950 text-electric-500 focus:ring-electric-500"
-                    />
-                    <span>
-                      I consent to sending investigation event data to configured cloud AI providers during analysis.
-                    </span>
-                  </label>
-                  <p className="mt-2 text-xs text-raven-500">
-                    This deployment has cloud AI enabled. Consent is required before any log-derived data can be sent to external AI services.
-                  </p>
-                </>
-              ) : (
-                <p className="text-xs text-raven-500">
-                  Cloud AI is not configured for this deployment. Analysis can run without external AI consent.
+          {/* Right: config panel */}
+          <div className="space-y-4">
+            {/* Analysis options */}
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden"
+            >
+              <div className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
+                <Settings2 className="w-3.5 h-3.5 text-text-muted" />
+                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Analysis options</span>
+              </div>
+              <div className="p-5 space-y-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <GitMerge className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="text-sm font-medium text-text-primary">Cross-file correlation</span>
+                    </div>
+                    <p className="text-xs text-text-muted leading-relaxed">
+                      Link events across log sources to surface multi-stage attack chains
+                    </p>
+                  </div>
+                  <div className={`flex-shrink-0 w-10 h-5 rounded-full border relative ${
+                    inv.correlation_enabled ? 'bg-indigo-500/40 border-indigo-500/50' : 'bg-white/5 border-white/10'
+                  }`}>
+                    <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
+                      inv.correlation_enabled ? 'left-[20px] bg-indigo-400' : 'left-[2px] bg-text-muted'
+                    }`} />
+                  </div>
+                </div>
+                <div className="h-px bg-white/[0.04]" />
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="text-sm font-medium text-text-primary">AI analysis</span>
+                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">
+                        Gemini 1.5 Pro
+                      </span>
+                    </div>
+                    <p className="text-xs text-text-muted leading-relaxed">
+                      Contextualizes findings and generates executive summaries
+                    </p>
+                  </div>
+                  <div className={`flex-shrink-0 w-10 h-5 rounded-full border relative ${
+                    inv.cloud_ai_enabled ? 'bg-violet-500/40 border-violet-500/50' : 'bg-white/5 border-white/10'
+                  }`}>
+                    <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
+                      inv.cloud_ai_enabled ? 'left-[20px] bg-violet-400' : 'left-[2px] bg-text-muted'
+                    }`} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Cloud AI consent */}
+            {canEdit && inv.files && inv.files.length > 0 && inv.cloud_ai_enabled && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-5"
+              >
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={cloudAiConsent}
+                    onChange={(e) => setCloudAiConsent(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-deep text-indigo-500 focus:ring-indigo-500"
+                  />
+                  <div>
+                    <p className="text-xs text-text-secondary leading-relaxed">
+                      I consent to sending investigation event data to cloud AI providers during analysis.
+                    </p>
+                    <p className="text-[10px] text-text-muted mt-1 font-mono">Required for cloud AI enrichment</p>
+                  </div>
+                </label>
+              </motion.div>
+            )}
+
+            {/* Summary */}
+            {inv.files && inv.files.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur p-5 space-y-3"
+              >
+                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Ready to analyze</span>
+                {[
+                  { label: `${inv.files.length} file${inv.files.length !== 1 ? 's' : ''} uploaded` },
+                  { label: inv.correlation_enabled ? 'Correlation enabled' : 'Correlation disabled' },
+                  { label: inv.cloud_ai_enabled ? 'AI enrichment enabled' : 'AI enrichment disabled' },
+                ].map(({ label }) => (
+                  <div key={label} className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+                    <span className="text-sm text-text-secondary">{label}</span>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+
+            {/* Analysis error */}
+            {analysisError && (
+              <div className="px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 font-mono text-xs text-rose-400">
+                {analysisError}
+              </div>
+            )}
+
+            {/* Run button */}
+            {canEdit && inv.files && inv.files.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <button
+                  onClick={handleAnalyze}
+                  disabled={analyzing || (inv.cloud_ai_enabled && !cloudAiConsent)}
+                  className="btn-sovereign w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                  {analyzing ? 'Starting analysis…' : 'Run analysis'}
+                </button>
+                <p className="text-center font-mono text-[10px] text-text-muted mt-2">
+                  Estimated time: ~4 minutes
                 </p>
-              )}
-            </div>
-          )}
-
-          {analysisError && (
-            <p className="rounded-lg border border-rose-900/50 bg-rose-950/30 px-3 py-2 text-xs font-mono text-rose-400">
-              {analysisError}
-            </p>
-          )}
-
-          <div className="flex flex-wrap justify-end gap-3">
-          {canEdit && inv.files && inv.files.length > 0 && (
-            <button
-              type="button"
-              onClick={handleAnalyze}
-              disabled={analyzing || (inv.cloud_ai_enabled && !cloudAiConsent)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-electric-500 hover:bg-electric-400 disabled:opacity-60 text-raven-950 text-sm font-semibold px-6 py-2.5 transition-colors"
-            >
-              {analyzing ? 'Starting…' : 'Run analysis'}
-            </button>
-          )}
-          {inv.status === 'complete' && (
-            <button
-              type="button"
-              onClick={() => navigate(`/investigations/${id}/report`)}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-electric-500/60 bg-electric-500/5 px-6 py-2.5 text-sm font-semibold text-electric-400 hover:bg-electric-500/10 hover:border-electric-400 transition-colors"
-            >
-              View report
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          )}
+              </motion.div>
+            )}
           </div>
         </div>
-      </main>
+      </div>
     </div>
   )
 }
