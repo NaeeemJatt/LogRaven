@@ -1,10 +1,15 @@
-// LogRaven — SOC 2 Compliance Audit Page
+// LogRaven — SOC 2 Compliance "Control Room"
 //
-// State machine managing the 3-step audit flow:
-//   form → progress → results
-// All transitions handled here; no sub-routes.
+// Persistent console shell: a sticky mission rail (phase nav + guidance + trust)
+// on the left, and a working stage on the right that swaps between
+// form → progress → results. State machine unchanged.
 
 import { useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  ShieldCheck, Cloud, Eye, FileCheck2, Lock,
+  SlidersHorizontal, Radar, FileBarChart2, Plug, ScanSearch, Check,
+} from 'lucide-react'
 import AuditForm from '../components/audit/AuditForm'
 import AuditProgress from '../components/audit/AuditProgress'
 import AuditResults from '../components/audit/AuditResults'
@@ -14,12 +19,108 @@ import { startAudit } from '../api/compliance'
 
 type AuditStep = 'form' | 'progress' | 'results'
 
-const STEP_LABELS: Record<AuditStep, string> = {
-  form:     'Form Setup',
-  progress: 'Running Audit',
-  results:  'Results',
-}
+const STEPS: { key: AuditStep; label: string; hint: string; icon: React.ElementType }[] = [
+  { key: 'form',     label: 'Configure', hint: 'Scope & credentials',    icon: SlidersHorizontal },
+  { key: 'progress', label: 'Assess',    hint: 'Collect & map evidence', icon: Radar },
+  { key: 'results',  label: 'Report',    hint: 'Score & evidence pack',  icon: FileBarChart2 },
+]
 const STEP_ORDER: AuditStep[] = ['form', 'progress', 'results']
+
+const FRAMEWORK_TAGS = [
+  { icon: ShieldCheck, label: 'SOC 2 Type II' },
+  { icon: Cloud,       label: 'CloudTrail' },
+  { icon: Eye,         label: 'GuardDuty' },
+  { icon: FileCheck2,  label: 'IAM Posture' },
+]
+
+const HOW_IT_WORKS = [
+  { icon: Plug,       title: 'Connect', body: 'Assume your read-only IAM role.' },
+  { icon: ScanSearch, title: 'Collect', body: 'Pull CloudTrail, IAM & GuardDuty evidence.' },
+  { icon: FileCheck2, title: 'Map',     body: 'AI grades each SOC 2 control.' },
+]
+
+// ── Sticky mission rail ───────────────────────────────────
+function MissionRail({ activeIdx }: { activeIdx: number }) {
+  return (
+    <aside className="md:sticky md:top-20 space-y-4">
+      {/* Brand */}
+      <div className="ops-panel p-5">
+        <div className="flex items-center gap-2 font-mono text-[10px] text-indigo-400 tracking-[0.22em] uppercase mb-2">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+          Continuous compliance
+        </div>
+        <h1 className="font-display text-xl font-bold text-text-primary leading-tight">
+          SOC 2 <span className="gradient-text">Control Room</span>
+        </h1>
+        <div className="flex flex-wrap gap-1.5 mt-3">
+          {FRAMEWORK_TAGS.map(({ icon: Icon, label }) => (
+            <span key={label} className="inline-flex items-center gap-1 rounded-md border border-white/[0.08] bg-white/[0.02] px-1.5 py-1 text-[10px] font-mono text-text-muted">
+              <Icon className="w-3 h-3 text-indigo-400/70" /> {label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Phase tracker */}
+      <div className="ops-panel p-3">
+        <div className="px-2 py-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">Phases</div>
+        <ol className="space-y-0.5">
+          {STEPS.map((s, idx) => {
+            const isActive = idx === activeIdx
+            const isComplete = idx < activeIdx
+            const Icon = s.icon
+            return (
+              <li key={s.key}>
+                <div className={`relative flex items-center gap-3 px-2.5 py-2.5 rounded-lg transition-colors ${isActive ? 'bg-white/[0.05]' : ''}`}>
+                  {isActive && <span className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-indigo-400" />}
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center border flex-shrink-0 ${
+                    isComplete ? 'bg-[#8FBDAD]/12 border-[#8FBDAD]/35 text-[#8FBDAD]'
+                    : isActive ? 'bg-indigo-500/12 border-indigo-500/35 text-indigo-300'
+                    : 'bg-white/[0.02] border-white/[0.08] text-text-muted'
+                  }`}>
+                    {isComplete ? <Check className="w-4 h-4" strokeWidth={3} /> : <Icon className="w-4 h-4" />}
+                  </span>
+                  <div className="min-w-0">
+                    <div className={`text-sm font-semibold leading-tight ${isActive ? 'text-text-primary' : isComplete ? 'text-[#8FBDAD]' : 'text-text-muted'}`}>
+                      {s.label}
+                    </div>
+                    <div className="text-[10px] text-text-muted truncate">{s.hint}</div>
+                  </div>
+                </div>
+                {idx < STEPS.length - 1 && <div className="ml-[1.4rem] h-2 w-px bg-white/[0.07]" />}
+              </li>
+            )
+          })}
+        </ol>
+      </div>
+
+      {/* How it works */}
+      <div className="ops-panel p-4">
+        <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted mb-3">How it works</div>
+        <ol className="space-y-2.5">
+          {HOW_IT_WORKS.map(({ icon: Icon, title, body }) => (
+            <li key={title} className="flex gap-2.5">
+              <Icon className="w-3.5 h-3.5 text-indigo-400/70 flex-shrink-0 mt-0.5" />
+              <div>
+                <span className="text-xs font-semibold text-text-secondary">{title}</span>
+                <span className="text-[11px] text-text-muted"> — {body}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      {/* Trust */}
+      <div className="rounded-xl border border-[#8FBDAD]/20 bg-[#8FBDAD]/[0.04] p-4 flex gap-2.5">
+        <Lock className="w-4 h-4 text-[#8FBDAD] flex-shrink-0 mt-0.5" />
+        <p className="text-[11px] text-text-muted leading-relaxed">
+          <span className="text-text-secondary font-semibold">Read-only &amp; scoped.</span> LogRaven only
+          lists/gets CloudTrail, IAM and GuardDuty — never writes to your account.
+        </p>
+      </div>
+    </aside>
+  )
+}
 
 export default function AuditPage() {
   const [currentStep, setCurrentStep]   = useState<AuditStep>('form')
@@ -29,7 +130,6 @@ export default function AuditPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // ── form → progress ──────────────────────────────────────────────────────
   const handleFormSubmit = async (formData: AuditFormData) => {
     setIsSubmitting(true)
     setErrorMessage(null)
@@ -51,19 +151,16 @@ export default function AuditPage() {
     }
   }
 
-  // ── progress → results ───────────────────────────────────────────────────
   const handleProgressComplete = useCallback((data: AuditStatusResponse) => {
     setAuditResults(data)
     setCurrentStep('results')
   }, [])
 
-  // ── progress → form (failure or cancel) ──────────────────────────────────
   const handleProgressError = useCallback((error: string) => {
     setErrorMessage(error)
     setCurrentStep('form')
   }, [])
 
-  // ── results → form (start new) ───────────────────────────────────────────
   const handleStartNew = () => {
     setCurrentStep('form')
     setAuditId(null)
@@ -72,96 +169,65 @@ export default function AuditPage() {
     setErrorMessage(null)
   }
 
+  const activeIdx = STEP_ORDER.indexOf(currentStep)
+
   return (
-    <div className="pt-16 min-h-screen">
-      <main className="px-4 sm:px-6 lg:px-8 py-8">
-        {/* ── Page title ─────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">Compliance</div>
-          <h1 className="font-display text-2xl font-bold text-text-primary tracking-tight">
-            SOC 2 Compliance Audit
-          </h1>
-          <p className="text-sm mt-1 text-text-muted">
-            Automated evidence collection and control mapping
-          </p>
-        </div>
+    <div className="pt-16 min-h-screen grid-bg relative">
+      <div
+        className="pointer-events-none absolute inset-x-0 top-16 h-72"
+        aria-hidden
+        style={{ background: 'radial-gradient(ellipse 70% 100% at 20% 0%, rgba(227,181,126,0.05), transparent 70%)' }}
+      />
 
-        {/* ── Step indicator ─────────────────────────────────────────────── */}
-        <div className="flex items-center gap-2 mb-8">
-          {STEP_ORDER.map((step, idx) => {
-            const stepIdx    = STEP_ORDER.indexOf(currentStep)
-            const isActive   = step === currentStep
-            const isComplete = STEP_ORDER.indexOf(step) < stepIdx
+      <div className="relative px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_minmax(0,1fr)] gap-6 items-start">
+          <MissionRail activeIdx={activeIdx} />
 
-            return (
-              <div key={step} className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 font-mono"
-                    style={{
-                      backgroundColor: isComplete ? 'rgba(20,184,166,0.2)' : isActive ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)',
-                      color: isComplete ? '#14B8A6' : isActive ? '#818CF8' : '#475569',
-                      border: isComplete ? '1px solid rgba(20,184,166,0.4)' : isActive ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    {isComplete ? '✓' : idx + 1}
-                  </span>
-                  <span
-                    className="text-sm font-medium"
-                    style={{
-                      color: isActive ? '#F1F5F9' : isComplete ? '#14B8A6' : '#475569',
-                    }}
-                  >
-                    {STEP_LABELS[step]}
-                  </span>
-                </div>
-                {idx < STEP_ORDER.length - 1 && (
-                  <span className="mx-1 text-text-ghost">—</span>
+          <main className="min-w-0">
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-5 px-4 py-3 rounded-xl border border-threat-critical/25 bg-threat-critical/[0.06] flex items-start justify-between gap-3"
+              >
+                <p className="text-sm text-threat-critical">{errorMessage}</p>
+                <button
+                  onClick={() => setErrorMessage(null)}
+                  className="text-xs flex-shrink-0 text-threat-critical/70 hover:text-threat-critical transition-colors"
+                  aria-label="Dismiss error"
+                >
+                  ✕
+                </button>
+              </motion.div>
+            )}
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.25 }}
+              >
+                {currentStep === 'form' && (
+                  <AuditForm onSubmit={(data) => { void handleFormSubmit(data) }} isLoading={isSubmitting} />
                 )}
-              </div>
-            )
-          })}
+                {currentStep === 'progress' && auditId && (
+                  <AuditProgress
+                    auditId={auditId}
+                    companyName={companyName}
+                    onComplete={handleProgressComplete}
+                    onError={handleProgressError}
+                  />
+                )}
+                {currentStep === 'results' && auditResults && auditId && (
+                  <AuditResults results={auditResults} auditId={auditId} onStartNew={handleStartNew} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </div>
-
-        {/* ── Error banner ───────────────────────────────────────────────── */}
-        {errorMessage && (
-          <div className="mb-6 px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 flex items-start justify-between gap-3">
-            <p className="text-sm text-rose-400">{errorMessage}</p>
-            <button
-              onClick={() => setErrorMessage(null)}
-              className="text-xs flex-shrink-0 text-rose-400/70 hover:text-rose-400 transition-colors"
-              aria-label="Dismiss error"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* ── Step content ───────────────────────────────────────────────── */}
-        {currentStep === 'form' && (
-          <AuditForm
-            onSubmit={(data) => { void handleFormSubmit(data) }}
-            isLoading={isSubmitting}
-          />
-        )}
-
-        {currentStep === 'progress' && auditId && (
-          <AuditProgress
-            auditId={auditId}
-            companyName={companyName}
-            onComplete={handleProgressComplete}
-            onError={handleProgressError}
-          />
-        )}
-
-        {currentStep === 'results' && auditResults && auditId && (
-          <AuditResults
-            results={auditResults}
-            auditId={auditId}
-            onStartNew={handleStartNew}
-          />
-        )}
-      </main>
+      </div>
     </div>
   )
 }

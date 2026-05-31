@@ -1,10 +1,11 @@
-// LogRaven — SOC 2 Audit Progress Component
+// LogRaven — SOC 2 Audit Progress (Control Room stage)
 //
-// Polls /api/v1/audit/{auditId}/status every 5s.
-// Shows animated progress bar, step checklist, and elapsed timer.
-// Calls onComplete when done, onError on failure or cancel.
+// Polls /api/v1/audit/{auditId}/status every 5s. Renders a single-stage
+// "scan console": prominent status, a horizontal pipeline, and a live log.
 
 import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import { Check, Loader2, WifiOff, Radio, Clock, X, Plug, Database, BrainCircuit, FileArchive } from 'lucide-react'
 import type { AuditStatusResponse } from '../../types/audit'
 import { getAuditStatus } from '../../api/compliance'
 
@@ -16,10 +17,10 @@ interface AuditProgressProps {
 }
 
 const STEPS = [
-  'Connecting to AWS account',
-  'Collecting CloudTrail evidence',
-  'Analyzing controls with AI',
-  'Generating evidence package',
+  { label: 'Connect',  detail: 'AWS account', icon: Plug },
+  { label: 'Collect',  detail: 'CloudTrail evidence', icon: Database },
+  { label: 'Analyze',  detail: 'Controls with AI', icon: BrainCircuit },
+  { label: 'Package',  detail: 'Evidence pack', icon: FileArchive },
 ]
 
 function checkedCount(percent: number): number {
@@ -40,43 +41,29 @@ function stepLabel(step: string | null | undefined, percent: number): string {
   return 'Connecting to AWS account...'
 }
 
-export default function AuditProgress({
-  auditId,
-  companyName,
-  onComplete,
-  onError,
-}: AuditProgressProps) {
+export default function AuditProgress({ auditId, companyName, onComplete, onError }: AuditProgressProps) {
   const [percent, setPercent]           = useState(0)
   const [currentStep, setCurrentStep]   = useState<string | null>(null)
   const [connectionLost, setConnectionLost] = useState(false)
   const [elapsed, setElapsed]           = useState(0)
 
-  // Refs so the interval callbacks always have latest values without re-creating
   const doneRef     = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Elapsed timer ──────────────────────────────────────────────────────────
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setElapsed((s) => s + 1)
-    }, 1000)
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
+    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 
-  // ── Polling ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const poll = async () => {
       if (doneRef.current) return
       try {
         const data = await getAuditStatus(auditId)
         setConnectionLost(false)
-
         if (data.percent != null) setPercent(data.percent)
         setCurrentStep(data.step ?? null)
-
         if (data.status === 'complete') {
           doneRef.current = true
           if (intervalRef.current) clearInterval(intervalRef.current)
@@ -92,14 +79,9 @@ export default function AuditProgress({
         setConnectionLost(true)
       }
     }
-
-    // Poll immediately, then every 5 s
     void poll()
     intervalRef.current = setInterval(() => { void poll() }, 5000)
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditId])
 
@@ -114,98 +96,107 @@ export default function AuditProgress({
   const seconds = elapsed % 60
   const checked = checkedCount(percent)
 
-  return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div
-        className="rounded-lg p-8 border"
-        style={{ backgroundColor: '#161B22', borderColor: '#30363D' }}
-      >
-        {/* Header */}
-        <h2 className="text-xl font-bold mb-1" style={{ color: '#E6EDF3' }}>
-          Running SOC 2 Audit
-        </h2>
-        <p className="text-sm mb-6" style={{ color: '#8B949E' }}>
-          {companyName}
-        </p>
+  // synthesize a small live log from progress
+  const logLines = [
+    ...STEPS.slice(0, checked).map((s) => ({ kind: 'done' as const, text: `${s.label.toLowerCase()} — ${s.detail} ✓` })),
+    ...(checked < STEPS.length ? [{ kind: 'active' as const, text: stepLabel(currentStep, percent) }] : []),
+  ]
 
-        {/* Progress bar */}
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-mono" style={{ color: '#8B949E' }}>
-            {stepLabel(currentStep, percent)}
-          </span>
-          <span className="text-xs font-mono font-semibold" style={{ color: '#2F81F7' }}>
-            {percent}%
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
+      className="ops-panel overflow-hidden"
+    >
+      {/* Header */}
+      <div className="px-6 py-4 border-b border-white/[0.07] flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 font-mono text-[10px] text-indigo-400 tracking-[0.22em] uppercase mb-0.5">
+            <Radio className="w-3 h-3 animate-pulse" /> Assessing
+          </div>
+          <h2 className="font-display text-base font-bold text-text-primary truncate">{companyName}</h2>
+        </div>
+        <button
+          onClick={handleCancel}
+          className="btn-ghost px-3 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 flex-shrink-0"
+        >
+          <X className="w-3.5 h-3.5" /> Cancel
+        </button>
+      </div>
+
+      <div className="p-6 space-y-6">
+        {/* Status block */}
+        <div className="flex items-end justify-between gap-4">
+          <div className="flex items-end gap-1.5">
+            <span className="stat-value text-5xl font-semibold text-text-primary">{percent}</span>
+            <span className="font-display text-2xl font-bold text-indigo-400 mb-1">%</span>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-muted font-mono mb-1">
+            <Clock className="w-3.5 h-3.5" /> {minutes}m {String(seconds).padStart(2, '0')}s
           </span>
         </div>
-        <div
-          className="w-full h-2 rounded-full overflow-hidden mb-6"
-          style={{ backgroundColor: '#0D1117' }}
-        >
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{ width: `${percent}%`, backgroundColor: '#2F81F7' }}
+        <div className="w-full h-2 rounded-full overflow-hidden bg-deep">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-indigo-400"
+            animate={{ width: `${percent}%` }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
           />
         </div>
 
-        {/* Step checklist */}
-        <div className="space-y-3 mb-6">
-          {STEPS.map((label, i) => {
+        {/* Horizontal pipeline */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {STEPS.map(({ label, detail, icon: Icon }, i) => {
             const done = i < checked
+            const active = i === checked
             return (
-              <div key={label} className="flex items-center gap-3">
-                <span
-                  className="w-5 h-5 flex items-center justify-center rounded-full text-xs font-bold flex-shrink-0"
-                  style={{
-                    backgroundColor: done ? '#3FB950' : '#30363D',
-                    color: done ? '#0D1117' : '#8B949E',
-                  }}
-                >
-                  {done ? '✓' : '○'}
+              <div
+                key={label}
+                className={`rounded-xl border p-3 transition-colors ${
+                  done ? 'border-[#8FBDAD]/30 bg-[#8FBDAD]/[0.05]'
+                  : active ? 'border-indigo-500/35 bg-indigo-500/[0.05]'
+                  : 'border-white/[0.07] bg-white/[0.01]'
+                }`}
+              >
+                <span className={`w-8 h-8 rounded-lg flex items-center justify-center border mb-2 ${
+                  done ? 'bg-[#8FBDAD]/12 border-[#8FBDAD]/35 text-[#8FBDAD]'
+                  : active ? 'bg-indigo-500/12 border-indigo-500/35 text-indigo-300'
+                  : 'bg-white/[0.02] border-white/[0.08] text-text-muted'
+                }`}>
+                  {done ? <Check className="w-4 h-4" strokeWidth={3} />
+                    : active ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Icon className="w-4 h-4" />}
                 </span>
-                <span
-                  className="text-sm"
-                  style={{ color: done ? '#3FB950' : '#8B949E' }}
-                >
-                  {label}
-                </span>
+                <div className={`text-xs font-semibold ${done ? 'text-text-primary' : active ? 'text-indigo-300' : 'text-text-muted'}`}>{label}</div>
+                <div className="text-[10px] text-text-muted truncate">{detail}</div>
               </div>
             )
           })}
         </div>
 
-        {/* Elapsed time */}
-        <p className="text-xs mb-6" style={{ color: '#8B949E' }}>
-          Running for {minutes} minute{minutes !== 1 ? 's' : ''}{' '}
-          {seconds} second{seconds !== 1 ? 's' : ''}
-        </p>
+        {/* Live log */}
+        <div className="rounded-xl border border-white/[0.07] bg-void/70 overflow-hidden">
+          <div className="px-3 py-2 border-b border-white/[0.06] flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Live log</span>
+            <span className="font-mono text-[10px] text-text-ghost">polls every 5s</span>
+          </div>
+          <div className="p-3 font-mono text-[11px] space-y-1 min-h-[96px]">
+            {logLines.map((l, i) => (
+              <div key={i} className="flex gap-2">
+                <span className={l.kind === 'done' ? 'text-[#8FBDAD]' : 'text-indigo-400'}>
+                  {l.kind === 'done' ? '✓' : '▷'}
+                </span>
+                <span className={l.kind === 'done' ? 'text-text-muted' : 'text-text-secondary'}>{l.text}</span>
+              </div>
+            ))}
+            <span className="inline-block w-1.5 h-3 bg-indigo-400/70 animate-pulse align-middle" />
+          </div>
+        </div>
 
-        {/* Connection lost banner */}
         {connectionLost && (
-          <p
-            className="text-xs mb-4 px-3 py-2 rounded border"
-            style={{
-              color: '#D29922',
-              backgroundColor: '#1a1800',
-              borderColor: '#D29922',
-            }}
-          >
-            Connection lost, retrying...
-          </p>
+          <div className="flex items-center gap-2 text-xs px-3 py-2.5 rounded-lg border border-threat-medium/30 bg-threat-medium/[0.07] text-threat-medium">
+            <WifiOff className="w-4 h-4 flex-shrink-0" /> Connection lost, retrying…
+          </div>
         )}
-
-        {/* Cancel button */}
-        <button
-          onClick={handleCancel}
-          className="w-full py-2 rounded text-sm font-medium border transition-colors hover:opacity-80"
-          style={{
-            backgroundColor: 'transparent',
-            borderColor: '#30363D',
-            color: '#8B949E',
-          }}
-        >
-          Cancel
-        </button>
       </div>
-    </div>
+    </motion.div>
   )
 }

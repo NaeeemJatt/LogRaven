@@ -19,6 +19,12 @@
       "skillPath": "frontend-security/SKILL.md",
       "computedHash": "e8d405042bb53c7b1a87523b01a6e7d219c31627679a4e92f8b32abbde4cbbc9"
     },
+    "html-to-pdf": {
+      "source": "aviz85/claude-skills-library",
+      "sourceType": "github",
+      "skillPath": "skills/html-to-pdf/SKILL.md",
+      "computedHash": "d99f90d6fe7aa5f624285c93ce920267bc1c2e5b899a1f0436e72fd5517c59a7"
+    },
     "premium-frontend-ui": {
       "source": "github/awesome-copilot",
       "sourceType": "github",

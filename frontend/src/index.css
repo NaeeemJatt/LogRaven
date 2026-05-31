@@ -2,40 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Design Tokens ──────────────────────────────────────── */
+/* ── Design Tokens — "Watchtower" SIEM console ──────────── */
 :root {
-  --void: #030508;
-  --deep: #080C14;
-  --surface: #0F1422;
-  --elevated: #161C2E;
-  --panel: #1D2540;
+  /* Neutral gunmetal / charcoal canvas */
+  --void: #0B0B0D;
+  --deep: #101015;
+  --surface: #15151B;
+  --elevated: #1C1C24;
+  --panel: #25252F;
 
-  --accent: #6366F1;
-  --accent-bright: #818CF8;
-  --accent-dim: rgba(99, 102, 241, 0.35);
-  --accent-surface: rgba(99, 102, 241, 0.07);
-  --accent-border: rgba(99, 102, 241, 0.18);
+  /* Amber / gold primary accent — the raven's watchful eye */
+  --accent: #E3B57E;
+  --accent-bright: #EECFA3;
+  --accent-dim: rgba(227, 181, 126, 0.35);
+  --accent-surface: rgba(227, 181, 126, 0.07);
+  --accent-border: rgba(227, 181, 126, 0.20);
 
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-muted: #475569;
+  --text-primary: #F6F4F0;
+  --text-secondary: #AEB4BF;
+  --text-muted: #767C88;
 
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border: rgba(255, 255, 255, 0.09);
-  --border-bright: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.12);
+  --border-bright: rgba(255, 255, 255, 0.22);
 
-  --threat-critical: #F43F5E;
-  --threat-high: #F97316;
-  --threat-medium: #FBBF24;
-  --threat-low: #14B8A6;
-  --threat-info: #818CF8;
+  /* Semantic severity — industry-standard SIEM scale */
+  --threat-critical: #F0444E;
+  --threat-high: #F2853C;
+  --threat-medium: #E8B84B;
+  --threat-low: #3FB6A0;
+  --threat-info: #8A9CB8;
 
   /* Legacy raven vars kept for any remaining page references */
-  --raven-950: #030508;
-  --raven-900: #080C14;
-  --raven-800: #0F1422;
-  --raven-700: #161C2E;
-  --electric-500: #6366F1;
+  --raven-950: #0B0B0D;
+  --raven-900: #101015;
+  --raven-800: #15151B;
+  --raven-700: #1C1C24;
+  --electric-500: #E3B57E;
 }
 
 /* ── Base ───────────────────────────────────────────────── */
@@ -48,7 +51,7 @@ html, body {
   padding: 0;
   background-color: var(--void);
   color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -76,17 +79,17 @@ body::after {
   background: var(--deep);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(99, 102, 241, 0.3);
+  background: rgba(227, 181, 126, 0.3);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(99, 102, 241, 0.5);
+  background: rgba(227, 181, 126, 0.55);
 }
 
 /* ── Selection ──────────────────────────────────────────── */
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: #C7D2FE;
+  background: rgba(227, 181, 126, 0.3);
+  color: #F3DCBC;
 }
 
 /* Remove autofill yellow flash */
@@ -99,8 +102,38 @@ input:-webkit-autofill:focus {
 }
 
 /* ── Typography scale ───────────────────────────────────── */
-.font-display { font-family: 'Syne', sans-serif; }
+.font-display { font-family: 'Chakra Petch', sans-serif; letter-spacing: -0.01em; }
 .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* ── Ambient SIEM textures ──────────────────────────────── */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.022) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.022) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.scanline-overlay {
+  position: relative;
+}
+.scanline-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(227, 181, 126, 0.05) 50%,
+    transparent 100%
+  );
+  height: 32%;
+  animation: scansweep 7s linear infinite;
+}
+@keyframes scansweep {
+  0% { transform: translateY(-120%); }
+  100% { transform: translateY(420%); }
+}
 
 /* ── Glass card ─────────────────────────────────────────── */
 .glass {
@@ -118,7 +151,7 @@ input:-webkit-autofill:focus {
 }
 
 .glass-sovereign {
-  background: rgba(99, 102, 241, 0.06);
+  background: rgba(227, 181, 126, 0.06);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--accent-border);
@@ -126,13 +159,13 @@ input:-webkit-autofill:focus {
 
 /* ── Glow ring ──────────────────────────────────────────── */
 .glow-ring {
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.25),
-              0 4px 24px rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 1px rgba(227, 181, 126, 0.25),
+              0 4px 24px rgba(227, 181, 126, 0.12);
 }
 
 .glow-ring-hover:hover {
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.4),
-              0 8px 40px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 1px rgba(227, 181, 126, 0.4),
+              0 8px 40px rgba(227, 181, 126, 0.2);
 }
 
 /* ── Shimmer loading ────────────────────────────────────── */
@@ -165,14 +198,14 @@ input:-webkit-autofill:focus {
 
 /* ── Gradient text ──────────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #818CF8 0%, #A5B4FC 50%, #C7D2FE 100%);
+  background: linear-gradient(135deg, #F3DCBC 0%, #EECFA3 45%, #E3B57E 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-text-threat {
-  background: linear-gradient(135deg, #F43F5E 0%, #F97316 100%);
+  background: linear-gradient(135deg, #F0444E 0%, #F2853C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -182,7 +215,8 @@ input:-webkit-autofill:focus {
 .btn-sovereign {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  background: linear-gradient(135deg, #EECFA3, #E3B57E);
+  color: #2A2012;
   transition: all 0.2s ease;
 }
 
@@ -200,9 +234,36 @@ input:-webkit-autofill:focus {
 }
 
 .btn-sovereign:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+
+/* ── Login page (intentionally preserved indigo theme) ──── */
+.btn-login {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #6366F1, #4F46E5);
+  color: #fff;
+  transition: all 0.2s ease;
+}
+.btn-login:hover {
   box-shadow: 0 0 20px rgba(99, 102, 241, 0.5), 0 4px 16px rgba(99, 102, 241, 0.3);
   transform: translateY(-1px);
 }
+.login-input {
+  background: rgba(8, 12, 20, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #F1F5F9;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-family: 'JetBrains Mono', monospace;
+}
+.login-input:focus {
+  outline: none;
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+.login-input::placeholder { color: #475569; }
 
 /* ── Ghost button ───────────────────────────────────────── */
 .btn-ghost {
@@ -240,8 +301,8 @@ input:-webkit-autofill:focus {
 
 .sovereign-input:focus {
   outline: none;
-  border-color: rgba(99, 102, 241, 0.5);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  border-color: rgba(227, 181, 126, 0.5);
+  box-shadow: 0 0 0 3px rgba(227, 181, 126, 0.12);
 }
 
 .sovereign-input::placeholder {
@@ -267,7 +328,7 @@ input:-webkit-autofill:focus {
 }
 
 .sovereign-table tbody tr:hover {
-  background: rgba(99, 102, 241, 0.04);
+  background: rgba(227, 181, 126, 0.05);
 }
 
 .sovereign-table tbody tr td {
@@ -284,10 +345,10 @@ input:-webkit-autofill:focus {
   min-height: 32px;
 }
 .step-connector.active {
-  background: linear-gradient(to bottom, #6366F1, rgba(99,102,241,0.3));
+  background: linear-gradient(to bottom, #E3B57E, rgba(227,181,126,0.3));
 }
 .step-connector.complete {
-  background: #6366F1;
+  background: #E3B57E;
 }
 
 /* ── MITRE matrix cell ──────────────────────────────────── */
@@ -302,17 +363,17 @@ input:-webkit-autofill:focus {
 }
 
 /* ── Severity colors utility ────────────────────────────── */
-.severity-critical { color: #F43F5E; }
-.severity-high { color: #F97316; }
-.severity-medium { color: #FBBF24; }
-.severity-low { color: #14B8A6; }
-.severity-info { color: #818CF8; }
+.severity-critical { color: #F0444E; }
+.severity-high { color: #F2853C; }
+.severity-medium { color: #E8B84B; }
+.severity-low { color: #3FB6A0; }
+.severity-info { color: #8A9CB8; }
 
-.bg-severity-critical { background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.25); }
-.bg-severity-high { background: rgba(249, 115, 22, 0.12); border: 1px solid rgba(249, 115, 22, 0.25); }
-.bg-severity-medium { background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.25); }
-.bg-severity-low { background: rgba(20, 184, 166, 0.12); border: 1px solid rgba(20, 184, 166, 0.25); }
-.bg-severity-info { background: rgba(129, 140, 248, 0.12); border: 1px solid rgba(129, 140, 248, 0.25); }
+.bg-severity-critical { background: rgba(240, 68, 78, 0.12); border: 1px solid rgba(240, 68, 78, 0.25); }
+.bg-severity-high { background: rgba(242, 133, 60, 0.12); border: 1px solid rgba(242, 133, 60, 0.25); }
+.bg-severity-medium { background: rgba(232, 184, 75, 0.12); border: 1px solid rgba(232, 184, 75, 0.25); }
+.bg-severity-low { background: rgba(63, 182, 160, 0.12); border: 1px solid rgba(63, 182, 160, 0.25); }
+.bg-severity-info { background: rgba(138, 156, 184, 0.12); border: 1px solid rgba(138, 156, 184, 0.25); }
 
 /* ── Section divider ────────────────────────────────────── */
 .section-label {
@@ -361,4 +422,45 @@ input:-webkit-autofill:focus {
 @keyframes pulse-ring {
   0% { transform: scale(1); opacity: 0.8; }
   100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ── Soft ops panel — calm bordered surface, no glow ──────── */
+.ops-panel {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+/* ── Stat tile — dense command-strip cell, soft accent bar ── */
+.stat-tile {
+  position: relative;
+  background: transparent;
+  transition: background 0.18s ease;
+}
+.stat-tile:hover {
+  background: rgba(255,255,255,0.018);
+}
+.stat-tile::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 18%; bottom: 18%;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: var(--tile-accent, var(--accent));
+  opacity: 0.65;
+}
+
+/* ── Accent rail — soft, faint signal line ─────────────────── */
+.accent-rail {
+  height: 2px;
+  background: linear-gradient(to right, rgba(227,181,126,0.45), transparent 60%);
+}
+
+/* ── Mono data numerals ────────────────────────────────────── */
+.stat-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
 }

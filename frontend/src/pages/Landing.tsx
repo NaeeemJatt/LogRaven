@@ -1,7 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
-import { Shield, ArrowRight, ChevronRight } from 'lucide-react'
+import { Shield, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 
 function SectionReveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -19,20 +19,123 @@ function SectionReveal({ children, delay = 0 }: { children: React.ReactNode; del
   )
 }
 
-function FeatureCard({ title, description, index }: { title: string; description: string; index: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+type Feature = { title: string; description: string; tag: string }
+
+function FeatureCard({ feature, index, cardRef }: { feature: Feature; index: number; cardRef?: (el: HTMLDivElement | null) => void }) {
   return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 24 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.07 }}
-      className="p-6 rounded-2xl border border-white/[0.06] bg-surface/50 hover:border-white/[0.10] hover:bg-elevated/60 transition-all duration-200"
+    <div
+      ref={cardRef}
+      className="flex-shrink-0 w-[300px] sm:w-[340px] min-h-[320px] p-7 rounded-2xl border border-white/[0.06] bg-surface/50 hover:border-indigo-500/20 hover:bg-elevated/60 transition-all duration-200 flex flex-col select-none"
     >
-      <h3 className="font-display font-semibold text-text-primary text-base mb-2">{title}</h3>
-      <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
-    </motion.div>
+      <div className="font-mono text-[10px] text-indigo-400/70 tracking-widest">{String(index + 1).padStart(2, '0')}</div>
+      <h3 className="font-display font-semibold text-text-primary text-lg mt-5 mb-3">{feature.title}</h3>
+      <p className="text-text-secondary text-sm leading-relaxed">{feature.description}</p>
+      <div className="mt-auto pt-6 flex items-center gap-3">
+        <div className="h-px flex-1 bg-white/[0.07]" />
+        <span className="font-mono text-[10px] text-text-muted tracking-[0.18em] uppercase">{feature.tag}</span>
+      </div>
+    </div>
+  )
+}
+
+function FeatureCarousel({ features }: { features: Feature[] }) {
+  const len = features.length
+  const COPIES = 5
+  const START = len * 2
+  const cards = Array.from({ length: COPIES }, () => features).flat()
+
+  const [index, setIndex] = useState(START)
+  const [withTransition, setWithTransition] = useState(true)
+  const [step, setStep] = useState(356)
+  const firstCard = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const measure = () => {
+      if (firstCard.current) setStep(firstCard.current.offsetWidth + 16)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+
+  const paginate = (dir: number) => {
+    setWithTransition(true)
+    setIndex((i) => i + dir)
+  }
+
+  const normalize = () => {
+    if (index >= len * (COPIES - 1)) { setWithTransition(false); setIndex((i) => i - len) }
+    else if (index < len) { setWithTransition(false); setIndex((i) => i + len) }
+  }
+
+  return (
+    <>
+      <div className="max-w-6xl mx-auto px-6 mb-10 flex items-end justify-between gap-6">
+        <SectionReveal>
+          <div className="font-mono text-[10px] text-indigo-400 tracking-[0.22em] uppercase mb-3">Capabilities</div>
+          <h2 className="font-display font-bold text-text-primary mb-3" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)' }}>
+            Everything you need to investigate
+          </h2>
+          <p className="text-text-secondary text-sm leading-relaxed max-w-xl">
+            From raw log ingestion to actionable threat reports — every step of the SOC workflow in one platform.
+          </p>
+        </SectionReveal>
+        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => paginate(-1)} aria-label="Previous"
+            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary hover:border-indigo-500/30 hover:bg-elevated/60 transition-all flex items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => paginate(1)} aria-label="Next"
+            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary hover:border-indigo-500/30 hover:bg-elevated/60 transition-all flex items-center justify-center"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="relative">
+        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-r from-void to-transparent pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-l from-void to-transparent pointer-events-none" />
+
+        <div className="overflow-hidden">
+          <motion.div
+            className="flex gap-4 w-max px-6"
+            initial={false}
+            animate={{ x: -index * step }}
+            transition={withTransition ? { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } : { duration: 0 }}
+            onAnimationComplete={normalize}
+          >
+            {cards.map((f, i) => (
+              <FeatureCard
+                key={i}
+                feature={f}
+                index={i % len}
+                cardRef={i === 0 ? (el) => { firstCard.current = el } : undefined}
+              />
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Mobile arrows */}
+        <div className="flex sm:hidden items-center justify-center gap-3 mt-8">
+          <button
+            onClick={() => paginate(-1)} aria-label="Previous"
+            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => paginate(1)} aria-label="Next"
+            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -63,14 +166,14 @@ function Step({ num, title, description, index }: { num: string; title: string; 
 
 function TerminalPreview() {
   const lines = [
-    { text: '$ lograven analyze --files Security.evtx Sysmon.evtx', color: '#818CF8' },
-    { text: '→ Parsed 284,712 events across 2 files', color: '#14B8A6', delay: 0.3 },
+    { text: '$ lograven analyze --files Security.evtx Sysmon.evtx', color: '#E3B57E' },
+    { text: '→ Parsed 284,712 events across 2 files', color: '#8FBDAD', delay: 0.3 },
     { text: '→ Running 847 detection rules...', color: '#94A3B8', delay: 0.6 },
-    { text: '⚠ T1003.001  CRITICAL  Credential Dumping via LSASS', color: '#F43F5E', delay: 0.9 },
-    { text: '⚠ T1059.001  CRITICAL  Encoded PowerShell Execution', color: '#F43F5E', delay: 1.1 },
+    { text: '⚠ T1003.001  CRITICAL  Credential Dumping via LSASS', color: '#DB8585', delay: 0.9 },
+    { text: '⚠ T1059.001  CRITICAL  Encoded PowerShell Execution', color: '#DB8585', delay: 1.1 },
     { text: '→ Correlating across 2 sources...', color: '#94A3B8', delay: 1.4 },
-    { text: '→ AI analysis complete (Gemini 1.5 Pro)', color: '#14B8A6', delay: 1.7 },
-    { text: '✓ Report ready: 12 findings, 3 critical', color: '#818CF8', delay: 2.0 },
+    { text: '→ AI analysis complete (Gemini 1.5 Pro)', color: '#8FBDAD', delay: 1.7 },
+    { text: '✓ Report ready: 12 findings, 3 critical', color: '#E3B57E', delay: 2.0 },
   ]
   return (
     <div className="rounded-2xl overflow-hidden border border-white/[0.06]" style={{ background: '#060810' }}>
@@ -110,13 +213,13 @@ export default function Landing() {
   const heroY = useTransform(scrollY, [0, 600], [0, -80])
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0])
 
-  const features = [
-    { title: 'Universal Log Ingestion', description: 'Upload EVTX, syslog, CloudTrail, Nginx, and firewall logs. Native parsers extract structured events from every format.' },
-    { title: 'Multi-Engine Detection', description: '847+ YAML detection rules run across every log line. Choose between native parsers, decoder-manager, or run both side-by-side.' },
-    { title: 'Gemini AI Analysis', description: 'Opt-in AI layer contextualizes findings, identifies attack chains, and generates executive-ready summaries for each investigation.' },
-    { title: 'MITRE ATT&CK Mapping', description: 'Every finding is automatically mapped to MITRE ATT&CK tactics and techniques, giving you the full kill chain at a glance.' },
-    { title: 'Cross-Source Correlation', description: 'Correlate findings across multiple log files to surface multi-stage attack patterns invisible in any single source.' },
-    { title: 'PDF Evidence Packages', description: 'Generate professional PDF reports with all findings, IOCs, and AI commentary — ready for security reviews or incident response.' },
+  const features: Feature[] = [
+    { tag: 'Ingestion', title: 'Universal Log Ingestion', description: 'Upload EVTX, syslog, CloudTrail, Nginx, and firewall logs. Native parsers extract structured events from every format.' },
+    { tag: 'Detection', title: 'Multi-Engine Detection', description: '847+ YAML detection rules run across every log line. Choose between native parsers, decoder-manager, or run both side-by-side.' },
+    { tag: 'AI Layer', title: 'AI Analysis', description: 'Opt-in AI layer contextualizes findings, identifies attack chains, and generates executive-ready summaries for each investigation.' },
+    { tag: 'Mapping', title: 'MITRE ATT&CK Mapping', description: 'Every finding is automatically mapped to MITRE ATT&CK tactics and techniques, giving you the full kill chain at a glance.' },
+    { tag: 'Correlation', title: 'Cross-Source Correlation', description: 'Correlate findings across multiple log files to surface multi-stage attack patterns invisible in any single source.' },
+    { tag: 'Reporting', title: 'PDF Evidence Packages', description: 'Generate professional PDF reports with all findings, IOCs, and AI commentary — ready for security reviews or incident response.' },
   ]
 
   const steps = [
@@ -158,115 +261,96 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center px-6 pt-20">
+      {/* Hero — asymmetric split: copy left, live console right */}
+      <section className="relative min-h-screen flex items-center px-6 pt-28 pb-16">
         <div className="absolute inset-0 bg-hero-mesh" />
         <div className="absolute top-0 left-0 right-0 h-[600px] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99,102,241,0.07) 0%, transparent 70%)' }} />
+          style={{ background: 'radial-gradient(ellipse 70% 50% at 30% -10%, rgba(227,181,126,0.06) 0%, transparent 70%)' }} />
 
-        <motion.div
-          style={{ y: heroY, opacity: heroOpacity }}
-          className="relative z-10 max-w-5xl mx-auto text-center"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] mb-8"
-          >
-            <span className="font-mono text-xs text-text-muted tracking-wider uppercase">
-              Log analysis &amp; threat intelligence
-            </span>
-          </motion.div>
+        <div className="relative z-10 max-w-7xl mx-auto w-full grid md:grid-cols-[1.05fr_1fr] gap-12 md:gap-16 items-center">
+          {/* Left — copy */}
+          <motion.div style={{ y: heroY, opacity: heroOpacity }}>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] mb-7"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <span className="font-mono text-[11px] text-text-muted tracking-wider uppercase">
+                Log analysis &amp; threat intelligence
+              </span>
+            </motion.div>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.7 }}
-            className="font-display font-extrabold leading-none tracking-tight mb-6"
-            style={{ fontSize: 'clamp(3rem, 8vw, 6.5rem)' }}
-          >
-            <span className="text-text-primary">Watch your logs.</span>
-            <br />
-            <span className="text-indigo-400">Find the threat.</span>
-          </motion.h1>
+            <motion.h1
+              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7 }}
+              className="font-display font-extrabold leading-[0.95] tracking-tight mb-6"
+              style={{ fontSize: 'clamp(2.75rem, 6vw, 5rem)' }}
+            >
+              <span className="text-text-primary">Watch your logs.</span><br />
+              <span className="text-indigo-400">Find the threat.</span>
+            </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="text-text-secondary text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed"
-          >
-            Upload any log format. Run 847 detection rules. Correlate across sources.
-            Map findings to MITRE ATT&CK — with optional Gemini AI enrichment.
-          </motion.p>
+            <motion.p
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+              className="text-text-secondary text-lg max-w-xl mb-9 leading-relaxed"
+            >
+              Upload any log format. Run 847 detection rules. Correlate across sources.
+              Map findings to MITRE ATT&CK — with optional Gemini AI enrichment.
+            </motion.p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.58 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3"
-          >
-            {isAuthenticated ? (
-              <Link to="/dashboard" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-glow-indigo">
-                Open dashboard <ArrowRight className="w-4 h-4" />
+            <motion.div
+              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 }}
+              className="flex flex-col sm:flex-row items-start gap-3"
+            >
+              {isAuthenticated ? (
+                <Link to="/dashboard" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold">
+                  Open dashboard <ArrowRight className="w-4 h-4" />
+                </Link>
+              ) : (
+                <Link to="/register" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold">
+                  Start investigating <ArrowRight className="w-4 h-4" />
+                </Link>
+              )}
+              <Link to="/login" className="btn-ghost flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
+                {isAuthenticated ? 'Account settings' : 'Sign in'}
+                <ChevronRight className="w-4 h-4" />
               </Link>
-            ) : (
-              <Link to="/register" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white shadow-glow-indigo">
-                Start investigating <ArrowRight className="w-4 h-4" />
-              </Link>
-            )}
-            <Link to="/login" className="btn-ghost flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
-              {isAuthenticated ? 'Account settings' : 'Sign in'}
-              <ChevronRight className="w-4 h-4" />
-            </Link>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 pt-8 border-t border-white/[0.06]"
+            >
+              {[
+                { label: 'Detection Rules', value: '847+' },
+                { label: 'Log Formats', value: '8' },
+                { label: 'MITRE Techniques', value: '200+' },
+                { label: 'Avg Analysis', value: '< 5m' },
+              ].map(({ label, value }) => (
+                <div key={label}>
+                  <div className="font-display font-bold text-2xl text-text-primary">{value}</div>
+                  <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mt-0.5">{label}</div>
+                </div>
+              ))}
+            </motion.div>
           </motion.div>
 
+          {/* Right — live console */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="flex items-center justify-center gap-8 mt-14 pt-10 border-t border-white/[0.05]"
+            initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ delay: 0.45, duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
+            className="relative"
           >
-            {[
-              { label: 'Detection Rules', value: '847+' },
-              { label: 'Log Formats', value: '8' },
-              { label: 'MITRE Techniques', value: '200+' },
-              { label: 'Avg Analysis', value: '< 5m' },
-            ].map(({ label, value }) => (
-              <div key={label} className="text-center">
-                <div className="font-display font-bold text-2xl text-text-primary">{value}</div>
-                <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mt-0.5">{label}</div>
-              </div>
-            ))}
+            <div className="absolute -inset-4 bg-hero-mesh opacity-40 blur-2xl rounded-3xl pointer-events-none" />
+            <div className="relative">
+              <TerminalPreview />
+            </div>
           </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Terminal */}
-      <section className="relative px-6 py-24">
-        <div className="max-w-4xl mx-auto">
-          <SectionReveal delay={0.1}><TerminalPreview /></SectionReveal>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="px-6 py-24">
-        <div className="max-w-6xl mx-auto">
-          <SectionReveal>
-            <h2 className="font-display font-bold text-text-primary mb-3" style={{ fontSize: 'clamp(1.75rem, 4vw, 3rem)' }}>
-              Everything you need to investigate
-            </h2>
-            <p className="text-text-secondary max-w-xl mb-12">
-              From raw log ingestion to actionable threat reports — every step of the SOC workflow in one platform.
-            </p>
-          </SectionReveal>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {features.map((f, i) => (
-              <FeatureCard key={f.title} title={f.title} description={f.description} index={i} />
-            ))}
-          </div>
-        </div>
+      {/* Features — manual infinite carousel */}
+      <section className="py-24 border-t border-white/[0.04] overflow-hidden">
+        <FeatureCarousel features={features} />
       </section>
 
       {/* How it works */}
@@ -308,7 +392,7 @@ export default function Landing() {
                     <div className="text-text-secondary text-xs mt-0.5">active findings detected</div>
                   </div>
                   <div className="flex gap-2">
-                    {[['3', 'critical', '#F43F5E'], ['4', 'high', '#F97316'], ['5', 'med', '#FBBF24']].map(([n, label, color]) => (
+                    {[['3', 'critical', '#DB8585'], ['4', 'high', '#E0A86F'], ['5', 'med', '#D9C27E']].map(([n, label, color]) => (
                       <div key={label} className="flex-1 px-2 py-1.5 rounded-lg text-center"
                         style={{ background: `${color}10`, border: `1px solid ${color}25` }}>
                         <div className="font-mono font-bold text-sm" style={{ color }}>{n}</div>
@@ -320,40 +404,6 @@ export default function Landing() {
               </div>
             </SectionReveal>
           </div>
-        </div>
-      </section>
-
-      {/* CTA Banner */}
-      <section className="px-6 py-24">
-        <div className="max-w-4xl mx-auto">
-          <SectionReveal>
-            <div className="relative p-12 rounded-3xl overflow-hidden text-center border border-indigo-500/20">
-              <div className="absolute inset-0 bg-sovereign-radial" />
-              <div className="absolute inset-0 border border-indigo-500/10 rounded-3xl" />
-              <div className="relative z-10">
-                <h2 className="font-display font-extrabold text-text-primary text-4xl mb-4">
-                  Start your first investigation
-                </h2>
-                <p className="text-text-secondary text-lg mb-8 max-w-md mx-auto">
-                  Upload logs, run detection, get answers. No configuration required.
-                </p>
-                <div className="flex items-center justify-center gap-3">
-                  {isAuthenticated ? (
-                    <Link to="/dashboard" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white">
-                      Open dashboard <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  ) : (
-                    <Link to="/register" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white">
-                      Create free account <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  )}
-                  <Link to="/login" className="btn-ghost px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
-                    Sign in
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </SectionReveal>
         </div>
       </section>
 

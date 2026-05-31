@@ -5,107 +5,147 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ['Syne', 'sans-serif'],
-        sans: ['DM Sans', 'sans-serif'],
+        // "Watchtower" SIEM identity — tactical HUD display, technical body, data mono
+        display: ['Chakra Petch', 'sans-serif'],
+        sans: ['IBM Plex Sans', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        // PlayParser sandbox fonts (font-play / font-play-mono utilities)
+        play: ['Chakra Petch', 'sans-serif'],
+        'play-mono': ['JetBrains Mono', 'monospace'],
       },
       colors: {
-        void: '#030508',
-        deep: '#080C14',
-        surface: '#0F1422',
-        elevated: '#161C2E',
-        panel: '#1D2540',
+        // Neutral gunmetal / charcoal canvas (the SIEM dark console base)
+        void: '#0B0B0D',
+        deep: '#101015',
+        surface: '#15151B',
+        elevated: '#1C1C24',
+        panel: '#25252F',
 
+        // Primary accent — AMBER / GOLD (the raven's watchful eye, monitoring-terminal amber).
+        // Keeps the `indigo` key name so existing utility classes remap automatically.
         indigo: {
-          300: '#A5B4FC',
-          400: '#818CF8',
-          500: '#6366F1',
-          600: '#4F46E5',
-          700: '#4338CA',
-          800: '#3730A3',
-          900: '#312E81',
-          950: '#1E1B4B',
+          300: '#F3DCBC',
+          400: '#EECFA3',
+          500: '#E3B57E',
+          600: '#C9974F',
+          700: '#B5620C',
+          800: '#854809',
+          900: '#583009',
+          950: '#2E1905',
+        },
+
+        // Built-in amber palette overridden with the SOFT sand-amber scale
+        // (PlayParser and any literal amber-* utilities inherit the calm tone).
+        amber: {
+          50: '#FBF7F0',
+          100: '#F6EBD8',
+          200: '#EFDCBC',
+          300: '#EECFA3',
+          400: '#E3B57E',
+          500: '#D4A05E',
+          600: '#BC8A48',
+          700: '#977038',
+          800: '#6E5228',
+          900: '#4A3720',
+          950: '#2A1F13',
+        },
+
+        // Secondary — STEEL / SLATE for info, AI, system data (neutral, not a vibrant blue).
+        // Keeps the `violet` key name so existing utility classes remap automatically.
+        violet: {
+          300: '#C3CDDC',
+          400: '#9CACC4',
+          500: '#7E90AD',
+          600: '#63748F',
         },
 
         sovereign: {
-          glow: 'rgba(99,102,241,0.35)',
-          border: 'rgba(99,102,241,0.18)',
-          surface: 'rgba(99,102,241,0.07)',
+          glow: 'rgba(227,181,126,0.38)',
+          border: 'rgba(227,181,126,0.24)',
+          surface: 'rgba(227,181,126,0.08)',
         },
 
+        // Semantic severity — industry-standard SIEM scale (Elastic Borealis-aligned)
         threat: {
-          critical: '#F43F5E',
-          high: '#F97316',
-          medium: '#FBBF24',
-          low: '#14B8A6',
-          info: '#818CF8',
+          critical: '#F0444E',
+          high: '#F2853C',
+          medium: '#E8B84B',
+          low: '#3FB6A0',
+          info: '#8A9CB8',
         },
 
-        // Keep severity aliases for backward compat with existing pages
+        // Severity aliases for backward compat with existing pages
         severity: {
-          critical: '#F43F5E',
-          high: '#F97316',
-          medium: '#FBBF24',
-          low: '#14B8A6',
-          info: '#818CF8',
+          critical: '#F0444E',
+          high: '#F2853C',
+          medium: '#E8B84B',
+          low: '#3FB6A0',
+          info: '#8A9CB8',
         },
 
         text: {
-          primary: '#F1F5F9',
-          secondary: '#94A3B8',
-          muted: '#475569',
-          ghost: '#1E293B',
+          primary: '#F6F4F0',
+          secondary: '#AEB4BF',
+          muted: '#767C88',
+          ghost: '#4A4E58',
         },
 
         border: {
-          subtle: 'rgba(255,255,255,0.05)',
-          DEFAULT: 'rgba(255,255,255,0.09)',
-          bright: 'rgba(255,255,255,0.16)',
+          subtle: 'rgba(255,255,255,0.06)',
+          DEFAULT: 'rgba(255,255,255,0.12)',
+          bright: 'rgba(255,255,255,0.22)',
         },
 
-        // PlayParser surfaces (keep for PlayParser page backward compat)
+        // PlayParser surfaces — retuned to the Watchtower amber/charcoal system
         play: {
-          base: '#06080d',
-          elevate: '#0c1018',
-          panel: '#141a24',
-          surface: '#1a2230',
-          'surface-2': '#222b3d',
-          border: '#2e3a4d',
-          'border-strong': '#3d4d63',
-          fg: '#eef1f6',
-          muted: '#9ca8b8',
-          subtle: '#6b7c90',
-          accent: '#2dd4bf',
-          'accent-muted': '#0d9488',
-          'accent-hover': '#5eead4',
-          'accent-glow': 'rgba(45, 212, 191, 0.22)',
-          warm: '#e8b86a',
-          'warm-bright': '#fbbf24',
+          base: '#0B0B0D',
+          elevate: '#101015',
+          panel: '#15151B',
+          surface: '#1C1C24',
+          'surface-2': '#25252F',
+          border: '#2D2D38',
+          'border-strong': '#3C3C49',
+          fg: '#F4F2EE',
+          muted: '#9DA3AE',
+          subtle: '#5C616E',
+          accent: '#E3B57E',
+          'accent-muted': '#A9631E',
+          'accent-hover': '#EECFA3',
+          'accent-glow': 'rgba(227, 181, 126, 0.22)',
+          warm: '#E8B84B',
+          'warm-bright': '#F3DCBC',
         },
       },
       backgroundImage: {
-        'sovereign-gradient': 'linear-gradient(135deg, #6366F1 0%, #818CF8 50%, #A5B4FC 100%)',
-        'sovereign-radial': 'radial-gradient(ellipse at center, rgba(99,102,241,0.15) 0%, transparent 70%)',
-        'threat-gradient': 'linear-gradient(135deg, #F43F5E 0%, #F97316 100%)',
+        'sovereign-gradient': 'linear-gradient(135deg, #C9974F 0%, #E3B57E 50%, #F3DCBC 100%)',
+        'sovereign-radial': 'radial-gradient(ellipse at center, rgba(227,181,126,0.14) 0%, transparent 70%)',
+        'threat-gradient': 'linear-gradient(135deg, #F0444E 0%, #F2853C 100%)',
         'hero-mesh': `
-          radial-gradient(ellipse 80% 50% at 50% -10%, rgba(99,102,241,0.25) 0%, transparent 60%),
-          radial-gradient(ellipse 40% 30% at 80% 20%, rgba(244,63,94,0.08) 0%, transparent 50%),
-          radial-gradient(ellipse 40% 30% at 20% 80%, rgba(20,184,166,0.06) 0%, transparent 50%)
+          radial-gradient(ellipse 80% 50% at 50% -10%, rgba(227,181,126,0.18) 0%, transparent 60%),
+          radial-gradient(ellipse 40% 30% at 82% 18%, rgba(240,68,78,0.07) 0%, transparent 50%),
+          radial-gradient(ellipse 44% 32% at 18% 82%, rgba(138,156,184,0.05) 0%, transparent 50%)
+        `,
+        'grid-faint': `
+          linear-gradient(to right, rgba(255,255,255,0.035) 1px, transparent 1px),
+          linear-gradient(to bottom, rgba(255,255,255,0.035) 1px, transparent 1px)
         `,
       },
+      backgroundSize: {
+        'grid-cell': '40px 40px',
+      },
       boxShadow: {
-        'sovereign': '0 0 0 1px rgba(99,102,241,0.2), 0 4px 24px rgba(99,102,241,0.12)',
-        'sovereign-lg': '0 0 0 1px rgba(99,102,241,0.25), 0 8px 48px rgba(99,102,241,0.2)',
-        'glow-indigo': '0 0 20px rgba(99,102,241,0.4), 0 0 60px rgba(99,102,241,0.15)',
-        'glow-rose': '0 0 20px rgba(244,63,94,0.4)',
-        'glow-teal': '0 0 20px rgba(20,184,166,0.4)',
-        'card': '0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.4)',
-        'card-hover': '0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.2)',
+        'sovereign': '0 0 0 1px rgba(227,181,126,0.22), 0 4px 24px rgba(227,181,126,0.12)',
+        'sovereign-lg': '0 0 0 1px rgba(227,181,126,0.28), 0 8px 48px rgba(227,181,126,0.2)',
+        'glow-indigo': '0 0 16px rgba(227,181,126,0.18)',
+        'glow-rose': '0 0 20px rgba(240,68,78,0.4)',
+        'glow-teal': '0 0 20px rgba(63,182,160,0.4)',
+        'card': '0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.45)',
+        'card-hover': '0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.55), 0 0 0 1px rgba(227,181,126,0.22)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
         'float': 'float 6s ease-in-out infinite',
-        'scan': 'scan 3s linear infinite',
+        'scan': 'scan 7s linear infinite',
         'shimmer': 'shimmer 2.5s infinite',
         'fade-in': 'fadeIn 0.6s ease forwards',
         'slide-up': 'slideUp 0.5s ease forwards',

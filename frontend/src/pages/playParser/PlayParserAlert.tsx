@@ -20,22 +20,22 @@ const variantStyles: Record<
   { wrap: string; icon: React.ReactNode; iconWrap: string }
 > = {
   info: {
-    wrap: 'border-cyan-500/40 bg-gradient-to-r from-cyan-950/55 to-slate-900/80 text-play-fg ring-1 ring-cyan-400/15',
+    wrap: 'border-zinc-500/35 bg-gradient-to-r from-zinc-800/60 to-zinc-900/80 text-play-fg ring-1 ring-zinc-400/10',
     icon: <Info className="h-4 w-4 shrink-0" aria-hidden />,
-    iconWrap: 'text-cyan-300',
+    iconWrap: 'text-zinc-300',
   },
   success: {
-    wrap: 'border-emerald-400/35 bg-gradient-to-r from-emerald-950/50 to-slate-900/70 text-play-fg ring-1 ring-emerald-400/20',
+    wrap: 'border-emerald-400/35 bg-gradient-to-r from-emerald-950/50 to-zinc-900/70 text-play-fg ring-1 ring-emerald-400/20',
     icon: <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />,
     iconWrap: 'text-emerald-300',
   },
   warning: {
-    wrap: 'border-amber-400/40 bg-gradient-to-r from-amber-950/55 to-slate-900/75 text-play-fg ring-1 ring-amber-400/20',
+    wrap: 'border-amber-400/40 bg-gradient-to-r from-amber-950/55 to-zinc-900/75 text-play-fg ring-1 ring-amber-400/20',
     icon: <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden />,
     iconWrap: 'text-amber-300',
   },
   danger: {
-    wrap: 'border-rose-400/40 bg-gradient-to-r from-rose-950/55 to-slate-900/75 text-play-fg ring-1 ring-rose-400/15',
+    wrap: 'border-rose-400/40 bg-gradient-to-r from-rose-950/55 to-zinc-900/75 text-play-fg ring-1 ring-rose-400/15',
     icon: <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />,
     iconWrap: 'text-rose-300',
   },
@@ -77,7 +77,7 @@ export const PlayParserAlert: React.FC<PlayParserAlertProps> = ({
                 <button
                   type="button"
                   onClick={() => setDetailOpen((o) => !o)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-teal-300 hover:text-teal-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 rounded transition-colors motion-reduce:transition-none"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded transition-colors motion-reduce:transition-none"
                   aria-expanded={detailOpen}
                   aria-controls={detailOpen ? detailId : undefined}
                 >
@@ -107,7 +107,7 @@ export const PlayParserAlert: React.FC<PlayParserAlertProps> = ({
           <button
             type="button"
             onClick={onDismiss}
-            className="shrink-0 rounded-lg p-1 text-slate-400 hover:text-white hover:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 transition-colors motion-reduce:transition-none"
+            className="shrink-0 rounded-lg p-1 text-zinc-400 hover:text-white hover:bg-zinc-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 transition-colors motion-reduce:transition-none"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

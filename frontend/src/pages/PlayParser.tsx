@@ -9,6 +9,10 @@ import {
   Loader2,
   Sparkles,
   WifiOff,
+  Settings2,
+  FileText,
+  Play,
+  FlaskConical,
 } from 'lucide-react'
 import type { AxiosError } from 'axios'
 import {
@@ -79,7 +83,7 @@ function matchBadgeClass(m: PlayParserPreviewMatch): string {
     case 'exact':
       return `${base} bg-emerald-500/15 text-emerald-300 border border-emerald-500/25`
     case 'substring':
-      return `${base} bg-slate-500/20 text-slate-300 border border-slate-500/30`
+      return `${base} bg-zinc-500/20 text-zinc-300 border border-zinc-500/30`
     case 'index':
       return `${base} bg-play-warm/15 text-play-warm-bright border border-play-warm/30`
     default:
@@ -174,7 +178,7 @@ function formatJsonTinted(json: string): React.ReactNode {
   return json.split(/("[^"]*"\s*:)/g).map((part, i) => {
     if (/^"[^"]*"\s*:$/.test(part)) {
       return (
-        <span key={i} className="text-teal-300/95">
+        <span key={i} className="text-amber-300/95">
           {part}
         </span>
       )
@@ -353,39 +357,50 @@ export default function PlayParser() {
           <span id={EVTX_DECODERS_HINT_ID} className="sr-only">
             {EVTX_FORMAT_TOOLTIP}
           </span>
-          <div className="flex flex-wrap items-start justify-between gap-4 mb-10">
-            <header className="min-w-0 max-w-3xl flex-1 space-y-4">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h1 className="text-3xl sm:text-4xl font-bold tracking-tight font-play bg-gradient-to-r from-white via-teal-100 to-cyan-200/90 bg-clip-text text-transparent drop-shadow-[0_0_20px_rgba(45,212,191,0.15)]">
-                  PlayParser
-                </h1>
-                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-teal-400/80">
-                  SANDBOX
-                </span>
-              </div>
-              <p className="text-play-muted text-sm leading-relaxed">
-                Choose parsers only, decoders only, or both. Inspect summary metrics, then open line-by-line raw vs parsed
-                previews for each parser or decoders (PlayParser sandbox only).
-              </p>
-            </header>
+          {/* Top bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+            <div className="flex items-baseline gap-3 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-play bg-gradient-to-r from-white via-amber-100 to-amber-200/90 bg-clip-text text-transparent">
+                PlayParser
+              </h1>
+              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400/80">Sandbox</span>
+            </div>
             <Link
               to="/dashboard"
-              className={`group inline-flex shrink-0 items-center gap-2 rounded-full border border-teal-500/30 bg-teal-950/25 px-3 py-1.5 text-sm text-teal-100/80 hover:text-teal-200 hover:border-teal-400/50 hover:bg-teal-900/35 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
+              className={`group inline-flex shrink-0 items-center gap-2 rounded-full border border-amber-500/30 bg-amber-950/25 px-3 py-1.5 text-sm text-amber-100/80 hover:text-amber-200 hover:border-amber-400/50 hover:bg-amber-900/35 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-teal-400/35 bg-teal-950/50 text-teal-300 group-hover:border-teal-300/60 group-hover:text-teal-200">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-amber-400/35 bg-amber-950/50 text-amber-300 group-hover:border-amber-300/60 group-hover:text-amber-200">
                 <ChevronLeft className="h-4 w-4" aria-hidden />
               </span>
               Dashboard
             </Link>
           </div>
 
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 min-w-0 gap-6 lg:grid-cols-[minmax(0,13fr)_minmax(0,7fr)] lg:gap-8 items-start">
-              <div className={`${playPanel} min-w-0 overflow-hidden`}>
+          {/* Workbench: sticky config sidebar + results canvas */}
+          <div className="grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
+            <aside className="md:sticky md:top-20 space-y-4">
+              <div className={`${playPanel} overflow-hidden`}>
+              {/* Console header strip */}
+              <div className={`${playSection} !py-4 flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/15`}>
+                <span className="flex items-center gap-2 font-play-mono text-[11px] uppercase tracking-[0.18em] text-amber-200/90">
+                  <Settings2 className="h-3.5 w-3.5 text-amber-400" aria-hidden /> Configuration
+                </span>
+                {file ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-950/30 px-2.5 py-1 font-play-mono text-[10px] text-amber-200 max-w-[60%]">
+                    <FileText className="h-3 w-3 shrink-0" aria-hidden />
+                    <span className="truncate">{file.name}</span>
+                  </span>
+                ) : (
+                  <span className="font-play-mono text-[10px] text-play-muted">no file selected</span>
+                )}
+              </div>
+
+              {/* Inputs (stacked in sidebar) */}
+              <div className="flex flex-col min-w-0 divide-y divide-play-border/50">
                 <div className={`${playSection} flex flex-col gap-4`}>
                   <div>
                     <label htmlFor={fileInputId} className={playSubsectionTitle}>
-                      Log file
+                      <span className="font-play-mono text-amber-400/70 mr-1">01</span> Log file
                     </label>
                     <input
                       ref={fileInputRef}
@@ -415,14 +430,14 @@ export default function PlayParser() {
                       }}
                       className={`w-full rounded-xl border-2 border-dashed px-4 py-8 text-left transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} ${
                         dropActive
-                          ? 'border-teal-400/70 bg-teal-500/15 shadow-[inset_0_0_40px_rgba(45,212,191,0.08)]'
-                          : 'border-teal-600/40 bg-teal-950/20 hover:border-teal-500/55 hover:bg-teal-900/25'
+                          ? 'border-amber-400/70 bg-amber-500/15'
+                          : 'border-amber-600/40 bg-amber-950/20 hover:border-amber-500/55 hover:bg-amber-900/25'
                       }`}
                     >
                       <p className="text-sm text-play-fg font-medium">
                         {file ? (
                           <span
-                            className="font-play-mono text-teal-300 truncate block max-w-full"
+                            className="font-play-mono text-amber-300 truncate block max-w-full"
                             title={file.name}
                           >
                             {file.name}
@@ -438,14 +453,14 @@ export default function PlayParser() {
                   </div>
 
                   <div>
-                    <span className={playSectionTitle}>Parsers to compare</span>
+                    <span className={playSectionTitle}><span className="font-play-mono text-amber-400/70 mr-1">02</span> Parsers to compare</span>
                   {playMode === 'decoders_only' ? (
                     <PlayParserAlert variant="info" title="Parsers disabled" className="mb-4">
                       In decoders-only mode, native parsers are not run. Switch mode if you need parser quality scores.
                     </PlayParserAlert>
                   ) : null}
                   <div
-                    className={`grid grid-cols-1 min-w-0 sm:grid-cols-2 gap-2 ${playMode === 'decoders_only' ? 'opacity-45 pointer-events-none' : ''}`}
+                    className={`grid grid-cols-1 min-w-0 gap-2 ${playMode === 'decoders_only' ? 'opacity-45 pointer-events-none' : ''}`}
                     aria-disabled={playMode === 'decoders_only'}
                   >
                     {PARSER_OPTIONS.map((p) => {
@@ -459,13 +474,13 @@ export default function PlayParser() {
                           onClick={() => toggleParser(p.key)}
                           className={`inline-flex w-full min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} disabled:cursor-not-allowed ${
                             on
-                              ? 'border-teal-400/55 bg-teal-900/35 text-teal-50 shadow-[0_0_16px_-6px_rgba(45,212,191,0.25)]'
-                              : 'border-slate-600/45 bg-slate-900/35 text-slate-300 hover:border-teal-700/50 hover:bg-slate-800/45'
+                              ? 'border-amber-400/55 bg-amber-900/35 text-amber-50'
+                              : 'border-zinc-600/45 bg-zinc-900/35 text-zinc-300 hover:border-amber-700/50 hover:bg-zinc-800/45'
                           }`}
                         >
                           <span
                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                              on ? 'border-teal-300 bg-teal-500/30 text-teal-200' : 'border-slate-500 bg-slate-800/80'
+                              on ? 'border-amber-300 bg-amber-500/30 text-amber-200' : 'border-zinc-500 bg-zinc-800/80'
                             }`}
                             aria-hidden
                           >
@@ -479,12 +494,10 @@ export default function PlayParser() {
                   </div>
                   </div>
                 </div>
-              </div>
 
-              <div className={`${playPanel} min-w-0 overflow-hidden flex flex-col`}>
                 <div className={`${playSection} flex flex-col gap-4`}>
                   <div>
-                    <span className={playSectionTitle}>Run mode</span>
+                    <span className={playSectionTitle}><span className="font-play-mono text-amber-400/70 mr-1">03</span> Run mode</span>
                     <div className="flex flex-col gap-2">
                       {RUN_MODE_OPTIONS.map((opt) => {
                         const active = playMode === opt.v
@@ -499,8 +512,8 @@ export default function PlayParser() {
                             }}
                             className={`rounded-xl border px-3 py-3 text-left w-full transition-all duration-150 motion-reduce:transition-none ${playFocusRing} ${
                               active
-                                ? 'border-teal-400/60 bg-gradient-to-br from-teal-900/50 to-cyan-950/30 shadow-[0_0_20px_-8px_rgba(45,212,191,0.35)]'
-                                : 'border-slate-600/50 bg-slate-900/40 hover:border-teal-600/40 hover:bg-slate-800/50'
+                                ? 'border-amber-400/60 bg-gradient-to-br from-amber-900/50 to-amber-950/30'
+                                : 'border-zinc-600/50 bg-zinc-900/40 hover:border-amber-600/40 hover:bg-zinc-800/50'
                             } ${blockedEvtxDecoders ? 'opacity-45 cursor-not-allowed pointer-events-none' : ''}`}
                           >
                             <span className="block text-sm font-semibold text-play-fg">{opt.label}</span>
@@ -522,9 +535,9 @@ export default function PlayParser() {
                               {isEvtxFile && evtxDecodersTooltipOpen ? (
                                 <div
                                   role="tooltip"
-                                  className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-cyan-500/40 bg-slate-900/95 px-3 py-2.5 text-xs text-teal-50/95 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-teal-400/15 backdrop-blur-sm pointer-events-none"
+                                  className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-amber-500/40 bg-zinc-900/95 px-3 py-2.5 text-xs text-amber-50/95 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-amber-400/15 backdrop-blur-sm pointer-events-none"
                                 >
-                                  <span className="font-play-mono text-[11px] text-cyan-100/90 leading-relaxed block">
+                                  <span className="font-play-mono text-[11px] text-amber-100/90 leading-relaxed block">
                                     {EVTX_FORMAT_TOOLTIP}
                                   </span>
                                 </div>
@@ -545,7 +558,7 @@ export default function PlayParser() {
                         <select
                           value={compareSourceType}
                           onChange={(e) => setCompareSourceType(e.target.value)}
-                          className={`w-full appearance-none rounded-xl border border-cyan-600/35 bg-slate-900/80 pl-3 pr-10 py-2.5 text-sm text-cyan-50 font-play-mono ${playFocusRing} transition-colors hover:border-cyan-400/45 hover:bg-slate-900`}
+                          className={`w-full appearance-none rounded-xl border border-amber-600/35 bg-zinc-900/80 pl-3 pr-10 py-2.5 text-sm text-amber-50 font-play-mono ${playFocusRing} transition-colors hover:border-amber-400/45 hover:bg-zinc-900`}
                         >
                           {COMPARE_SOURCE_TYPES.map((o) => (
                             <option key={o.value} value={o.value}>
@@ -554,42 +567,49 @@ export default function PlayParser() {
                           ))}
                         </select>
                         <ChevronDown
-                          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400/80"
+                          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-400/80"
                           aria-hidden
                         />
                       </div>
                     </div>
                   )}
 
-                  <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                    <button
-                      type="button"
-                      disabled={runLoading}
-                      onClick={() => void runPlay()}
-                      title="Run evaluation (keyboard: focus this control and press Enter)"
-                      className={`inline-flex min-w-[8.5rem] w-full sm:w-auto items-center justify-center gap-2 rounded-xl bg-teal-500 px-5 py-2.5 text-sm font-bold text-slate-950 shadow-[0_4px_24px_-4px_rgba(45,212,191,0.55)] hover:bg-teal-400 active:bg-teal-600 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
-                    >
-                      {runLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : null}
-                      {runLoading ? 'Running…' : 'Run'}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={detectLoading}
-                      onClick={() => void runDetectorHint()}
-                      className={`inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-950/20 px-5 py-2.5 text-sm font-medium text-amber-100/90 hover:bg-amber-950/40 hover:border-amber-400/45 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
-                    >
-                      {detectLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin text-play-accent" aria-hidden />
-                      ) : (
-                        <Sparkles className="h-4 w-4 text-play-warm-bright" aria-hidden />
-                      )}
-                      Detector hint
-                    </button>
-                  </div>
                 </div>
               </div>
-            </div>
 
+              {/* Action bar */}
+              <div className={`${playSection} !py-4 border-t border-amber-500/15 flex flex-col gap-3`}>
+                <p className="font-play-mono text-[11px] text-play-muted">
+                  {file ? 'Ready to evaluate.' : 'Upload a log file to begin.'}
+                </p>
+                <button
+                  type="button"
+                  disabled={runLoading}
+                  onClick={() => void runPlay()}
+                  title="Run evaluation (keyboard: focus this control and press Enter)"
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-zinc-950 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:bg-amber-400 active:bg-amber-600 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
+                >
+                  {runLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+                  {runLoading ? 'Running…' : 'Run evaluation'}
+                </button>
+                <button
+                  type="button"
+                  disabled={detectLoading}
+                  onClick={() => void runDetectorHint()}
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-950/20 px-5 py-2.5 text-sm font-medium text-amber-100/90 hover:bg-amber-950/40 hover:border-amber-400/45 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
+                >
+                  {detectLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-play-accent" aria-hidden />
+                  ) : (
+                    <Sparkles className="h-4 w-4 text-play-warm-bright" aria-hidden />
+                  )}
+                  Detector hint
+                </button>
+              </div>
+            </div>
+            </aside>
+
+            <section className="min-w-0 space-y-6">
             {error || (hints && hints.length > 0) ? (
               <div className={`${playPanel} overflow-hidden`}>
                 {error ? (
@@ -611,19 +631,19 @@ export default function PlayParser() {
                         {hints.map((h) => (
                           <li
                             key={`${h.log_type}-${h.confidence}-${h.reasons?.join(',')}`}
-                            className="rounded-lg border border-teal-600/30 bg-slate-900/60 px-3 py-2"
+                            className="rounded-lg border border-amber-600/30 bg-zinc-900/60 px-3 py-2"
                           >
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-md border border-teal-400/40 bg-teal-950/50 px-2 py-0.5 font-play-mono text-xs text-teal-200">
+                              <span className="rounded-md border border-amber-400/40 bg-amber-950/50 px-2 py-0.5 font-play-mono text-xs text-amber-200">
                                 {h.log_type}
                               </span>
-                              <span className="text-xs text-cyan-200/70 tabular-nums">
+                              <span className="text-xs text-amber-200/70 tabular-nums">
                                 {(h.confidence * 100).toFixed(0)}% confidence
                               </span>
                             </div>
-                            <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-slate-700/80">
+                            <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-zinc-700/80">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-teal-600 to-cyan-400 transition-[width] duration-200 motion-reduce:transition-none"
+                                className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400 transition-[width] duration-200 motion-reduce:transition-none"
                                 style={{ width: `${Math.round(h.confidence * 100)}%` }}
                               />
                             </div>
@@ -638,20 +658,40 @@ export default function PlayParser() {
                 ) : null}
               </div>
             ) : null}
-          </div>
+
+            {!lastRunMode && !runLoading && !error && !(hints && hints.length) ? (
+            <div className={`${playPanel} overflow-hidden scanline-overlay`}>
+              <div className="px-6 py-16 sm:py-24 flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center mb-5">
+                  <FlaskConical className="h-6 w-6 text-amber-400" aria-hidden />
+                </div>
+                <h3 className="font-play text-lg font-semibold text-play-fg">Results will appear here</h3>
+                <p className="text-sm text-play-muted mt-2 max-w-md leading-relaxed">
+                  Upload a log, choose parsers and a run mode, then hit{' '}
+                  <span className="text-amber-300 font-medium">Run evaluation</span>. Quality scores, decoder
+                  comparison and a line-by-line preview render in this canvas.
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-2 font-play-mono text-[11px] text-play-subtle">
+                  <span className="rounded-md border border-play-border bg-zinc-900/50 px-2 py-1">quality scores</span>
+                  <span className="rounded-md border border-play-border bg-zinc-900/50 px-2 py-1">raw vs parsed</span>
+                  <span className="rounded-md border border-play-border bg-zinc-900/50 px-2 py-1">decoder compare</span>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {compareResults && (lastRunMode === 'both' || lastRunMode === 'decoders_only') && (
-            <section className={`${playPanel} mt-10 overflow-hidden`} aria-labelledby="compare-heading">
-              <div className={`${playSection} flex flex-wrap items-center justify-between gap-3 border-b border-teal-500/20`}>
-                <h2 id="compare-heading" className="text-lg font-semibold font-play text-teal-50">
+            <section className={`${playPanel} overflow-hidden`} aria-labelledby="compare-heading">
+              <div className={`${playSection} flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/20`}>
+                <h2 id="compare-heading" className="text-lg font-semibold font-play text-amber-50">
                   {lastRunMode === 'decoders_only' ? 'Decoders result' : 'Parsers vs decoders'}
                 </h2>
-                <span className="rounded-full border border-cyan-500/35 bg-cyan-950/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-cyan-200">
+                <span className="rounded-full border border-amber-500/35 bg-amber-950/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-200">
                   {compareStatusLabel}
                 </span>
               </div>
               <div className={`${playSection} grid sm:grid-cols-2 gap-4`}>
-                <div className="rounded-xl border border-teal-600/25 bg-gradient-to-br from-teal-950/30 to-slate-900/50 p-4 space-y-3">
+                <div className="rounded-xl border border-amber-600/25 bg-gradient-to-br from-amber-950/30 to-zinc-900/50 p-4 space-y-3">
                   <p className={playSubsectionTitle}>Decoder status</p>
                   {!compareResults.decoders.manager_reachable ? (
                     <div className="flex items-center gap-2 text-amber-300">
@@ -689,7 +729,7 @@ export default function PlayParser() {
                   ) : null}
                 </div>
                 {lastRunMode === 'both' && compareResults.compare ? (
-                  <div className="rounded-xl border border-cyan-600/25 bg-gradient-to-br from-cyan-950/25 to-slate-900/50 p-4">
+                  <div className="rounded-xl border border-amber-600/25 bg-gradient-to-br from-amber-950/25 to-zinc-900/50 p-4">
                     <p className={playSubsectionTitle}>Compare sample</p>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-2">
                       <div>
@@ -712,7 +752,7 @@ export default function PlayParser() {
                       </div>
                       <div>
                         <dt className="text-[10px] uppercase tracking-wider text-play-muted">Timestamp match</dt>
-                        <dd className="text-lg font-play-mono tabular-nums text-teal-300">
+                        <dd className="text-lg font-play-mono tabular-nums text-amber-300">
                           {(compareResults.compare.timestamp_agreement_ratio * 100).toFixed(0)}%
                         </dd>
                       </div>
@@ -730,7 +770,7 @@ export default function PlayParser() {
               </div>
               <div className="overflow-x-auto border-t border-play-border/60">
                 <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-[1] bg-slate-900/95 backdrop-blur-sm border-b border-teal-500/20 text-left text-[10px] uppercase tracking-wider text-teal-200/80">
+                  <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-[10px] uppercase tracking-wider text-amber-200/80">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Parser</th>
                       <th className="px-4 py-3 font-semibold">OK</th>
@@ -740,7 +780,7 @@ export default function PlayParser() {
                   <tbody>
                     {compareResults.parser_results.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-4 py-3 text-slate-400 text-xs">
+                        <td colSpan={3} className="px-4 py-3 text-zinc-400 text-xs">
                           No native parsers in this run.
                         </td>
                       </tr>
@@ -748,7 +788,7 @@ export default function PlayParser() {
                       compareResults.parser_results.map((row, idx) => (
                         <tr
                           key={row.parser_key}
-                          className={`border-b border-slate-700/50 transition-colors duration-150 hover:bg-teal-950/20 motion-reduce:transition-none ${idx % 2 === 1 ? 'bg-slate-900/40' : ''}`}
+                          className={`border-b border-zinc-700/50 transition-colors duration-150 hover:bg-amber-950/20 motion-reduce:transition-none ${idx % 2 === 1 ? 'bg-zinc-900/40' : ''}`}
                         >
                           <td className="px-4 py-2.5 font-play-mono text-play-fg">{row.parser_key}</td>
                           <td className="px-4 py-2.5">
@@ -775,16 +815,16 @@ export default function PlayParser() {
           {results &&
             results.length > 0 &&
             (lastRunMode === 'parsers_only' || lastRunMode === 'both') && (
-              <section className={`${playPanel} mt-10 overflow-hidden`} aria-labelledby="quality-heading">
-                <div className={`${playSection} border-b border-teal-500/20 pb-4`}>
-                  <h2 id="quality-heading" className="text-lg font-semibold text-teal-50 font-play">
+              <section className={`${playPanel} overflow-hidden`} aria-labelledby="quality-heading">
+                <div className={`${playSection} border-b border-amber-500/20 pb-4`}>
+                  <h2 id="quality-heading" className="text-lg font-semibold text-amber-50 font-play">
                     Native parser quality
                   </h2>
                   <p className="text-xs text-play-muted mt-1">Expanded samples and scores from the last run.</p>
                 </div>
                 <div className="overflow-x-auto max-h-[min(70vh,48rem)] overflow-y-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 z-[1] bg-slate-900/95 backdrop-blur-sm border-b border-teal-500/20 text-left text-[10px] uppercase tracking-wider text-teal-200/80">
+                    <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-[10px] uppercase tracking-wider text-amber-200/80">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Parser</th>
                         <th className="px-4 py-3 font-semibold">Status</th>
@@ -797,7 +837,7 @@ export default function PlayParser() {
                     <tbody>
                       {results.map((row) => (
                         <React.Fragment key={row.parser_key}>
-                          <tr className="border-b border-slate-700/40 hover:bg-teal-950/15 transition-colors duration-150 motion-reduce:transition-none">
+                          <tr className="border-b border-zinc-700/40 hover:bg-amber-950/15 transition-colors duration-150 motion-reduce:transition-none">
                             <td className="px-4 py-3 font-play-mono text-play-fg">{row.parser_key}</td>
                             <td className="px-4 py-3">
                               {row.ok ? (
@@ -818,9 +858,9 @@ export default function PlayParser() {
                                   <div className="flex justify-between text-xs tabular-nums text-play-fg">
                                     <span>{(row.quality.score * 100).toFixed(1)}%</span>
                                   </div>
-                                  <div className="h-1.5 w-full rounded-full bg-slate-700 overflow-hidden">
+                                  <div className="h-1.5 w-full rounded-full bg-zinc-700 overflow-hidden">
                                     <div
-                                      className="h-full rounded-full bg-gradient-to-r from-teal-700 via-teal-400 to-cyan-300 transition-[width] duration-200 motion-reduce:transition-none"
+                                      className="h-full rounded-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-300 transition-[width] duration-200 motion-reduce:transition-none"
                                       style={{ width: `${Math.min(100, row.quality.score * 100)}%` }}
                                     />
                                   </div>
@@ -842,7 +882,7 @@ export default function PlayParser() {
                               {row.ok && row.sample_events?.length ? (
                                 <button
                                   type="button"
-                                  className={`p-1.5 rounded-lg text-slate-400 hover:text-teal-300 hover:bg-teal-950/40 ${playFocusRing}`}
+                                  className={`p-1.5 rounded-lg text-zinc-400 hover:text-amber-300 hover:bg-amber-950/40 ${playFocusRing}`}
                                   aria-expanded={!!expanded[row.parser_key]}
                                   aria-label={expanded[row.parser_key] ? 'Collapse samples' : 'Expand samples'}
                                   onClick={() =>
@@ -859,9 +899,9 @@ export default function PlayParser() {
                             </td>
                           </tr>
                           {expanded[row.parser_key] && row.sample_events?.length ? (
-                            <tr className="bg-slate-950/80 border-b border-teal-900/30">
+                            <tr className="bg-zinc-950/80 border-b border-amber-900/30">
                               <td colSpan={6} className="px-4 py-3">
-                                <pre className="text-[11px] font-play-mono text-slate-300 overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-teal-800/40 bg-slate-950/90 p-3">
+                                <pre className="text-[11px] font-play-mono text-zinc-300 overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap break-all rounded-lg border border-amber-800/40 bg-zinc-950/90 p-3">
                                   {formatJsonTinted(JSON.stringify(row.sample_events, null, 2))}
                                 </pre>
                               </td>
@@ -876,9 +916,9 @@ export default function PlayParser() {
             )}
 
           {lastRunMode && file && (
-            <section className={`${playPanel} mt-10 overflow-hidden`} aria-labelledby="preview-heading">
-              <div className={`${playSection} border-b border-teal-500/20`}>
-                <h2 id="preview-heading" className="text-lg font-semibold text-teal-50 font-play">
+            <section className={`${playPanel} overflow-hidden`} aria-labelledby="preview-heading">
+              <div className={`${playSection} border-b border-amber-500/20`}>
+                <h2 id="preview-heading" className="text-lg font-semibold text-amber-50 font-play">
                   Line preview
                 </h2>
                 <p className="text-xs text-play-muted mt-1 max-w-2xl">
@@ -900,8 +940,8 @@ export default function PlayParser() {
                           onClick={() => void loadPreview(key)}
                           className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-play-mono transition-colors duration-150 ${playFocusRing} disabled:opacity-50 ${
                             active
-                              ? 'border-teal-400/70 bg-teal-900/40 text-teal-200 shadow-[0_0_14px_-5px_rgba(45,212,191,0.4)]'
-                              : 'border-slate-600/50 bg-slate-900/50 text-slate-300 hover:border-teal-600/45'
+                              ? 'border-amber-400/70 bg-amber-900/40 text-amber-200'
+                              : 'border-zinc-600/50 bg-zinc-900/50 text-zinc-300 hover:border-amber-600/45'
                           }`}
                         >
                           {label}
@@ -915,8 +955,8 @@ export default function PlayParser() {
                       onClick={() => void loadPreview(PREVIEW_TARGET_DECODER)}
                       className={`shrink-0 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors duration-150 ${playFocusRing} disabled:opacity-50 ${
                         previewActive === PREVIEW_TARGET_DECODER
-                          ? 'border-amber-400/70 bg-amber-950/50 text-amber-200 shadow-[0_0_14px_-4px_rgba(251,191,36,0.35)]'
-                          : 'border-slate-600/50 bg-slate-900/50 text-slate-300 hover:border-amber-600/45'
+                          ? 'border-amber-400/70 bg-amber-950/50 text-amber-200'
+                          : 'border-zinc-600/50 bg-zinc-900/50 text-zinc-300 hover:border-amber-600/45'
                       }`}
                     >
                       Decoders
@@ -924,16 +964,16 @@ export default function PlayParser() {
                   ) : null}
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-play-mono text-cyan-200/80">
+                <div className="mt-4 flex flex-wrap gap-2 text-[10px] font-play-mono text-amber-200/80">
                   {previewPayload ? (
                     <>
-                      <span className="rounded-md border border-cyan-500/35 bg-cyan-950/40 px-2 py-0.5 text-cyan-100">
+                      <span className="rounded-md border border-amber-500/35 bg-amber-950/40 px-2 py-0.5 text-amber-100">
                         {previewPayload.preview_kind}
                       </span>
-                      <span className="rounded-md border border-teal-500/35 bg-teal-950/40 px-2 py-0.5 text-teal-100">
+                      <span className="rounded-md border border-amber-500/35 bg-amber-950/40 px-2 py-0.5 text-amber-100">
                         {previewPayload.key}
                       </span>
-                      <span className="rounded-md border border-slate-500/40 bg-slate-800/60 px-2 py-0.5 text-slate-200">
+                      <span className="rounded-md border border-zinc-500/40 bg-zinc-800/60 px-2 py-0.5 text-zinc-200">
                         {previewPayload.line_limit} lines max
                       </span>
                     </>
@@ -942,22 +982,22 @@ export default function PlayParser() {
 
                 {previewLoading ? (
                   <div
-                    className="mt-4 rounded-xl border border-teal-600/30 overflow-hidden bg-slate-950/50"
+                    className="mt-4 rounded-xl border border-amber-600/30 overflow-hidden bg-zinc-950/50"
                     aria-busy="true"
                     aria-label="Loading preview"
                   >
-                    <div className="grid grid-cols-[2rem_1fr_1fr_5rem] gap-0 border-b border-teal-500/25 bg-teal-950/30 px-2 py-2 text-[10px] uppercase text-teal-200/90 font-semibold tracking-wider">
+                    <div className="grid grid-cols-[2rem_1fr_1fr_5rem] gap-0 border-b border-amber-500/25 bg-amber-950/30 px-2 py-2 text-[10px] uppercase text-amber-200/90 font-semibold tracking-wider">
                       <div>#</div>
                       <div>Raw</div>
                       <div>Parsed</div>
                       <div>Match</div>
                     </div>
-                    <div className="divide-y divide-slate-700/50 bg-slate-900/40 p-2 space-y-2">
+                    <div className="divide-y divide-zinc-700/50 bg-zinc-900/40 p-2 space-y-2">
                       {[0, 1, 2, 3, 4].map((i) => (
                         <div key={i} className="grid grid-cols-[2rem_1fr_1fr_5rem] gap-2 items-center py-2">
-                          <div className="h-3 w-6 rounded bg-teal-900/50 animate-pulse motion-reduce:animate-none" />
-                          <div className="h-3 rounded bg-slate-600/60 animate-pulse motion-reduce:animate-none" />
-                          <div className="h-3 rounded bg-cyan-950/40 animate-pulse motion-reduce:animate-none" />
+                          <div className="h-3 w-6 rounded bg-amber-900/50 animate-pulse motion-reduce:animate-none" />
+                          <div className="h-3 rounded bg-zinc-600/60 animate-pulse motion-reduce:animate-none" />
+                          <div className="h-3 rounded bg-amber-950/40 animate-pulse motion-reduce:animate-none" />
                           <div className="h-5 w-12 rounded-full bg-amber-900/40 animate-pulse motion-reduce:animate-none" />
                         </div>
                       ))}
@@ -979,7 +1019,7 @@ export default function PlayParser() {
                 ) : null}
 
                 {!previewLoading && !previewPayload && !previewError ? (
-                  <div className="mt-4 rounded-xl border border-dashed border-teal-500/35 bg-teal-950/15 px-4 py-8 text-center text-sm text-teal-100/70">
+                  <div className="mt-4 rounded-xl border border-dashed border-amber-500/35 bg-amber-950/15 px-4 py-8 text-center text-sm text-amber-100/70">
                     Select a parser or Decoders above to load a line-by-line preview.
                   </div>
                 ) : null}
@@ -994,13 +1034,13 @@ export default function PlayParser() {
                         {previewPayload.note}
                       </PlayParserAlert>
                     ) : null}
-                    <div className="overflow-x-auto max-h-[28rem] overflow-y-auto rounded-xl border border-teal-600/25">
+                    <div className="overflow-x-auto max-h-[28rem] overflow-y-auto rounded-xl border border-amber-600/25">
                       <table className="min-w-full text-xs">
-                        <thead className="sticky top-0 z-[1] bg-slate-900/98 backdrop-blur-sm border-b border-teal-500/25 text-left text-[10px] uppercase tracking-wider text-teal-200/85">
+                        <thead className="sticky top-0 z-[1] bg-zinc-900/98 backdrop-blur-sm border-b border-amber-500/25 text-left text-[10px] uppercase tracking-wider text-amber-200/85">
                           <tr>
                             <th className="px-2 py-2 w-10 font-semibold">#</th>
-                            <th className="px-2 py-2 min-w-[200px] font-semibold bg-slate-800/90 text-slate-200">Raw</th>
-                            <th className="px-2 py-2 min-w-[240px] font-semibold bg-teal-950/50 text-teal-100/90">Parsed</th>
+                            <th className="px-2 py-2 min-w-[200px] font-semibold bg-zinc-800/90 text-zinc-200">Raw</th>
+                            <th className="px-2 py-2 min-w-[240px] font-semibold bg-amber-950/50 text-amber-100/90">Parsed</th>
                             <th className="px-2 py-2 w-24 font-semibold">Match</th>
                           </tr>
                         </thead>
@@ -1008,13 +1048,13 @@ export default function PlayParser() {
                           {previewPayload.rows.map((r) => (
                             <tr
                               key={r.line_no}
-                              className="border-b border-slate-700/40 align-top transition-colors duration-150 hover:bg-teal-950/10 motion-reduce:transition-none"
+                              className="border-b border-zinc-700/40 align-top transition-colors duration-150 hover:bg-amber-950/10 motion-reduce:transition-none"
                             >
-                              <td className="px-2 py-2 tabular-nums text-slate-500 font-play-mono">{r.line_no}</td>
-                              <td className="px-2 py-2 font-play-mono text-slate-200 whitespace-pre-wrap break-all max-w-md bg-slate-900/70">
+                              <td className="px-2 py-2 tabular-nums text-zinc-500 font-play-mono">{r.line_no}</td>
+                              <td className="px-2 py-2 font-play-mono text-zinc-200 whitespace-pre-wrap break-all max-w-md bg-zinc-900/70">
                                 {r.raw}
                               </td>
-                              <td className="px-2 py-2 font-play-mono text-teal-100/85 whitespace-pre-wrap break-all max-w-xl bg-teal-950/25">
+                              <td className="px-2 py-2 font-play-mono text-amber-100/85 whitespace-pre-wrap break-all max-w-xl bg-amber-950/25">
                                 {r.parsed ? JSON.stringify(r.parsed, null, 2) : '—'}
                               </td>
                               <td className="px-2 py-2">
@@ -1037,6 +1077,8 @@ export default function PlayParser() {
               </div>
             </section>
           )}
+            </section>
+          </div>
         </main>
       </div>
     </div>
