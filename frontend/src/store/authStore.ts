@@ -5,6 +5,9 @@ export interface AuthUser {
   id: string
   email: string
   tier: string
+  name?: string | null
+  timezone?: string | null
+  created_at?: string
 }
 
 interface AuthState {

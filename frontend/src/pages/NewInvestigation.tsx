@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ChevronLeft, ArrowRight, Shield, Loader2 } from 'lucide-react'
+import {
+  ChevronLeft, ArrowRight, Loader2, Tag, UploadCloud, Radar, Check, Clock,
+} from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
 
 const SUGGESTIONS = [
@@ -12,6 +14,49 @@ const SUGGESTIONS = [
   'Exfiltration detection',
   'Windows event log forensics',
 ]
+
+const WIZARD_STEPS = [
+  { n: 1, label: 'Name', hint: 'Identify the case', icon: Tag },
+  { n: 2, label: 'Upload logs', hint: 'Add evidence', icon: UploadCloud },
+  { n: 3, label: 'Analyze', hint: 'Detect & correlate', icon: Radar },
+]
+
+// ── Journey rail ──────────────────────────────────────────
+function WizardRail({ active }: { active: number }) {
+  return (
+    <div className="flex items-center">
+      {WIZARD_STEPS.map((s, i) => {
+        const isActive = s.n === active
+        const isDone = s.n < active
+        const Icon = s.icon
+        return (
+          <React.Fragment key={s.n}>
+            <div className="flex items-center gap-3 min-w-0">
+              <span className={`w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0 transition-colors ${
+                isActive ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300'
+                : isDone ? 'bg-[#8FBDAD]/12 border-[#8FBDAD]/35 text-[#8FBDAD]'
+                : 'bg-white/[0.02] border-white/[0.08] text-text-muted'
+              }`}
+                style={isActive ? { boxShadow: '0 0 0 1px rgba(227,181,126,0.22)' } : undefined}
+              >
+                {isDone ? <Check className="w-4 h-4" strokeWidth={3} /> : <Icon className="w-4 h-4" />}
+              </span>
+              <div className="hidden sm:block min-w-0">
+                <div className={`text-sm font-semibold leading-tight ${isActive ? 'text-text-primary' : 'text-text-muted'}`}>
+                  {s.label}
+                </div>
+                <div className="text-[10px] text-text-muted truncate">{s.hint}</div>
+              </div>
+            </div>
+            {i < WIZARD_STEPS.length - 1 && (
+              <div className={`flex-1 h-px mx-3 ${isDone ? 'bg-[#8FBDAD]/30' : 'bg-white/[0.08]'}`} />
+            )}
+          </React.Fragment>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function NewInvestigation() {
   const navigate = useNavigate()
@@ -42,141 +87,102 @@ export default function NewInvestigation() {
   }
 
   return (
-    <div className="pt-16 min-h-screen">
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+    <div className="pt-16 min-h-screen grid-bg">
+      <div className="px-4 sm:px-6 lg:px-8 py-10 max-w-2xl mx-auto">
 
         <Link
           to="/dashboard"
           className="inline-flex items-center gap-1.5 text-text-muted hover:text-text-secondary text-sm mb-8 transition-colors"
         >
-          <ChevronLeft className="w-3.5 h-3.5" />
-          Back to investigations
+          <ChevronLeft className="w-3.5 h-3.5" /> Back to investigations
         </Link>
 
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
+        {/* Journey rail */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          className="ops-panel p-5 mb-5"
+        >
+          <WizardRail active={1} />
+        </motion.div>
 
-          {/* Form */}
-          <div className="xl:col-span-2">
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden"
-            >
-              <div className="px-6 py-5 border-b border-white/[0.06]">
-                <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">New investigation</div>
-                <h1 className="font-display font-bold text-text-primary text-xl leading-tight">
-                  Name your investigation
-                </h1>
-              </div>
-
-              <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                <div>
-                  <label className="block font-mono text-[10px] text-text-muted tracking-widest uppercase mb-2">
-                    Investigation name
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Prod server incident — May 28"
-                    maxLength={200}
-                    className="sovereign-input w-full px-4 py-3.5 rounded-xl text-base"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') void handleSubmit()
-                    }}
-                  />
-                  <div className="flex items-center justify-between mt-1.5">
-                    <p className="text-[11px] text-text-muted">
-                      Give it a descriptive name — you&apos;ll add log files in the next step.
-                    </p>
-                    <span className="font-mono text-[10px] text-text-ghost">{name.length}/200</span>
-                  </div>
-                </div>
-
-                {/* Suggestions */}
-                <div>
-                  <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mb-2.5">Quick start templates</div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {SUGGESTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setName(s)}
-                        className="px-3 py-2.5 rounded-xl border border-white/[0.06] text-xs text-text-muted hover:text-text-secondary hover:border-indigo-500/20 hover:bg-indigo-500/5 transition-all text-left"
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 font-mono text-xs text-rose-400">
-                    {error}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 pt-1">
-                  <button
-                    type="submit"
-                    disabled={loading || !name.trim()}
-                    className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold text-white disabled:opacity-40"
-                  >
-                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                    {loading ? 'Creating…' : 'Continue to file upload'}
-                    {!loading && <ArrowRight className="w-4 h-4" />}
-                  </button>
-                  <Link to="/dashboard" className="btn-ghost px-4 py-3 rounded-xl text-sm font-medium text-text-secondary">
-                    Cancel
-                  </Link>
-                </div>
-              </form>
-            </motion.div>
+        {/* Step card */}
+        <motion.div
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.08 }}
+          className="ops-panel overflow-hidden"
+        >
+          <div className="px-6 py-5 border-b border-white/[0.07]">
+            <div className="font-mono text-[10px] text-indigo-400 tracking-[0.18em] uppercase mb-1">Step 1 of 3</div>
+            <h1 className="font-display font-bold text-text-primary text-2xl leading-tight">Name your investigation</h1>
+            <p className="text-sm text-text-muted mt-1">A descriptive name helps you find this case later. You'll add log files next.</p>
           </div>
 
-          {/* Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: 16 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-            className="space-y-4"
-          >
-            <div className="rounded-2xl border border-white/[0.06] bg-surface/40 overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-white/[0.06]">
-                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">What happens next</span>
-              </div>
-              <div className="p-5 space-y-4">
-                {[
-                  { label: 'Upload log files', desc: 'Drag in any log format — EVTX, syslog, CloudTrail, Nginx' },
-                  { label: 'Run 847 detection rules', desc: 'Every event checked against threat detection patterns' },
-                  { label: 'Correlate across sources', desc: 'Find multi-stage attacks spanning multiple log files' },
-                  { label: 'AI enrichment (optional)', desc: 'Gemini summarizes and contextualizes findings' },
-                ].map(({ label, desc }, i) => (
-                  <div key={label} className="flex gap-3 items-start">
-                    <span className="font-mono text-[10px] text-indigo-400/60 mt-0.5 flex-shrink-0 w-4">
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
-                    <div>
-                      <div className="text-sm font-medium text-text-primary mb-0.5">{label}</div>
-                      <div className="text-xs text-text-muted leading-relaxed">{desc}</div>
-                    </div>
-                  </div>
-                ))}
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <div>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Prod server incident — May 28"
+                maxLength={200}
+                className="sovereign-input w-full px-4 py-4 rounded-xl text-lg"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmit() }}
+              />
+              <div className="flex items-center justify-end mt-1.5">
+                <span className="font-mono text-[10px] text-text-ghost">{name.length}/200</span>
               </div>
             </div>
 
-            <div className="p-4 rounded-xl border border-indigo-500/15 bg-indigo-500/5">
-              <div className="flex items-center gap-2 mb-1.5">
-                <Shield className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase">Avg time to results</span>
+            <div>
+              <div className="font-mono text-[10px] text-text-muted tracking-[0.16em] uppercase mb-2.5">Quick-start templates</div>
+              <div className="flex flex-wrap gap-2">
+                {SUGGESTIONS.map((s) => {
+                  const sel = name === s
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setName(s)}
+                      className={`px-3 py-2 rounded-lg border text-xs text-left transition-all ${
+                        sel ? 'border-indigo-500/45 bg-indigo-500/10 text-indigo-200'
+                            : 'border-white/[0.07] text-text-muted hover:text-text-secondary hover:border-indigo-500/20 hover:bg-white/[0.02]'
+                      }`}
+                    >
+                      {s}
+                    </button>
+                  )
+                })}
               </div>
-              <p className="text-sm font-bold text-text-primary">Under 5 minutes</p>
-              <p className="text-xs text-text-muted mt-0.5">for a typical 4-file investigation</p>
             </div>
-          </motion.div>
-        </div>
+
+            {error && (
+              <div className="px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 font-mono text-xs text-rose-400">
+                {error}
+              </div>
+            )}
+          </form>
+
+          <div className="px-6 py-4 border-t border-white/[0.07] flex items-center justify-between gap-3">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-text-muted">
+              <Clock className="w-3 h-3" /> Results in under 5 min
+            </span>
+            <div className="flex items-center gap-2">
+              <Link to="/dashboard" className="btn-ghost px-4 py-2.5 rounded-lg text-sm font-medium text-text-secondary">
+                Cancel
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleSubmit()}
+                disabled={loading || !name.trim()}
+                className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? 'Creating…' : 'Continue to upload'}
+                {!loading && <ArrowRight className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   )

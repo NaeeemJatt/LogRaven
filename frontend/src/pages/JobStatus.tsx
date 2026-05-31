@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   ChevronLeft, CheckCircle2, Clock, Zap,
   GitMerge, FileText, ArrowRight, Cpu, Loader2

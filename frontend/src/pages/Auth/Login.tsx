@@ -253,17 +253,17 @@ export default function Login() {
   }
 
   const inputClass =
-    'sovereign-input w-full text-sm px-3 py-3 font-mono'
+    'login-input w-full text-sm px-3 py-3 font-mono'
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-void">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-[#030508]">
 
       {/* ── Left panel — dark + characters ─────────────────────────────────── */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-deep p-12 border-r border-white/[0.04]">
+      <div className="relative hidden lg:flex flex-col justify-between bg-[#080C14] p-12 border-r border-white/[0.04]">
 
         {/* Brand */}
         <div className="relative z-20">
-          <p className="font-mono font-bold tracking-widest text-indigo-400 text-lg uppercase">
+          <p className="font-mono font-bold tracking-widest text-[#818CF8] text-lg uppercase">
             LOGRAVEN
           </p>
           <p className="text-text-muted text-xs tracking-widest uppercase mt-0.5">
@@ -426,17 +426,17 @@ export default function Login() {
         </div>
 
         {/* Decorative blobs */}
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-500/3 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-[#6366F1]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#6366F1]/[0.03] rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* ── Right panel — login form ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-center p-8 bg-void">
+      <div className="flex items-center justify-center p-8 bg-[#030508]">
         <div className="w-full max-w-sm">
 
           {/* Mobile brand */}
           <div className="lg:hidden text-center mb-10">
-            <p className="font-mono font-bold tracking-widest text-indigo-400 text-lg uppercase">
+            <p className="font-mono font-bold tracking-widest text-[#818CF8] text-lg uppercase">
               LOGRAVEN
             </p>
             <p className="text-text-muted text-xs tracking-widest uppercase mt-1">
@@ -507,7 +507,7 @@ export default function Login() {
                 />
                 <span className="text-text-muted text-xs font-mono">Remember me</span>
               </label>
-              <a href="#" className="text-xs text-indigo-400 hover:text-indigo-300 font-mono transition-colors">
+              <a href="#" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
                 Forgot password?
               </a>
             </div>
@@ -521,7 +521,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-sovereign w-full text-sm font-medium tracking-wide py-3 rounded transition-colors uppercase mt-2"
+              className="btn-login w-full text-sm font-medium tracking-wide py-3 rounded transition-colors uppercase mt-2"
             >
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
@@ -530,7 +530,7 @@ export default function Login() {
           {/* Register link */}
           <p className="text-text-muted text-xs font-mono mt-8 text-center">
             No account?{' '}
-            <Link to="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+            <Link to="/register" className="text-[#818CF8] hover:text-[#A5B4FC] transition-colors">
               Register
             </Link>
           </p>

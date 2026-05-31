@@ -1,39 +1,18 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion, useInView } from 'framer-motion'
+import { motion } from 'framer-motion'
 import {
   Plus, Search, AlertTriangle, CheckCircle2,
   Clock, XCircle, FileText, Trash2,
   Activity, ChevronRight, Loader2,
-  ArrowUpDown, BarChart2
+  ArrowUpDown, Radio, ShieldAlert,
 } from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
 import ConfirmModal from '../components/ui/ConfirmModal'
 import type { Investigation } from '../types/investigation'
 
-// ── Stat card ─────────────────────────────────────────────
-function StatCard({ label, value, color, sub, index }: {
-  label: string; value: string | number; color: string; sub: string; index: number
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true })
-
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 24 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-      className="p-5 rounded-xl border border-white/[0.06] bg-surface/60 backdrop-blur overflow-hidden"
-    >
-      <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mb-2">{sub} · {label}</div>
-      <div className="font-display font-bold text-3xl" style={{ color }}>{value}</div>
-    </motion.div>
-  )
-}
-
-// ── Activity histogram (7-day placeholder) ─────────────────
+// ── Activity histogram (7-day) ─────────────────────────────
 function ActivityHistogram({ data }: { data: Investigation[] }) {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
   const now = new Date()
@@ -51,37 +30,99 @@ function ActivityHistogram({ data }: { data: Investigation[] }) {
   const max = Math.max(...counts.map((c) => c.count), 1)
 
   return (
-    <div className="p-5 rounded-xl border border-white/[0.06] bg-surface/40 backdrop-blur">
+    <div className="ops-panel p-5 h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Activity</div>
-          <div className="text-sm font-semibold text-text-primary mt-0.5">7-day investigation trend</div>
+        <div className="flex items-center gap-2">
+          <Activity className="w-3.5 h-3.5 text-text-muted" />
+          <span className="font-mono text-[10px] text-text-secondary tracking-[0.14em] uppercase">7-day intake</span>
         </div>
-        <BarChart2 className="w-4 h-4 text-text-muted" />
       </div>
-      <div className="flex items-end gap-1.5 h-12">
+
+      <div className="relative flex-1 flex items-end gap-2 min-h-[72px]">
+        {/* baseline grid */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between opacity-40">
+          {[0, 1, 2].map((i) => <div key={i} className="h-px w-full bg-white/[0.05]" />)}
+        </div>
         {counts.map((c, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+          <div key={i} className="relative flex-1 flex flex-col items-center justify-end h-full">
             <motion.div
               initial={{ scaleY: 0 }}
               animate={{ scaleY: 1 }}
-              transition={{ delay: i * 0.04, duration: 0.4, ease: 'easeOut' }}
+              transition={{ delay: i * 0.05, duration: 0.5, ease: 'easeOut' }}
               style={{
-                height: `${Math.max((c.count / max) * 100, 8)}%`,
-                background: c.count > 0 ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.05)',
+                height: `${Math.max((c.count / max) * 100, 6)}%`,
+                background: c.count > 0 ? 'rgba(227,181,126,0.55)' : 'rgba(255,255,255,0.05)',
                 transformOrigin: 'bottom',
               }}
-              className="w-full rounded-sm"
+              className="w-full max-w-[22px] rounded-[2px]"
             />
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-1.5 mt-2">
+      <div className="flex items-center gap-2 mt-2">
         {counts.map((c, i) => (
           <div key={i} className="flex-1 text-center">
-            <span className="font-mono text-[9px] text-text-ghost">{c.label}</span>
+            <span className="font-mono text-[9px] text-text-muted">{c.label}</span>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Threat posture panel ───────────────────────────────────
+function ThreatPosture({ data }: { data: Investigation[] }) {
+  const agg = data.reduce(
+    (acc, inv) => {
+      const s = (inv as any).severity_summary
+      acc.critical += s?.critical ?? 0
+      acc.high += s?.high ?? 0
+      acc.findings += (inv as any).findings_count ?? 0
+      return acc
+    },
+    { critical: 0, high: 0, findings: 0 }
+  )
+
+  const rows = [
+    { label: 'Critical', value: agg.critical, color: '#D98C8C' },
+    { label: 'High', value: agg.high, color: '#D9A878' },
+    { label: 'Findings', value: agg.findings, color: '#E3B57E' },
+  ]
+  const clear = agg.critical === 0 && agg.high === 0
+
+  return (
+    <div className="ops-panel p-5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-3.5 h-3.5 text-text-muted" />
+          <span className="font-mono text-[10px] text-text-secondary tracking-[0.14em] uppercase">Threat posture</span>
+        </div>
+        <span className={`font-mono text-[9px] tracking-wide ${clear ? 'text-[#8FBDAD]' : 'text-[#D9A878]'}`}>
+          {clear ? 'Nominal' : 'Elevated'}
+        </span>
+      </div>
+
+      <div className="flex-1 flex flex-col justify-center gap-3">
+        {rows.map((r) => {
+          const pct = agg.findings > 0 ? Math.min((r.value / agg.findings) * 100, 100) : 0
+          return (
+            <div key={r.label}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">{r.label}</span>
+                <span className="stat-value text-sm" style={{ color: r.color }}>{r.value}</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${r.label === 'Findings' ? (agg.findings > 0 ? 100 : 0) : pct}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  className="h-full rounded-full"
+                  style={{ background: r.color, opacity: 0.8 }}
+                />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -257,7 +298,7 @@ function EmptyState() {
           </p>
           <Link
             to="/investigations/new"
-            className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white"
+            className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold"
           >
             <Plus className="w-4 h-4" /> New investigation
           </Link>
@@ -303,11 +344,11 @@ export default function Dashboard() {
   const completeCount = list.filter((i) => i.status === 'complete').length
   const failedCount = list.filter((i) => i.status === 'failed').length
 
-  const stats = [
-    { label: 'Investigations', value: total,         color: '#6366F1', sub: 'total',    index: 0 },
-    { label: 'Active',         value: activeCount,   color: '#F97316', sub: 'running',  index: 1 },
-    { label: 'Complete',       value: completeCount, color: '#14B8A6', sub: 'finished', index: 2 },
-    { label: 'Failed',         value: failedCount,   color: '#F43F5E', sub: 'errored',  index: 3 },
+  const completionPct = total > 0 ? Math.round((completeCount / total) * 100) : 0
+  const statusLegend = [
+    { label: 'Active', value: activeCount, color: '#D9A878' },
+    { label: 'Complete', value: completeCount, color: '#8FBDAD' },
+    { label: 'Failed', value: failedCount, color: '#D98C8C' },
   ]
 
   const handleDeleteConfirm = async () => {
@@ -332,68 +373,120 @@ export default function Dashboard() {
   )
 
   return (
-    <div className="pt-16 min-h-screen">
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+    <div className="pt-16 min-h-screen grid-bg relative">
+      {/* soft top ambient wash */}
+      <div
+        className="pointer-events-none absolute inset-x-0 top-16 h-64"
+        style={{ background: 'radial-gradient(ellipse 60% 100% at 30% 0%, rgba(227,181,126,0.05), transparent 70%)' }}
+      />
+
+      <div className="relative px-4 sm:px-6 lg:px-8 py-8 max-w-[1400px] mx-auto">
 
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+          className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7"
         >
           <div>
-            <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">Workspace</div>
-            <h1 className="font-display font-bold text-text-primary text-3xl">Investigations</h1>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-[#8FBDAD] opacity-60 animate-ping" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#8FBDAD]" />
+              </span>
+              <span className="font-mono text-[10px] text-text-muted tracking-[0.18em] uppercase">
+                Operations console
+              </span>
+            </div>
+            <h1 className="font-display font-bold text-text-primary text-3xl sm:text-[2.1rem] leading-none tracking-tight">
+              Investigations
+            </h1>
           </div>
           <Link
             to="/investigations/new"
-            className="btn-sovereign flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start sm:self-auto"
+            className="btn-sovereign inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" /> New investigation
           </Link>
         </motion.div>
 
         {error && (
-          <div className="mb-6 px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-xs font-mono">
+          <div className="mb-6 px-4 py-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.07] text-rose-400 text-xs font-mono">
             Failed to load investigations. Check the API and try again.
           </div>
         )}
 
-        {/* Stats + histogram row */}
-        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4 mb-8">
-          <div className="xl:col-span-4 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {stats.map((s) => <StatCard key={s.label} {...s} />)}
-          </div>
-          <div className="xl:col-span-1">
-            <ActivityHistogram data={list} />
-          </div>
-        </div>
-
-        {/* Dense investigations table */}
+        {/* Bento operations grid */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }}
-          className="rounded-xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden"
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
+        >
+          {/* Hero metric tile */}
+          <div className="ops-panel p-6 md:row-span-2 flex flex-col">
+            <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">Under watch</span>
+            <div className="mt-3 flex items-end gap-2">
+              <span className="stat-value text-[4.5rem] leading-[0.85] font-semibold" style={{ color: '#E3B57E' }}>{total}</span>
+            </div>
+            <span className="text-sm text-text-secondary mt-2">investigations</span>
+
+            <div className="h-px bg-white/[0.07] my-5" />
+
+            <ul className="space-y-2.5">
+              {statusLegend.map((s) => (
+                <li key={s.label} className="flex items-center gap-2.5">
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: s.color }} />
+                  <span className="text-xs text-text-secondary flex-1">{s.label}</span>
+                  <span className="stat-value text-sm" style={{ color: s.color }}>{s.value}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="mt-auto pt-6">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Completion</span>
+                <span className="stat-value text-xs" style={{ color: '#8FBDAD' }}>{completionPct}%</span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }} animate={{ width: `${completionPct}%` }}
+                  transition={{ duration: 1, ease: 'easeOut', delay: 0.3 }}
+                  className="h-full rounded-full" style={{ background: '#8FBDAD', opacity: 0.8 }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Intake trend */}
+          <div className="md:col-span-2"><ActivityHistogram data={list} /></div>
+
+          {/* Threat posture */}
+          <div className="md:col-span-2"><ThreatPosture data={list} /></div>
+        </motion.div>
+
+        {/* Live feed table */}
+        <motion.div
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.24 }}
+          className="ops-panel overflow-hidden"
         >
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-            <div className="flex items-center gap-3">
-              <h2 className="font-display font-semibold text-text-primary text-sm">
-                Investigations
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08] bg-white/[0.015]">
+            <div className="flex items-center gap-2.5">
+              <Radio className="w-3.5 h-3.5 text-indigo-400" />
+              <h2 className="font-mono text-[11px] font-medium text-text-secondary tracking-[0.16em] uppercase">
+                Live feed
               </h2>
-              <span className="font-mono text-[10px] text-text-muted bg-white/[0.04] px-2 py-0.5 rounded">
+              <span className="font-mono text-[10px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
                 {filtered.length}/{total}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.02]">
-                <Search className="w-3 h-3 text-text-muted" />
-                <input
-                  type="text"
-                  placeholder="Filter..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent text-xs text-text-secondary placeholder-text-muted outline-none w-28"
-                />
-              </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/[0.1] bg-void/60 focus-within:border-indigo-500/50 transition-colors">
+              <Search className="w-3 h-3 text-text-muted" />
+              <input
+                type="text"
+                placeholder="Filter..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent text-xs text-text-secondary placeholder-text-muted outline-none w-28 font-mono"
+              />
             </div>
           </div>
 
@@ -450,7 +543,7 @@ export default function Dashboard() {
           )}
 
           {list.length > 0 && (
-            <div className="px-4 py-2.5 border-t border-white/[0.04] flex items-center justify-between">
+            <div className="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between">
               <span className="font-mono text-[10px] text-text-muted">
                 {filtered.length} of {total} investigations
               </span>

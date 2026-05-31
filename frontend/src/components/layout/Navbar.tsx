@@ -3,8 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Shield, LayoutDashboard, Terminal, CheckSquare,
-  LogOut, ChevronDown, Menu, X, ChevronRight, Key,
-  User, Settings, CreditCard, Activity, Radio
+  LogOut, Menu, X, Radio, User
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useAuth } from '../../hooks/useAuth'
@@ -15,77 +14,6 @@ const navLinks = [
   { label: 'PlayParser', href: '/play-parser', icon: Terminal },
   { label: 'Compliance', href: '/compliance',  icon: CheckSquare },
 ]
-
-// ── Profile Dropdown ──────────────────────────────────────
-function ProfileDropdown({
-  onClose,
-  onSignOut,
-}: {
-  onClose: () => void
-  onSignOut: () => void
-}) {
-  const navigate = useNavigate()
-
-  const menuItems = [
-    { label: 'Profile', sub: 'Account details & preferences', href: '/profile' },
-    { label: 'Activity log', sub: 'Your recent investigations', href: '/profile' },
-    { label: 'Billing & plan', sub: 'Manage subscription', href: '/profile' },
-    { label: 'API Keys', sub: 'Manage API credentials', href: '/profile' },
-    { label: 'Settings', sub: 'Integrations & preferences', href: '/profile' },
-  ]
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.97 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl border border-white/[0.08] overflow-hidden z-50"
-      style={{
-        background: 'rgba(13, 17, 28, 0.97)',
-        backdropFilter: 'blur(24px)',
-        boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-      }}
-    >
-      {/* Identity header — rendered by parent via props */}
-      <div className="p-1.5">
-        {menuItems.map(({ label, sub, href }) => (
-          <button
-            key={label}
-            onClick={() => { onClose(); navigate(href) }}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-          >
-            <div className="min-w-0">
-              <div className="text-xs font-medium text-text-primary group-hover:text-white transition-colors">{label}</div>
-              <div className="font-mono text-[9px] text-text-muted truncate">{sub}</div>
-            </div>
-            <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors flex-shrink-0 ml-2" />
-          </button>
-        ))}
-      </div>
-
-      <div className="mx-3 h-px bg-white/[0.05]" />
-
-      <div className="p-1.5">
-        <button
-          onClick={onClose}
-          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-        >
-          <div className="text-xs font-medium text-text-secondary group-hover:text-text-primary transition-colors">Help &amp; documentation</div>
-          <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors" />
-        </button>
-
-        <button
-          onClick={onSignOut}
-          className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all duration-150 group text-left gap-2"
-        >
-          <LogOut className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-400 transition-colors flex-shrink-0" />
-          <div className="text-xs font-medium text-rose-400/80 group-hover:text-rose-400 transition-colors">Sign out</div>
-        </button>
-      </div>
-    </motion.div>
-  )
-}
 
 // ── Main Navbar ───────────────────────────────────────────
 export default function Navbar() {
@@ -102,9 +30,8 @@ export default function Navbar() {
   const profileRef = useRef<HTMLDivElement>(null)
 
   // Derive display values from real auth user
-  const displayName = user?.email?.split('@')[0] ?? 'User'
+  const displayName = user?.name ?? user?.email?.split('@')[0] ?? 'User'
   const initials = displayName.charAt(0).toUpperCase()
-  const plan = user?.tier?.toUpperCase() ?? 'FREE'
   const email = user?.email ?? ''
 
   useEffect(() => {
@@ -152,14 +79,20 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0">
             <div className="relative">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center group-hover:border-indigo-400/60 transition-all duration-300">
-                <Shield className="w-4 h-4 text-indigo-400" />
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center group-hover:border-indigo-400/60 transition-all duration-300">
+                <Shield className="w-4 h-4 text-indigo-400" strokeWidth={2.25} />
               </div>
-              <div className="absolute inset-0 rounded-lg bg-indigo-500/10 blur-md group-hover:bg-indigo-500/20 transition-all duration-300" />
+              <div className="absolute inset-0 rounded-lg bg-indigo-500/10 blur-md group-hover:bg-indigo-500/25 transition-all duration-300" />
             </div>
-            <span className="font-display font-bold text-lg text-text-primary tracking-tight">
-              Log<span className="text-indigo-400">Raven</span>
-            </span>
+            <div className="flex flex-col leading-none">
+              <span className="font-display font-bold text-lg text-text-primary tracking-tight">
+                Log<span className="text-indigo-400">Raven</span>
+              </span>
+              <span className="hidden sm:flex items-center gap-1 font-mono text-[8px] text-text-muted tracking-[0.25em] uppercase mt-0.5">
+                <span className="inline-block w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
+                Monitoring
+              </span>
+            </div>
           </Link>
 
           {/* Nav links — desktop */}
@@ -180,31 +113,25 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Right side — profile trigger */}
+          {/* Right side — profile trigger (icon only) */}
           <div className="hidden md:flex items-center ml-auto">
             <div ref={profileRef} className="relative">
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
-                className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border transition-all duration-200 ${
+                aria-label="Account menu"
+                title={email}
+                className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-200 ${
                   profileOpen
-                    ? 'border-indigo-500/30 bg-indigo-500/10'
+                    ? 'border-indigo-500/40 bg-indigo-500/10'
                     : 'border-white/[0.06] bg-white/[0.03] hover:border-white/[0.1] hover:bg-white/[0.05]'
                 }`}
               >
-                <div className="relative">
-                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500/50 to-violet-500/50 border border-indigo-500/40 flex items-center justify-center">
-                    <span className="font-display font-bold text-[10px] text-indigo-200">{initials}</span>
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-teal-400 border border-deep" />
+                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500/50 to-indigo-700/50 border border-indigo-500/40 flex items-center justify-center">
+                  <span className="font-display font-bold text-[11px] text-indigo-200">{initials}</span>
                 </div>
-                <div className="text-left">
-                  <div className="text-xs font-semibold text-text-primary leading-none mb-0.5">{displayName}</div>
-                  <div className="font-mono text-[9px] text-text-muted leading-none">{plan} plan</div>
-                </div>
-                <ChevronDown className={`w-3 h-3 text-text-muted transition-transform duration-200 ${profileOpen ? 'rotate-180' : ''}`} />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-teal-400 border-2 border-deep" />
               </button>
 
-              {/* User info header injected above dropdown */}
               <AnimatePresence>
                 {profileOpen && (
                   <motion.div
@@ -212,74 +139,28 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
                     transition={{ duration: 0.15, ease: 'easeOut' }}
-                    className="absolute right-0 top-[calc(100%+8px)] w-72 rounded-2xl border border-white/[0.08] overflow-hidden z-50"
+                    className="absolute right-0 top-[calc(100%+8px)] w-52 rounded-2xl border border-white/[0.08] overflow-hidden z-50 p-1.5"
                     style={{
                       background: 'rgba(13, 17, 28, 0.97)',
                       backdropFilter: 'blur(24px)',
                       boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
                     }}
                   >
-                    {/* User identity header */}
-                    <div className="px-4 py-4 border-b border-white/[0.06]">
-                      <div className="flex items-center gap-3">
-                        <div className="relative flex-shrink-0">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/40 to-violet-500/40 border border-indigo-500/30 flex items-center justify-center">
-                            <span className="font-display font-bold text-sm text-indigo-200">{initials}</span>
-                          </div>
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-teal-400 border-2 border-[#0d111c]" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-display font-semibold text-sm text-text-primary truncate">{displayName}</div>
-                          <div className="font-mono text-[10px] text-text-muted truncate">{email}</div>
-                        </div>
-                        <span className="flex-shrink-0 font-mono text-[9px] px-2 py-0.5 rounded-md bg-indigo-500/15 border border-indigo-500/25 text-indigo-400 tracking-wider">
-                          {plan}
-                        </span>
-                      </div>
-                    </div>
+                    <button
+                      onClick={() => { setProfileOpen(false); navigate('/profile') }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 text-left group"
+                    >
+                      <User className="w-4 h-4 text-text-secondary group-hover:text-text-primary transition-colors flex-shrink-0" />
+                      <span className="text-sm font-medium text-text-primary">My Profile</span>
+                    </button>
 
-                    {/* Menu items */}
-                    <div className="p-1.5">
-                      {[
-                        { label: 'Profile', sub: 'Account details & preferences', href: '/profile' },
-                        { label: 'Activity log', sub: 'Your recent investigations', href: '/profile' },
-                        { label: 'Billing & plan', sub: 'Manage subscription', href: '/profile' },
-                        { label: 'API Keys', sub: 'Manage API credentials', href: '/profile' },
-                        { label: 'Settings', sub: 'Integrations & preferences', href: '/profile' },
-                      ].map(({ label, sub, href }) => (
-                        <button
-                          key={label}
-                          onClick={() => { setProfileOpen(false); navigate(href) }}
-                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-                        >
-                          <div className="min-w-0">
-                            <div className="text-xs font-medium text-text-primary group-hover:text-white transition-colors">{label}</div>
-                            <div className="font-mono text-[9px] text-text-muted truncate">{sub}</div>
-                          </div>
-                          <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors flex-shrink-0 ml-2" />
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="mx-3 h-px bg-white/[0.05]" />
-
-                    <div className="p-1.5">
-                      <button
-                        onClick={() => setProfileOpen(false)}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all duration-150 group text-left"
-                      >
-                        <div className="text-xs font-medium text-text-secondary group-hover:text-text-primary transition-colors">Help &amp; documentation</div>
-                        <ChevronRight className="w-3 h-3 text-text-ghost group-hover:text-text-muted transition-colors" />
-                      </button>
-
-                      <button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all duration-150 group text-left gap-2"
-                      >
-                        <LogOut className="w-3.5 h-3.5 text-rose-400/70 group-hover:text-rose-400 transition-colors flex-shrink-0" />
-                        <div className="text-xs font-medium text-rose-400/80 group-hover:text-rose-400 transition-colors">Sign out</div>
-                      </button>
-                    </div>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-rose-500/10 transition-all duration-150 text-left group"
+                    >
+                      <LogOut className="w-4 h-4 text-rose-400/80 group-hover:text-rose-400 transition-colors flex-shrink-0" />
+                      <span className="text-sm font-medium text-rose-400/90 group-hover:text-rose-400 transition-colors">Logout</span>
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -307,7 +188,7 @@ export default function Navbar() {
           >
             <div className="px-4 py-3 space-y-1">
               <div className="flex items-center gap-3 px-3 py-3 mb-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/40 to-violet-500/40 border border-indigo-500/30 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500/40 to-indigo-700/40 border border-indigo-500/30 flex items-center justify-center">
                   <span className="font-display font-bold text-xs text-indigo-200">{initials}</span>
                 </div>
                 <div>
