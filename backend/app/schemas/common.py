@@ -17,4 +17,4 @@ class HealthResponse(BaseModel):
     status: str
     db: str
     redis: str
-    claude_api: str
+    ai: str

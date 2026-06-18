@@ -15,7 +15,7 @@ LogRaven is a cybersecurity platform with two modes:
 | ORM | SQLAlchemy 2.0 (async) + Alembic |
 | Queue | Celery 5 + Redis 7 |
 | Database | PostgreSQL 15 |
-| AI | Google Gemini 2.5 Flash (`google-genai`) |
+| AI | Cloud AI engine |
 | PDF | reportlab (compliance) + WeasyPrint (threat reports) |
 | Storage | Local (dev) / S3 (prod) via `storage.py` abstraction |
 | Frontend | React 18 + Vite + TypeScript + Tailwind CSS |
@@ -81,7 +81,7 @@ See `.env.example` for the full list. Key variables:
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET_KEY` | Yes | 32+ random characters |
-| `GEMINI_API_KEY` | Yes | Google AI Studio key — used for both threat detection and SOC 2 |
+| `GEMINI_API_KEY` | Yes | Cloud AI provider API key — used for both threat detection and SOC 2 |
 | `REDIS_URL` | Yes | Redis connection string |
 | `STORAGE_BACKEND` | No | `local` (default) or `s3` |
 | `VITE_AWS_ACCOUNT_ID` | No | Your AWS account ID shown in the IAM role trust-policy helper |

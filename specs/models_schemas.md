@@ -95,4 +95,4 @@
 
 ### common.py
 - ErrorResponse: error (str), code (str), detail (str)
-- HealthResponse: status (str), db (str), redis (str), claude_api (str)
+- HealthResponse: status (str), db (str), redis (str), ai (str)

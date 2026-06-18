@@ -172,7 +172,7 @@ function TerminalPreview() {
     { text: '⚠ T1003.001  CRITICAL  Credential Dumping via LSASS', color: '#DB8585', delay: 0.9 },
     { text: '⚠ T1059.001  CRITICAL  Encoded PowerShell Execution', color: '#DB8585', delay: 1.1 },
     { text: '→ Correlating across 2 sources...', color: '#94A3B8', delay: 1.4 },
-    { text: '→ AI analysis complete (Gemini 1.5 Pro)', color: '#8FBDAD', delay: 1.7 },
+    { text: '→ AI analysis complete', color: '#8FBDAD', delay: 1.7 },
     { text: '✓ Report ready: 12 findings, 3 critical', color: '#E3B57E', delay: 2.0 },
   ]
   return (
@@ -294,7 +294,7 @@ export default function Landing() {
               className="text-text-secondary text-lg max-w-xl mb-9 leading-relaxed"
             >
               Upload any log format. Run 847 detection rules. Correlate across sources.
-              Map findings to MITRE ATT&CK — with optional Gemini AI enrichment.
+              Map findings to MITRE ATT&CK — with optional AI enrichment.
             </motion.p>
 
             <motion.div

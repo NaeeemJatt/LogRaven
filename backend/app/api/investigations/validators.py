@@ -53,10 +53,25 @@ _EXT_MIME_OK = {
 }
 
 
+# Extensions whose real payload is binary; everything else must be UTF-8 text.
+_BINARY_EXTENSIONS = {"evtx"}
+# Magic-byte signatures keyed by extension (first bytes of a genuine file).
+_MAGIC_SIGNATURES = {
+    "evtx": b"ElfFile\x00",
+}
+# Bytes read from the start of the upload for content-based validation.
+_CONTENT_SNIFF_BYTES = 8192
+
+
 def _mime_matches_extension(ext: str, content_type: str) -> bool:
     ct = (content_type or "").split(";")[0].strip().lower()
-    if not ct or ct == "application/octet-stream":
+    if not ct:
         return True
+    # octet-stream is no longer a blanket pass: it is only acceptable for
+    # extensions that can legitimately arrive as a generic binary stream.
+    # The authoritative gate is _validate_content (magic bytes / UTF-8).
+    if ct == "application/octet-stream":
+        return ext in ("evtx", "log", "txt", "csv", "json")
     allowed = _EXT_MIME_OK.get(ext, ())
     if ct in allowed:
         return True
@@ -64,9 +79,32 @@ def _mime_matches_extension(ext: str, content_type: str) -> bool:
     guess, _ = mimetypes.guess_type(f"x.{ext}")
     if guess and guess.lower() == ct:
         return True
-    if ct == "application/octet-stream":
-        return ext in ("evtx", "log", "txt")
     return False
+
+
+def _validate_content(ext: str, head: bytes) -> None:
+    """
+    Content-based gate: never trust the client-supplied extension/MIME alone.
+
+    - Binary types (evtx) must start with their known magic signature.
+    - Text types (csv/log/txt/json) must not contain NUL bytes in the head,
+      which reliably indicates binary/polyglot content disguised as text.
+    """
+    if not head:
+        return  # empty file — extension/size checks already ran
+
+    signature = _MAGIC_SIGNATURES.get(ext)
+    if signature is not None:
+        if not head.startswith(signature):
+            raise InvalidFileTypeError(
+                f"File content does not match a valid .{ext} file."
+            )
+        return
+
+    if ext not in _BINARY_EXTENSIONS and b"\x00" in head:
+        raise InvalidFileTypeError(
+            f"File content looks binary, not a valid text .{ext} file."
+        )
 
 
 async def validate_file_upload(
@@ -91,6 +129,11 @@ async def validate_file_upload(
         raise InvalidFileTypeError(
             f"Content-Type does not match extension .{ext}. Got: {file.content_type or '(none)'}"
         )
+
+    # Content-based validation (authoritative): sniff the file head, then rewind.
+    head = await file.read(_CONTENT_SNIFF_BYTES)
+    await file.seek(0)
+    _validate_content(ext, head)
 
     limit = TIER_SIZE_LIMITS.get(tier, TIER_SIZE_LIMITS["free"])
 

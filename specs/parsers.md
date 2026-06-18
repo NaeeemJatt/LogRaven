@@ -40,7 +40,7 @@ Pattern 2: ISO8601  — "YYYY-MM-DDTHH:MM:SS hostname process[pid]: message"
 Pattern 3: Custom1  — timestamp with timezone
 Pattern 4: Custom2  — systemd journal format
 Pattern 5: Minimal  — any line with sshd/sudo/PAM keyword
-AI fallback: if no pattern matches >80%, send 50 sample lines to Claude for format detection
+AI fallback: if no pattern matches >80%, send 50 sample lines to the AI engine for format detection
 Extract: username from PAM/sshd message patterns, source_ip from "from X.X.X.X" patterns
 Flags: brute_force (5+ auth_failure same IP/60s), privilege_escalation (sudo), account_modification
 

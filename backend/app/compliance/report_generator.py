@@ -128,12 +128,24 @@ def _add_page_number(canvas, doc):
 
 
 def generate_soc2_report(audit_job: "AuditJob", audit_results: list["AuditResult"]) -> str:
+    """Backward-compatible SOC 2 wrapper around the generic report generator."""
+    return generate_compliance_report(audit_job, audit_results, framework_name="SOC 2 Type II", framework_id="soc2")
+
+
+def generate_compliance_report(
+    audit_job: "AuditJob",
+    audit_results: list["AuditResult"],
+    framework_name: str = "SOC 2 Type II",
+    framework_id: str = "soc2",
+) -> str:
     """
-    Generate a multi-page SOC 2 evidence package PDF.
+    Generate a multi-page compliance evidence package PDF for one framework.
 
     Args:
         audit_job: AuditJob model instance
-        audit_results: List of AuditResult model instances
+        audit_results: AuditResult rows for this framework
+        framework_name: Display name used in titles/prose
+        framework_id: Stable slug used in the filename
 
     Returns:
         Absolute file path to the generated PDF
@@ -145,10 +157,10 @@ def generate_soc2_report(audit_job: "AuditJob", audit_results: list["AuditResult
     # Generate filename
     company_slug = audit_job.company_name.lower().replace(" ", "_")
     date_str = datetime.utcnow().strftime("%Y-%m-%d")
-    filename = f"{audit_job.id}_{company_slug}_{date_str}.pdf"
+    filename = f"{audit_job.id}_{framework_id}_{company_slug}_{date_str}.pdf"
     pdf_path = report_dir / filename
 
-    logger.info("Generating SOC 2 report: %s", pdf_path)
+    logger.info("Generating %s report: %s", framework_name, pdf_path)
 
     doc = SimpleDocTemplate(
         str(pdf_path),
@@ -157,17 +169,17 @@ def generate_soc2_report(audit_job: "AuditJob", audit_results: list["AuditResult
         leftMargin=2 * cm,
         topMargin=2 * cm,
         bottomMargin=2 * cm,
-        title="SOC 2 Evidence Package",
+        title=f"{framework_name} Evidence Package",
     )
 
     story = []
 
     # Page 1: Cover Page
-    story.extend(_build_cover_page(audit_job))
+    story.extend(_build_cover_page(audit_job, framework_name))
     story.append(PageBreak())
 
     # Page 2: Executive Summary
-    story.extend(_build_executive_summary(audit_job, audit_results))
+    story.extend(_build_executive_summary(audit_job, audit_results, framework_name))
     story.append(PageBreak())
 
     # Pages 3+: Per-Control Details
@@ -195,7 +207,7 @@ def generate_soc2_report(audit_job: "AuditJob", audit_results: list["AuditResult
 # ═════════════════════════════════════════════════════════════════════════════
 
 
-def _build_cover_page(audit_job: "AuditJob") -> list:
+def _build_cover_page(audit_job: "AuditJob", framework_name: str = "SOC 2 Type II") -> list:
     """Build the cover page."""
     story = []
 
@@ -210,7 +222,7 @@ def _build_cover_page(audit_job: "AuditJob") -> list:
 
     story.append(
         Paragraph(
-            f"<font color='{_HEX_NAVY}' size=28><b>SOC 2 Type I<br/>Evidence Package</b></font>",
+            f"<font color='{_HEX_NAVY}' size=28><b>{escape(framework_name)}<br/>Evidence Package</b></font>",
             title_style,
         )
     )
@@ -269,7 +281,11 @@ def _build_cover_page(audit_job: "AuditJob") -> list:
     return story
 
 
-def _build_executive_summary(audit_job: "AuditJob", audit_results: list["AuditResult"]) -> list:
+def _build_executive_summary(
+    audit_job: "AuditJob",
+    audit_results: list["AuditResult"],
+    framework_name: str = "SOC 2 Type II",
+) -> list:
     """Build the executive summary page."""
     story = []
 
@@ -339,8 +355,8 @@ def _build_executive_summary(audit_job: "AuditJob", audit_results: list["AuditRe
     story.append(Spacer(1, 0.5 * cm))
 
     posture_text = (
-        f"This audit assessed {total} SOC 2 controls across the CC6 (Logical and Physical Access) "
-        f"and CC7 (System Operations) categories. The assessment found {pass_count} controls operating effectively, "
+        f"This audit assessed {total} {escape(framework_name)} controls. "
+        f"The assessment found {pass_count} controls operating effectively, "
         f"{fail_count} controls requiring attention, and {partial_count} controls with partial implementation. "
         f"The overall compliance posture is rated at {score_percent:.1f}%."
     )
@@ -449,6 +465,22 @@ def _build_control_detail(audit_result: "AuditResult") -> list:
             )
         )
 
+    remediation = audit_result.raw_evidence_summary.get("remediation")
+    if remediation:
+        story.append(Spacer(1, 0.2 * cm))
+        story.append(
+            Paragraph(
+                f"<font color='{_HEX_ACCENT}' size=10><b>Recommended Remediation</b></font>",
+                subheading_style,
+            )
+        )
+        story.append(
+            Paragraph(
+                f"<font color='{_HEX_TEXT_PRIMARY}' size=10>{escape(str(remediation))}</font>",
+                normal_style,
+            )
+        )
+
     story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph("<hr/><br/>", normal_style))
 
@@ -493,7 +525,7 @@ def _build_appendix() -> list:
         "LogRaven maintains strict data privacy boundaries. Raw AWS identifiers (account IDs, ARNs, IP addresses, "
         "usernames) are collected and stored in your PostgreSQL database only. Before any AI analysis, all PII is "
         "stripped and replaced with aggregated statistics (counts, booleans, policy summaries). This sanitized "
-        "summary is sent to Gemini AI for control assessment. Raw identifiers never leave your infrastructure."
+        "summary is sent to our AI engine for control assessment. Raw identifiers never leave your infrastructure."
     )
     story.append(Paragraph(privacy_text, normal_style))
     story.append(Spacer(1, 0.3 * cm))

@@ -158,9 +158,14 @@ def sanitize_for_ai(
     cloudtrail_events: dict[str, Any],
     iam_summary: dict[str, Any],
     guardduty_findings: dict[str, Any],
+    extended: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
-    Convert raw AWS collector output into a PII-free summary safe for Gemini.
+    Convert raw AWS collector output into a PII-free summary safe for the AI engine.
+
+    `extended` carries the deep-collector sections (iam_extended, cloudtrail_config,
+    encryption, network, monitoring, backup), which are already aggregate/PII-free;
+    they are merged in and re-validated for defense in depth.
 
     Raises ValueError if the output still contains forbidden PII patterns (strict mode).
     """
@@ -169,6 +174,11 @@ def sanitize_for_ai(
         "iam": _sanitize_iam(iam_summary),
         "guardduty": _sanitize_guardduty(guardduty_findings),
     }
+    if extended:
+        # Deep-collector sections are aggregate-only; pass through under their keys.
+        for key in ("iam_extended", "cloudtrail_config", "encryption", "network", "monitoring", "backup"):
+            if key in extended and extended[key] is not None:
+                sanitized[key] = extended[key]
     validate_no_pii(sanitized)
     logger.info(
         "Sanitized evidence: %d cloudtrail events, %d IAM users, guardduty_enabled=%s",

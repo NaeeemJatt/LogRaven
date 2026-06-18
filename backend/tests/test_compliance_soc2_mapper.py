@@ -1,4 +1,4 @@
-"""Tests for SOC 2 Gemini control mapper."""
+"""Tests for SOC 2 AI control mapper."""
 
 import asyncio
 import json

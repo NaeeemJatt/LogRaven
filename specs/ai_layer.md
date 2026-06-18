@@ -6,7 +6,7 @@ analyze(events_by_source, correlated_chains, user_tier) -> AnalysisResult
   1. Apply cost ceiling via cost_limiter.py
   2. Build separate prompts for correlated chains and single-source events
   3. Call cloud/engine.py
-  4. On failure: try openai_engine.py fallback
+  4. On failure: try the fallback engine
   5. Return AnalysisResult
 
 ## ai/chunker.py
@@ -22,7 +22,7 @@ enforce_ceiling(events, user_tier) -> List[NormalizedEvent]
   Selection priority: flagged before unflagged, critical before low
   If ceiling hit: log warning, note in report that X events were rule-only
 
-## ai/cloud/engine.py (Claude claude-sonnet-4-6)
+## ai/cloud/engine.py (cloud AI engine)
 Before sending: strip PII from raw_message (replace internal hostnames with [HOST])
 Prompt structure: system prompt (SOC analyst persona) + structured events JSON
 Output: strict JSON array of finding objects

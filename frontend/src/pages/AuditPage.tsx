@@ -27,16 +27,16 @@ const STEPS: { key: AuditStep; label: string; hint: string; icon: React.ElementT
 const STEP_ORDER: AuditStep[] = ['form', 'progress', 'results']
 
 const FRAMEWORK_TAGS = [
-  { icon: ShieldCheck, label: 'SOC 2 Type II' },
-  { icon: Cloud,       label: 'CloudTrail' },
-  { icon: Eye,         label: 'GuardDuty' },
-  { icon: FileCheck2,  label: 'IAM Posture' },
+  { icon: ShieldCheck, label: 'SOC 2 · ISO 27001' },
+  { icon: Cloud,       label: 'CIS · PCI DSS' },
+  { icon: Eye,         label: 'HIPAA · NIST' },
+  { icon: FileCheck2,  label: 'Collect once' },
 ]
 
 const HOW_IT_WORKS = [
   { icon: Plug,       title: 'Connect', body: 'Assume your read-only IAM role.' },
-  { icon: ScanSearch, title: 'Collect', body: 'Pull CloudTrail, IAM & GuardDuty evidence.' },
-  { icon: FileCheck2, title: 'Map',     body: 'AI grades each SOC 2 control.' },
+  { icon: ScanSearch, title: 'Collect', body: 'Pull AWS evidence once, normalize to signals.' },
+  { icon: FileCheck2, title: 'Map',     body: 'AI grades every selected framework.' },
 ]
 
 // ── Sticky mission rail ───────────────────────────────────
@@ -50,7 +50,7 @@ function MissionRail({ activeIdx }: { activeIdx: number }) {
           Continuous compliance
         </div>
         <h1 className="font-display text-xl font-bold text-text-primary leading-tight">
-          SOC 2 <span className="gradient-text">Control Room</span>
+          Compliance <span className="gradient-text">Control Room</span>
         </h1>
         <div className="flex flex-wrap gap-1.5 mt-3">
           {FRAMEWORK_TAGS.map(({ icon: Icon, label }) => (
@@ -139,6 +139,8 @@ export default function AuditPage() {
         role_arn:         formData.roleArn,
         audit_start_date: formData.auditStartDate,
         audit_end_date:   formData.auditEndDate,
+        frameworks:       formData.frameworks,
+        recurrence:       formData.recurrence,
       })
       setAuditId(data.audit_id)
       setCompanyName(formData.companyName)

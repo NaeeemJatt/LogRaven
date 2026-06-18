@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     APP_NAME: str = "LogRaven"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    # Extra CORS origins (comma-separated) appended to the built-in localhost
+    # list. Set this in production, e.g. "https://app.lograven.com".
+    CORS_ALLOWED_ORIGINS: str = ""
 
     # Database
     DATABASE_URL: str
@@ -66,6 +69,10 @@ class Settings(BaseSettings):
     AWS_REGION: str = "eu-west-1"
     S3_BUCKET_NAME: str = "lograven-prod"
     S3_DOWNLOAD_URL_EXPIRE_SECONDS: int = 900
+    # Optional STS AssumeRole ExternalId for SOC 2 collection (confused-deputy
+    # defense). When set, customers must add a matching sts:ExternalId condition
+    # to their role trust policy. Empty = not enforced (backward compatible).
+    AWS_ASSUME_ROLE_EXTERNAL_ID: str = ""
 
     # AI Cost Ceilings (max events sent to AI per investigation)
     AI_CEILING_FREE: int = 2000

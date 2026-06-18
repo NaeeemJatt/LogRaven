@@ -36,6 +36,21 @@ async def lifespan(app: FastAPI):
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "uploads"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "playground"), exist_ok=True)
 
+    # In in-process pipeline mode, a restart kills any in-flight analysis task.
+    # Reset those orphaned rows so they don't hang in 'processing' forever.
+    if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+        try:
+            from app.tasks.process_investigation import recover_orphaned_investigations
+
+            recovered = await recover_orphaned_investigations()
+            if recovered:
+                app_log.warning(
+                    "  Recovered %d investigation(s) interrupted by a previous restart",
+                    recovered,
+                )
+        except Exception as exc:  # pragma: no cover - best-effort startup cleanup
+            app_log.warning("  Orphan investigation recovery skipped: %s", exc)
+
     play_paths = sorted(
         {getattr(r, "path", "") for r in app.routes if "play-parser" in getattr(r, "path", "")}
     )
@@ -98,6 +113,13 @@ async def access_logger(request: Request, call_next):
 # In DEBUG, allow any localhost / 127.0.0.1 port so Vite (5173), alternate hosts, and
 # VITE_API_URL=http://127.0.0.1:8000 still work with credentials.
 _cors_origins = ["http://localhost:3000", "http://localhost:5173", "http://localhost:5174"]
+# Append explicit production origins from config (comma-separated), so a
+# deployed frontend on a real domain works without widening the dev defaults.
+_cors_origins += [
+    origin.strip()
+    for origin in settings.CORS_ALLOWED_ORIGINS.split(",")
+    if origin.strip()
+]
 _cors_regex = (
     r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$"
     if settings.DEBUG
