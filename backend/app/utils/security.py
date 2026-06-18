@@ -14,8 +14,14 @@ from app.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Precomputed bcrypt hash used to equalize password-verification timing on the
+# "user not found" login path, mitigating username enumeration via timing.
+DUMMY_PASSWORD_HASH = pwd_context.hash("lograven-dummy-password")
+
 FILE_DOWNLOAD_TOKEN_EXPIRE_MINUTES = 15
 FILE_DOWNLOAD_TOKEN_AUDIENCE = "lograven-download"
+
+AUDIT_SHARE_TOKEN_AUDIENCE = "lograven-audit-share"
 
 
 def hash_password(plain: str) -> str:
@@ -121,3 +127,39 @@ def decode_file_download_token(token: str) -> tuple[str, str]:
     if not owner or not isinstance(owner, str):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
     return key, owner
+
+
+def create_audit_share_token(audit_id: str, expire_days: int = 7) -> str:
+    """Read-only, expiring share token granting access to one audit's results (no auth)."""
+    expire = datetime.now(timezone.utc) + timedelta(days=expire_days)
+    payload = {
+        "typ": "audit_share",
+        "audit_id": audit_id,
+        "iss": settings.JWT_ISSUER,
+        "aud": AUDIT_SHARE_TOKEN_AUDIENCE,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_audit_share_token(token: str) -> str:
+    """Return the audit_id encoded in a share token (raises 401 if invalid/expired)."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=AUDIT_SHARE_TOKEN_AUDIENCE,
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Share link expired")
+    except InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid share link")
+
+    if payload.get("typ") != "audit_share":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid share link")
+    audit_id = payload.get("audit_id")
+    if not audit_id or not isinstance(audit_id, str):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid share link")
+    return audit_id

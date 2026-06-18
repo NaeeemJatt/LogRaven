@@ -24,6 +24,14 @@ _conf = {
     "task_reject_on_worker_lost": True,
     "task_always_eager": settings.CELERY_TASK_ALWAYS_EAGER,
     "task_eager_propagates": True,
+    # Continuous monitoring: check hourly for recurring audits that are due.
+    # Run a beat worker with: celery -A app.tasks.celery_app beat
+    "beat_schedule": {
+        "compliance-rescan-due-audits": {
+            "task": "compliance.rescan_due_audits",
+            "schedule": 3600.0,
+        },
+    },
 }
 # Prefork-only; solo/threads pools on Windows ignore or warn on this.
 if os.name != "nt":

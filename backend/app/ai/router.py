@@ -12,7 +12,7 @@ async def route_analysis(
     user_tier: str,
 ) -> tuple[list, list]:
     """
-    Route events to the correct prompt builder and Gemini engine.
+    Route events to the correct prompt builder and AI engine.
     Returns (single_source_findings, correlated_findings).
     """
     from app.ai.cloud import engine

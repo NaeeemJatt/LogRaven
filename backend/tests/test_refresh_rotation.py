@@ -66,6 +66,8 @@ async def test_refresh_token_rotates_once_and_stores_replay_result(monkeypatch):
             "id": user_id,
             "email": "user@example.com",
             "tier": "pro",
+            "name": None,
+            "timezone": None,
             "created_at": "2026-04-02T12:00:00",
         },
     }

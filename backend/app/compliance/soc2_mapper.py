@@ -1,4 +1,4 @@
-# LogRaven — SOC 2 Gemini Control Mapper
+# LogRaven — SOC 2 AI Control Mapper
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from app.utils.logger import get_logger
 logger = get_logger(__name__)
 
 MODEL = "gemini-2.5-flash"
-GEMINI_TIMEOUT_SECONDS = 120
+AI_TIMEOUT_SECONDS = 120
 RETRY_DELAY_SECONDS = 5
 
 SOC2_SYSTEM_PROMPT = """You are a SOC 2 compliance auditor with 15 years of experience.
@@ -28,7 +28,7 @@ You respond only with valid JSON. No preamble, no markdown, no explanation outsi
 
 
 class MappingError(Exception):
-    """Raised when Gemini returns invalid or unusable JSON for control mapping."""
+    """Raised when the AI engine returns invalid or unusable JSON for control mapping."""
 
 
 def _build_user_prompt(sanitized_evidence: dict[str, Any]) -> str:
@@ -105,7 +105,7 @@ def _parse_and_validate_response(text: str) -> list[dict[str, Any]]:
         parsed = json.loads(text)
     except json.JSONDecodeError as exc:
         snippet = text[:500] if text else ""
-        raise MappingError(f"Gemini returned invalid JSON: {exc}. Raw snippet: {snippet}") from exc
+        raise MappingError(f"AI engine returned invalid JSON: {exc}. Raw snippet: {snippet}") from exc
 
     if isinstance(parsed, dict):
         for key in ("controls", "results", "data"):
@@ -149,7 +149,7 @@ def _parse_and_validate_response(text: str) -> list[dict[str, Any]]:
     return results
 
 
-async def _call_gemini(client: Any, user_prompt: str) -> str:
+async def _call_model(client: Any, user_prompt: str) -> str:
     response = await asyncio.wait_for(
         client.aio.models.generate_content(
             model=MODEL,
@@ -161,7 +161,7 @@ async def _call_gemini(client: Any, user_prompt: str) -> str:
                 max_output_tokens=8192,
             ),
         ),
-        timeout=GEMINI_TIMEOUT_SECONDS,
+        timeout=AI_TIMEOUT_SECONDS,
     )
 
     usage = getattr(response, "usage_metadata", None)
@@ -170,20 +170,20 @@ async def _call_gemini(client: Any, user_prompt: str) -> str:
         output_tokens = getattr(usage, "candidates_token_count", None)
         if prompt_tokens is not None or output_tokens is not None:
             logger.info(
-                "Gemini SOC2 mapping tokens: prompt=%s output=%s",
+                "AI SOC2 mapping tokens: prompt=%s output=%s",
                 prompt_tokens,
                 output_tokens,
             )
 
     text = response.text
     if not text:
-        raise MappingError("Gemini returned an empty response")
+        raise MappingError("AI engine returned an empty response")
     return text
 
 
 async def map_to_soc2_controls(sanitized_evidence: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Map sanitized AWS evidence to SOC 2 CC6/CC7 controls using Gemini.
+    Map sanitized AWS evidence to SOC 2 CC6/CC7 controls using the AI engine.
 
     Returns a list of 11 control assessment dicts.
     """
@@ -192,26 +192,26 @@ async def map_to_soc2_controls(sanitized_evidence: dict[str, Any]) -> list[dict[
 
     for attempt in range(2):
         try:
-            text = await _call_gemini(client, user_prompt)
+            text = await _call_model(client, user_prompt)
             results = _parse_and_validate_response(text)
             logger.info("SOC2 mapping complete: %d controls assessed", len(results))
             return results
         except asyncio.TimeoutError as exc:
             if attempt == 0:
-                logger.warning("Gemini SOC2 mapping timed out — retrying in %ds", RETRY_DELAY_SECONDS)
+                logger.warning("AI SOC2 mapping timed out — retrying in %ds", RETRY_DELAY_SECONDS)
                 await asyncio.sleep(RETRY_DELAY_SECONDS)
                 continue
-            raise MappingError("Gemini SOC2 mapping timed out after retry") from exc
+            raise MappingError("AI SOC2 mapping timed out after retry") from exc
         except MappingError:
             raise
         except Exception as exc:
             if attempt == 0 and "timeout" in str(exc).lower():
-                logger.warning("Gemini SOC2 mapping error — retrying in %ds: %s", RETRY_DELAY_SECONDS, exc)
+                logger.warning("AI SOC2 mapping error — retrying in %ds: %s", RETRY_DELAY_SECONDS, exc)
                 await asyncio.sleep(RETRY_DELAY_SECONDS)
                 continue
-            raise MappingError(f"Gemini SOC2 mapping failed: {exc}") from exc
+            raise MappingError(f"AI SOC2 mapping failed: {exc}") from exc
 
-    raise MappingError("Gemini SOC2 mapping failed after retry")
+    raise MappingError("AI SOC2 mapping failed after retry")
 
 
 def get_overall_compliance_score(control_results: list[dict[str, Any]]) -> dict[str, Any]:

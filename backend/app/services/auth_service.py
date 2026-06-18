@@ -110,6 +110,9 @@ async def login_user(
     )
 
     if user is None:
+        # Run a dummy verify so the not-found path costs roughly the same as a
+        # wrong-password path — removes the timing side channel for enumeration.
+        security.verify_password(password, security.DUMMY_PASSWORD_HASH)
         # Still write failed_login audit (no user_id)
         db.add(AuditLog(
             action="failed_login",

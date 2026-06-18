@@ -2,7 +2,11 @@
 # NOTE: boto3 also used for S3 storage and SOC 2 AWS collector
 
 # Web framework
-fastapi==0.111.0
+# fastapi 0.115.x pulls Starlette >=0.40.0, which fixes the multipart/form-data
+# memory-exhaustion DoS (CVE-2024-47874) present in the Starlette <0.38 range
+# that fastapi 0.111 depended on.
+fastapi==0.115.7
+starlette>=0.40.0,<0.41.0
 uvicorn[standard]==0.30.1
 
 # Database

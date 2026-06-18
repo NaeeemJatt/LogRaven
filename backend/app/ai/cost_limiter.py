@@ -1,7 +1,7 @@
 # LogRaven — AI Cost Limiter
 #
 # PURPOSE:
-#   Enforces hard per-investigation event ceiling before sending to Gemini.
+#   Enforces hard per-investigation event ceiling before sending to the AI engine.
 #   Prevents unbounded API costs regardless of file size.
 #   Makes AI cost predictable: maximum $0.10-0.15 per investigation.
 #

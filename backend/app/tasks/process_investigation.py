@@ -207,13 +207,13 @@ async def _run_pipeline(investigation_id: str, *, cloud_ai_consent: bool = False
                 logger.warning("  cost limiter error (skipping): %s", e)
 
             # ── Step 7: AI analysis ───────────────────────────────────────────
-            _banner("STEP 5 / 7  —  Gemini AI Analysis")
+            _banner("STEP 5 / 7  —  AI Analysis")
             single_findings: list[dict] = []
             correlated_findings: list[dict] = []
             chains = correlation_summary if isinstance(correlation_summary, list) else []
 
             ai_log_type = primary_log_type if (len(investigation.files) == 1 and primary_log_type) else "mixed"
-            logger.info("  model  : gemini-2.5-flash")
+            logger.info("  engine : LogRaven AI")
             logger.info("  type   : %s  |  events: %d  |  chains: %d",
                 ai_log_type, len(events_for_ai), len(chains))
 
@@ -393,3 +393,33 @@ async def run_investigation_pipeline_inline(investigation_id: str, *, cloud_ai_c
         await _run_pipeline(investigation_id, cloud_ai_consent=cloud_ai_consent)
     except Exception:
         logger.exception("Investigation pipeline failed (inline): %s", investigation_id)
+
+
+async def recover_orphaned_investigations() -> int:
+    """
+    Reset investigations left in a running state when the API process restarted.
+
+    When the in-process asyncio pipeline is used, the analysis task lives inside
+    the API process, so any restart (e.g. uvicorn --reload) kills in-flight jobs
+    and leaves their rows stuck at 'queued'/'processing' forever. Mark those as
+    'failed' so the UI unsticks and the user can re-run analysis.
+
+    Only call this in in-process pipeline mode — Celery worker jobs survive API
+    restarts and must not be touched.
+    """
+    from sqlalchemy import update
+    from app.dependencies import AsyncSessionLocal
+    from app.models.investigation import Investigation
+
+    message = (
+        "Analysis was interrupted by a server restart before it finished. "
+        "Click Analyze to run it again."
+    )
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            update(Investigation)
+            .where(Investigation.status.in_(["queued", "processing"]))
+            .values(status="failed", error_message=message)
+        )
+        await db.commit()
+        return result.rowcount or 0

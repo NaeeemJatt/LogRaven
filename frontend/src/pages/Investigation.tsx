@@ -433,7 +433,7 @@ export default function Investigation() {
                       <Cpu className="w-3.5 h-3.5 text-violet-400" />
                       <span className="text-sm font-medium text-text-primary">AI analysis</span>
                       <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">
-                        Gemini 1.5 Pro
+                        LogRaven AI
                       </span>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">

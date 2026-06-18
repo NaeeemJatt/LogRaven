@@ -1,4 +1,4 @@
-# LogRaven — Gemini AI Engine
+# LogRaven — Cloud AI Engine
 
 import asyncio
 import json
@@ -23,7 +23,7 @@ def _get_client():
     from app.config import settings
     api_key = settings.GEMINI_API_KEY
     if not api_key:
-        logger.warning("LogRaven AI: GEMINI_API_KEY not configured in .env — skipping AI analysis")
+        logger.warning("LogRaven AI: API key not configured in .env — skipping AI analysis")
         return None
     try:
         from google import genai
@@ -34,8 +34,8 @@ def _get_client():
         return None
 
 
-async def _call_gemini(client, system_prompt: str, user_prompt: str) -> list[dict]:
-    """Single Gemini call with 3-attempt exponential backoff."""
+async def _call_model(client, system_prompt: str, user_prompt: str) -> list[dict]:
+    """Single AI call with 3-attempt exponential backoff."""
     from google.genai import types
 
     for attempt in range(3):
@@ -52,7 +52,7 @@ async def _call_gemini(client, system_prompt: str, user_prompt: str) -> list[dic
             )
             text = response.text
             if not text:
-                logger.warning("Gemini returned empty response on attempt %d", attempt + 1)
+                logger.warning("AI returned empty response on attempt %d", attempt + 1)
                 return []
             parsed = json.loads(text)
             if isinstance(parsed, list):
@@ -62,18 +62,18 @@ async def _call_gemini(client, system_prompt: str, user_prompt: str) -> list[dic
                 for key in ("findings", "results", "data"):
                     if isinstance(parsed.get(key), list):
                         return parsed[key]
-            logger.warning("Unexpected Gemini response shape: %s", type(parsed))
+            logger.warning("Unexpected AI response shape: %s", type(parsed))
             return []
         except json.JSONDecodeError as e:
-            logger.warning("Gemini JSON parse error (attempt %d): %s", attempt + 1, e)
+            logger.warning("AI JSON parse error (attempt %d): %s", attempt + 1, e)
             return []
         except Exception as e:
             wait = 2 ** attempt  # 1s, 2s, 4s
-            logger.warning("Gemini API error (attempt %d): %s — retrying in %ds", attempt + 1, e, wait)
+            logger.warning("AI API error (attempt %d): %s — retrying in %ds", attempt + 1, e, wait)
             if attempt < 2:
                 await asyncio.sleep(wait)
             else:
-                logger.error("Gemini API failed after 3 attempts: %s", e)
+                logger.error("AI API failed after 3 attempts: %s", e)
                 return []
     return []
 
@@ -126,7 +126,7 @@ async def analyze_events(
     user_prompt: str,
 ) -> list[dict]:
     """
-    Analyze events with Gemini, chunking if needed.
+    Analyze events with the AI engine, chunking if needed.
     Returns merged, deduplicated findings list.
     """
     if not events:
@@ -134,7 +134,7 @@ async def analyze_events(
 
     client = _get_client()
     if client is None:
-        logger.warning("LogRaven AI: GEMINI_API_KEY not set — skipping AI analysis")
+        logger.warning("LogRaven AI: API key not set — skipping AI analysis")
         return []
 
     chunks = chunker.split_events(events)
@@ -145,7 +145,7 @@ async def analyze_events(
         # Rebuild prompts with the same prompt family so chunking does not drop
         # log-type-specific instructions or prompt-injection defenses.
         chunk_system_prompt, chunk_user_prompt = prompt_builder(chunk)
-        chunk_findings = _normalize_findings(await _call_gemini(client, chunk_system_prompt, chunk_user_prompt))
+        chunk_findings = _normalize_findings(await _call_model(client, chunk_system_prompt, chunk_user_prompt))
         logger.info("LogRaven AI: chunk %d/%d -> %d findings", i + 1, len(chunks), len(chunk_findings))
         all_chunk_findings.append(chunk_findings)
 
@@ -155,18 +155,18 @@ async def analyze_events(
 
 
 async def analyze_chains(chains: list) -> list[dict]:
-    """Analyze correlated attack chains with Gemini."""
+    """Analyze correlated attack chains with the AI engine."""
     if not chains:
         return []
 
     client = _get_client()
     if client is None:
-        logger.warning("LogRaven AI: GEMINI_API_KEY not set — skipping correlation AI analysis")
+        logger.warning("LogRaven AI: API key not set — skipping correlation AI analysis")
         return []
 
     from app.ai.prompts.correlation_prompt import build_correlation_prompt
     system_prompt, user_prompt = build_correlation_prompt(chains)
 
-    findings = _normalize_findings(await _call_gemini(client, system_prompt, user_prompt))
+    findings = _normalize_findings(await _call_model(client, system_prompt, user_prompt))
     logger.info("LogRaven AI: correlation analysis -> %d findings", len(findings))
     return findings

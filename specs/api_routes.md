@@ -61,5 +61,5 @@ GET /api/v1/reports/{report_id}/download
 
 ## Health Route
 GET /health
-  Response: HealthResponse {status, db, redis, claude_api}
+  Response: HealthResponse {status, db, redis, ai}
   No auth required

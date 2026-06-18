@@ -10,6 +10,8 @@
 # with permission to sts:AssumeRole on the customer role.
 #
 # CUSTOMER IAM POLICY TEMPLATE (attach to the role they create for LogRaven):
+# All actions are read-only. The deep collectors degrade gracefully, so granting
+# only a subset still works — ungranted signals simply resolve to "unknown".
 # {
 #   "Version": "2012-10-17",
 #   "Statement": [
@@ -17,13 +19,36 @@
 #       "Effect": "Allow",
 #       "Action": [
 #         "cloudtrail:LookupEvents",
+#         "cloudtrail:DescribeTrails",
 #         "iam:GetAccountSummary",
 #         "iam:GetAccountPasswordPolicy",
 #         "iam:ListUsers",
 #         "iam:ListMFADevices",
+#         "iam:GenerateCredentialReport",
+#         "iam:GetCredentialReport",
+#         "iam:ListEntitiesForPolicy",
+#         "access-analyzer:ListAnalyzers",
+#         "access-analyzer:ListFindingsV2",
 #         "guardduty:ListDetectors",
 #         "guardduty:ListFindings",
-#         "guardduty:GetFindings"
+#         "guardduty:GetFindings",
+#         "s3:ListAllMyBuckets",
+#         "s3:GetEncryptionConfiguration",
+#         "s3:GetAccountPublicAccessBlock",
+#         "ec2:GetEbsEncryptionByDefault",
+#         "ec2:DescribeFlowLogs",
+#         "ec2:DescribeSecurityGroups",
+#         "rds:DescribeDBInstances",
+#         "kms:ListKeys",
+#         "kms:DescribeKey",
+#         "kms:GetKeyRotationStatus",
+#         "config:DescribeConfigurationRecorderStatus",
+#         "securityhub:DescribeHub",
+#         "inspector2:BatchGetAccountStatus",
+#         "logs:DescribeLogGroups",
+#         "cloudwatch:DescribeAlarms",
+#         "backup:ListBackupPlans",
+#         "sts:GetCallerIdentity"
 #       ],
 #       "Resource": "*"
 #     }
@@ -40,6 +65,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from app.compliance.cloudtrail_utils import trim_cloudtrail_event
 from app.compliance.constants import CLOUDTRAIL_EVENT_NAMES
+from app.config import settings
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -69,11 +95,17 @@ def get_aws_session(role_arn: str) -> boto3.Session:
     """
     try:
         sts = boto3.client("sts")
-        response = sts.assume_role(
-            RoleArn=role_arn,
-            RoleSessionName=SESSION_NAME,
-            DurationSeconds=SESSION_DURATION_SECONDS,
-        )
+        assume_kwargs: dict[str, Any] = {
+            "RoleArn": role_arn,
+            "RoleSessionName": SESSION_NAME,
+            "DurationSeconds": SESSION_DURATION_SECONDS,
+        }
+        # Pass ExternalId only when configured. AWS ignores it unless the
+        # customer's trust policy requires it, so this is backward compatible.
+        external_id = (settings.AWS_ASSUME_ROLE_EXTERNAL_ID or "").strip()
+        if external_id:
+            assume_kwargs["ExternalId"] = external_id
+        response = sts.assume_role(**assume_kwargs)
         creds = response["Credentials"]
         return boto3.Session(
             aws_access_key_id=creds["AccessKeyId"],
