@@ -1,0 +1,49 @@
+# LogRaven — Production backend image (API, Celery worker, Celery beat)
+#
+# One image, three roles — the compose file overrides the command:
+#   API    : /entrypoint.sh api      (runs migrations, then uvicorn)
+#   Worker : /entrypoint.sh worker
+#   Beat   : /entrypoint.sh beat
+#
+# Unlike the PyArmor-obfuscated client Dockerfile, this image ships plain
+# source: easier debugging, real stack traces, smaller build.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# WeasyPrint (PDF) runtime libs + curl for container healthchecks
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf2.0-0 \
+    libfontconfig1 \
+    libglib2.0-0 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ /app/app/
+COPY alembic/ /app/alembic/
+COPY alembic.ini /app/alembic.ini
+COPY docker-entrypoint.sh /entrypoint.sh
+# Normalize CRLF (Windows checkouts) or the shebang breaks in the container
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
+# Non-root runtime user; /data is the shared storage volume mount point.
+RUN useradd --create-home --uid 1000 lograven \
+    && mkdir -p /data \
+    && chown -R lograven:lograven /app /data
+USER lograven
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://localhost:8000/health || exit 1
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["api"]

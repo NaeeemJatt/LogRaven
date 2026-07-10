@@ -5,6 +5,7 @@ export interface AuthUser {
   id: string
   email: string
   tier: string
+  email_verified?: boolean
   name?: string | null
   timezone?: string | null
   created_at?: string

@@ -52,6 +52,16 @@ _mock_settings.DECODER_MAX_LINES_PER_FILE = 2000
 _mock_settings.DECODER_PLAY_MAX_LINES = 200
 _mock_settings.PLAY_PARSER_PREVIEW_MAX_LINES = 100
 _mock_settings.PLAY_PARSER_PREVIEW_RAW_MAX_CHARS = 2000
+_mock_settings.CORS_ALLOWED_ORIGINS = ""
+_mock_settings.RATE_LIMIT_STORAGE_URL = ""
+_mock_settings.LOG_FORMAT          = "text"
+_mock_settings.SMTP_HOST           = ""
+_mock_settings.SMTP_PORT           = 587
+_mock_settings.SMTP_USERNAME       = ""
+_mock_settings.SMTP_PASSWORD       = ""
+_mock_settings.SMTP_FROM_EMAIL     = "no-reply@lograven.local"
+_mock_settings.SMTP_USE_TLS        = True
+_mock_settings.FRONTEND_BASE_URL   = "http://localhost:5173"
 
 _cfg_stub = types.ModuleType("app.config")
 _cfg_stub.settings = _mock_settings

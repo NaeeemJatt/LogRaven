@@ -50,6 +50,24 @@ class Settings(BaseSettings):
     # When True, rate limits use first X-Forwarded-For hop (enable only behind a trusted reverse proxy)
     TRUST_FORWARDED_FOR: bool = False
 
+    # Email (SMTP — works with Amazon SES SMTP, Gmail, Mailgun, etc.)
+    # When SMTP_HOST is empty, emails are logged instead of sent (dev-safe).
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "no-reply@lograven.local"
+    SMTP_USE_TLS: bool = True
+    # Public URL of the frontend — used to build links in emails (verify/reset).
+    FRONTEND_BASE_URL: str = "http://localhost:5173"
+
+    # Rate limiting: set to the Redis URL in production so limits are shared
+    # across API replicas. Empty = in-memory (single process only).
+    RATE_LIMIT_STORAGE_URL: str = ""
+
+    # Logging: "text" (colored, dev) or "json" (production log aggregation).
+    LOG_FORMAT: Literal["text", "json"] = "text"
+
     # Storage
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
     LOCAL_STORAGE_PATH: str = "./local"

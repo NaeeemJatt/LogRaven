@@ -32,6 +32,7 @@ class UserResponse(BaseModel):
     id: UUID
     email: str
     tier: str
+    email_verified: bool = False
     name: Optional[str] = None
     timezone: Optional[str] = None
     created_at: datetime
@@ -47,6 +48,23 @@ class UpdateProfileRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+class DeleteAccountRequest(BaseModel):
+    password: str
 
 
 class TokenResponse(BaseModel):

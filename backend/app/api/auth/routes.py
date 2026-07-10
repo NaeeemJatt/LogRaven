@@ -10,8 +10,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.dependencies import get_current_user, get_db
 from app.limiter import limiter
-from app.schemas.user import AuthSessionResponse, UserCreate, UserLogin, UserResponse, UpdateProfileRequest, ChangePasswordRequest
-from app.services import auth_service
+from app.schemas.user import (
+    AuthSessionResponse,
+    ChangePasswordRequest,
+    DeleteAccountRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
+    UpdateProfileRequest,
+    UserCreate,
+    UserLogin,
+    UserResponse,
+    VerifyEmailRequest,
+)
+from app.services import account_service, auth_service
 from app.utils.cookies import REFRESH_COOKIE, clear_auth_cookies, set_auth_cookies
 from app.utils.refresh_tokens import revoke_refresh_token
 from app.utils.security import decode_token
@@ -155,3 +166,76 @@ async def change_password(
     current_user.password_hash = hash_password(body.new_password)
     current_user.updated_at = datetime.utcnow()
     await db.commit()
+
+
+# ── Email verification ────────────────────────────────────────────────────────
+
+@router.post("/verify-email/request", status_code=202)
+@limiter.limit("5/hour")
+async def request_email_verification(
+    request: Request,
+    current_user=Depends(get_current_user),
+) -> dict:
+    """Send (or re-send) the verification email for the logged-in user."""
+    await account_service.send_verification(current_user)
+    return {"ok": True}
+
+
+@router.post("/verify-email", status_code=200)
+@limiter.limit("20/hour")
+async def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Confirm an email address from the token in the verification link."""
+    await account_service.confirm_verification(body.token, db)
+    return {"ok": True}
+
+
+# ── Password reset (forgot password) ─────────────────────────────────────────
+
+@router.post("/password/forgot", status_code=202)
+@limiter.limit("5/hour")
+async def forgot_password(
+    request: Request,
+    body: ForgotPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Send a reset link if the account exists. Always returns 202 (no enumeration)."""
+    await account_service.request_password_reset(
+        body.email, db, ip_address=request.client.host if request.client else None,
+    )
+    return {"ok": True}
+
+
+@router.post("/password/reset", status_code=204)
+@limiter.limit("10/hour")
+async def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Set a new password using a valid, unused reset token."""
+    await account_service.reset_password(
+        body.token, body.new_password, db,
+        ip_address=request.client.host if request.client else None,
+    )
+
+
+# ── Account deletion ──────────────────────────────────────────────────────────
+
+@router.delete("/me", status_code=204)
+async def delete_account(
+    request: Request,
+    body: DeleteAccountRequest,
+    response: Response,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Permanently delete the account, its data, and stored files."""
+    await account_service.delete_account(
+        current_user, body.password, db,
+        ip_address=request.client.host if request.client else None,
+    )
+    clear_auth_cookies(response)

@@ -498,18 +498,11 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Remember me + forgot */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-3.5 h-3.5 bg-surface border-white/[0.12] rounded-none"
-                />
-                <span className="text-text-muted text-xs font-mono">Remember me</span>
-              </label>
-              <a href="#" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
+            {/* Forgot password */}
+            <div className="flex items-center justify-end">
+              <Link to="/forgot-password" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {error && (

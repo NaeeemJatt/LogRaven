@@ -29,7 +29,17 @@ access_cookie_scheme = APIKeyCookie(name=ACCESS_COOKIE, auto_error=False)
 
 _async_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-engine = create_async_engine(_async_url, echo=settings.DEBUG, future=True)
+engine = create_async_engine(
+    _async_url,
+    echo=settings.DEBUG,
+    future=True,
+    # Production-safe pool: bounded size, recycle stale connections, and
+    # pre-ping so dropped connections (e.g. RDS failover) are detected.
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,

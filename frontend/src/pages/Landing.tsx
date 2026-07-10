@@ -310,7 +310,7 @@ export default function Landing() {
                   Start investigating <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
-              <Link to="/login" className="btn-ghost flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
+              <Link to={isAuthenticated ? '/profile' : '/login'} className="btn-ghost flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
                 {isAuthenticated ? 'Account settings' : 'Sign in'}
                 <ChevronRight className="w-4 h-4" />
               </Link>

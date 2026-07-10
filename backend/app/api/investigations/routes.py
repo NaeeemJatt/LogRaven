@@ -24,8 +24,12 @@ from app.schemas.investigation import (
 )
 from app.api.reports.helpers import build_report_response
 from app.models.finding import Finding
+from app.models.report import Report
 from app.services import report_service
+from app.utils.logger import get_logger
 from app.utils.storage import StorageBackend
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -157,8 +161,25 @@ async def delete_investigation(
     investigation_id: uuid.UUID,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    storage: StorageBackend = Depends(get_storage),
 ):
-    inv = await _get_investigation_or_404(investigation_id, current_user, db)
+    inv = await _get_investigation_or_404(investigation_id, current_user, db, load_files=True)
+
+    # Purge blobs (uploaded logs + report PDF) so storage never accumulates
+    # orphans. Best-effort: a missing blob must not block the delete.
+    blob_keys = [f.storage_key for f in inv.files if f.storage_key]
+    report_result = await db.execute(
+        select(Report.pdf_storage_key).where(Report.investigation_id == inv.id)
+    )
+    pdf_key = report_result.scalar_one_or_none()
+    if pdf_key:
+        blob_keys.append(pdf_key)
+    for key in blob_keys:
+        try:
+            await storage.delete_file(key)
+        except Exception:
+            logger.warning("Blob cleanup failed for %s (continuing delete)", key)
+
     await db.delete(inv)
     await db.commit()
 

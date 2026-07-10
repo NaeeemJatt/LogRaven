@@ -65,6 +65,7 @@ async def register_user(
         email=email,
         password_hash=security.hash_password(password),
         tier="free",
+        email_verified=False,
     )
     db.add(user)
     await db.flush()  # populate user.id before audit log
@@ -80,6 +81,14 @@ async def register_user(
     db.add(audit)
     await db.commit()
     await db.refresh(user)
+
+    # Send the verification email without blocking registration on SMTP.
+    try:
+        from app.services.account_service import send_verification
+
+        asyncio.get_running_loop().create_task(send_verification(user))
+    except Exception:  # never fail registration because of email
+        pass
 
     refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
     await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))

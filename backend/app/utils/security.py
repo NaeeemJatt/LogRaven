@@ -23,6 +23,12 @@ FILE_DOWNLOAD_TOKEN_AUDIENCE = "lograven-download"
 
 AUDIT_SHARE_TOKEN_AUDIENCE = "lograven-audit-share"
 
+EMAIL_VERIFY_TOKEN_AUDIENCE = "lograven-email-verify"
+EMAIL_VERIFY_TOKEN_EXPIRE_HOURS = 24
+
+PASSWORD_RESET_TOKEN_AUDIENCE = "lograven-password-reset"
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
+
 
 def hash_password(plain: str) -> str:
     truncated = plain.encode("utf-8")[:72].decode("utf-8", errors="ignore")
@@ -127,6 +133,83 @@ def decode_file_download_token(token: str) -> tuple[str, str]:
     if not owner or not isinstance(owner, str):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid download link")
     return key, owner
+
+
+def create_email_verify_token(user_id: str, email: str) -> str:
+    """Signed token proving control of *email*, valid for 24 hours."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=EMAIL_VERIFY_TOKEN_EXPIRE_HOURS)
+    payload = {
+        "typ": "email_verify",
+        "sub": user_id,
+        "email": email,
+        "iss": settings.JWT_ISSUER,
+        "aud": EMAIL_VERIFY_TOKEN_AUDIENCE,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_email_verify_token(token: str) -> tuple[str, str]:
+    """Return (user_id, email). Raises HTTP 400 on invalid/expired token."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=EMAIL_VERIFY_TOKEN_AUDIENCE,
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification link expired. Request a new one.")
+    except InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification link")
+
+    if payload.get("typ") != "email_verify" or not payload.get("sub") or not payload.get("email"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification link")
+    return payload["sub"], payload["email"]
+
+
+def _password_fingerprint(password_hash: str) -> str:
+    """Short digest of the current hash — embedding it makes reset tokens single-use."""
+    import hashlib
+
+    return hashlib.sha256(password_hash.encode("utf-8")).hexdigest()[:16]
+
+
+def create_password_reset_token(user_id: str, password_hash: str) -> str:
+    """Signed reset token. Invalidates itself once the password changes."""
+    expire = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "typ": "pwd_reset",
+        "sub": user_id,
+        "pwf": _password_fingerprint(password_hash),
+        "iss": settings.JWT_ISSUER,
+        "aud": PASSWORD_RESET_TOKEN_AUDIENCE,
+        "exp": expire,
+    }
+    return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+
+
+def decode_password_reset_token(token: str, current_password_hash: str) -> str:
+    """Return user_id. Raises HTTP 400 if invalid, expired, or already used."""
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=PASSWORD_RESET_TOKEN_AUDIENCE,
+        )
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset link expired. Request a new one.")
+    except InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
+
+    if payload.get("typ") != "pwd_reset" or not payload.get("sub"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
+    if payload.get("pwf") != _password_fingerprint(current_password_hash):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset link has already been used")
+    return payload["sub"]
 
 
 def create_audit_share_token(audit_id: str, expire_days: int = 7) -> str:

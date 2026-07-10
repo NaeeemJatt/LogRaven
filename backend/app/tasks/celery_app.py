@@ -12,6 +12,7 @@ celery_app = Celery(
     backend=settings.REDIS_URL,
     include=[
         "app.tasks.process_investigation",
+        "app.tasks.maintenance",
         "app.compliance.tasks",
     ],
 )
@@ -24,12 +25,24 @@ _conf = {
     "task_reject_on_worker_lost": True,
     "task_always_eager": settings.CELERY_TASK_ALWAYS_EAGER,
     "task_eager_propagates": True,
-    # Continuous monitoring: check hourly for recurring audits that are due.
-    # Run a beat worker with: celery -A app.tasks.celery_app beat
+    # Hard ceilings so a hung task can never occupy a worker forever.
+    # Soft limit raises SoftTimeLimitExceeded inside the task first.
+    "task_soft_time_limit": 1500,   # 25 min
+    "task_time_limit": 1800,        # 30 min hard kill
+    # Keep task results from accumulating in Redis indefinitely.
+    "result_expires": 86400,        # 24 h
     "beat_schedule": {
+        # Continuous monitoring: check hourly for recurring audits that are due.
+        # Run a beat worker with: celery -A app.tasks.celery_app beat
         "compliance-rescan-due-audits": {
             "task": "compliance.rescan_due_audits",
             "schedule": 3600.0,
+        },
+        # Reliability: fail jobs stuck in a running state past their TTL
+        # (e.g. a worker crashed mid-pipeline) so users can retry.
+        "reconcile-stuck-jobs": {
+            "task": "maintenance.reconcile_stuck_jobs",
+            "schedule": 900.0,  # every 15 min
         },
     },
 }
