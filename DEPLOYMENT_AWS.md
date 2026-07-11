@@ -116,17 +116,24 @@ Open `http://YOUR_ELASTIC_IP` — register, run an investigation, start an audit
 SES is effectively free at this scale (3,000 message charges/month free for the
 first 12 months on the new free tier; $0.10 per 1,000 emails after).
 
-### 3.6 Domain + HTTPS (optional but recommended, ~30 min)
+### 3.6 Domain + HTTPS (required for a public launch, ~20 min)
 1. Point a domain (Route 53, Namecheap, Cloudflare…) A-record at the Elastic IP.
-2. Get a certificate on the host and terminate TLS in the `web` container:
+2. Issue the certificate once on the host (the fixed `--cert-name lograven` is
+   what `frontend/nginx-tls.conf` expects — no config editing needed):
    ```bash
    sudo apt install -y certbot
-   sudo certbot certonly --standalone -d yourdomain.com
+   sudo certbot certonly --standalone --cert-name lograven -d yourdomain.com
    ```
-   Mount `/etc/letsencrypt` into the `web` service, add a `listen 443 ssl` server
-   block to `frontend/nginx.conf`, and redirect 80 → 443.
 3. Set in `.env`: `FRONTEND_BASE_URL=https://yourdomain.com`, `COOKIE_SECURE=true`.
-4. Rebuild: `docker compose -f docker-compose.prod.yml up -d --build web api`.
+4. Start the stack with the bundled TLS overlay (terminates TLS in nginx,
+   redirects 80 → 443, serves HSTS):
+   ```bash
+   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml up -d --build
+   ```
+5. After each certbot renewal, reload nginx:
+   ```bash
+   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml exec web nginx -s reload
+   ```
 
 ### 3.7 Backups (~10 min)
 ```bash
@@ -138,6 +145,24 @@ find ~/backups -name '*.sql.gz' -mtime +7 -delete
 ```
 `crontab -e` → `0 3 * * * /home/ubuntu/backup.sh`
 Optionally sync to S3: `aws s3 sync ~/backups s3://your-backup-bucket/` (5 GB free).
+
+**Restore drill (run once before launch, then quarterly):**
+```bash
+# Restore the newest dump into a scratch database and sanity-check it.
+LATEST=$(ls -t ~/backups/*.sql.gz | head -1)
+docker compose -f ~/LogRaven/docker-compose.prod.yml exec -T db \
+  psql -U postgres -c "DROP DATABASE IF EXISTS lograven_restore; CREATE DATABASE lograven_restore;"
+gunzip -c "$LATEST" | docker compose -f ~/LogRaven/docker-compose.prod.yml exec -T db \
+  psql -U postgres -d lograven_restore
+docker compose -f ~/LogRaven/docker-compose.prod.yml exec -T db \
+  psql -U postgres -d lograven_restore -c "SELECT count(*) FROM users; SELECT count(*) FROM investigations;"
+docker compose -f ~/LogRaven/docker-compose.prod.yml exec -T db \
+  psql -U postgres -c "DROP DATABASE lograven_restore;"
+```
+
+**Rollback after a bad deploy:** `git checkout <last-good-commit> && docker compose -f docker-compose.prod.yml up -d --build`.
+Migrations run forward automatically; if a migration itself must be undone, run
+`docker compose -f docker-compose.prod.yml exec api alembic downgrade -1` before checking out the old commit.
 
 ### 3.8 Updating the app
 ```bash

@@ -21,12 +21,13 @@ import zipfile
 import json
 import re
 from datetime import date, datetime
+from math import ceil
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
 
@@ -43,6 +44,7 @@ from app.compliance.frameworks import (
 )
 from app.compliance.crosswalk import build_crosswalk, reuse_factor
 from app.utils import security
+from app.utils.audit import add_audit
 from app.utils.storage import create_storage_backend
 from app.utils.logger import get_logger
 
@@ -459,11 +461,30 @@ async def start_audit(
         status="pending",
     )
     db.add(audit_job)
+    await db.flush()
+    add_audit(db, user_id=current_user.id, action="compliance_audit_started", request=request, metadata={
+        "audit_id": str(audit_job.id),
+        "frameworks": frameworks,
+        "recurrence": body.recurrence,
+    })
     await db.commit()
     await db.refresh(audit_job)
 
     logger.info("Created AuditJob %s", audit_job.id)
-    task_result = run_soc2_audit.apply_async(args=[str(audit_job.id)], task_id=str(audit_job.id))
+    try:
+        from app.tasks.dev_worker import ensure_dev_worker_running
+
+        if not ensure_dev_worker_running():
+            raise RuntimeError("Celery worker is unavailable")
+        task_result = run_soc2_audit.apply_async(
+            args=[str(audit_job.id)], task_id=str(audit_job.id)
+        )
+    except Exception as exc:
+        logger.exception("Failed to dispatch compliance audit %s", audit_job.id)
+        audit_job.status = "failed"
+        audit_job.error_message = "Audit could not be dispatched. Please retry."
+        await db.commit()
+        raise HTTPException(status_code=503, detail="Audit could not be dispatched.") from exc
     logger.info("Enqueued Celery task %s", task_result.id)
 
     return AuditStartResponse(
@@ -474,28 +495,66 @@ async def start_audit(
 
 
 @router.get("/audits", response_model=list[AuditSummary])
-async def list_audits(current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)) -> list[AuditSummary]:
+async def list_audits(
+    response: Response,
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=20, ge=1, le=100),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[AuditSummary]:
     """List the current user's audits (history), newest first."""
+    total = (
+        await db.execute(
+            select(func.count(AuditJob.id)).where(AuditJob.user_id == current_user.id)
+        )
+    ).scalar_one() or 0
     res = await db.execute(
-        select(AuditJob).where(AuditJob.user_id == current_user.id).order_by(AuditJob.created_at.desc())
+        select(AuditJob)
+        .where(AuditJob.user_id == current_user.id)
+        .order_by(AuditJob.created_at.desc(), AuditJob.id.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
     )
     jobs = list(res.scalars().all())
 
+    scores: dict[uuid.UUID, float] = {}
+    complete_ids = [job.id for job in jobs if job.status == "complete"]
+    if complete_ids:
+        ranked_snapshots = (
+            select(
+                ComplianceSnapshot.audit_job_id.label("audit_job_id"),
+                ComplianceSnapshot.framework.label("framework"),
+                ComplianceSnapshot.score_percent.label("score_percent"),
+                func.row_number()
+                .over(
+                    partition_by=(
+                        ComplianceSnapshot.audit_job_id,
+                        ComplianceSnapshot.framework,
+                    ),
+                    order_by=ComplianceSnapshot.created_at.desc(),
+                )
+                .label("row_number"),
+            )
+            .where(ComplianceSnapshot.audit_job_id.in_(complete_ids))
+            .subquery()
+        )
+        snap_res = await db.execute(
+            select(
+                ranked_snapshots.c.audit_job_id,
+                ranked_snapshots.c.score_percent,
+            ).where(ranked_snapshots.c.row_number == 1)
+        )
+        per_job: dict[uuid.UUID, list[float]] = {}
+        for job_id, score_percent in snap_res.all():
+            per_job.setdefault(job_id, []).append(score_percent)
+        scores = {
+            job_id: round(sum(values) / len(values), 2)
+            for job_id, values in per_job.items()
+            if values
+        }
+
     summaries: list[AuditSummary] = []
     for job in jobs:
-        score = None
-        if job.status == "complete":
-            snap_res = await db.execute(
-                select(ComplianceSnapshot)
-                .where(ComplianceSnapshot.audit_job_id == job.id)
-                .order_by(ComplianceSnapshot.created_at.desc())
-            )
-            snaps = list(snap_res.scalars().all())
-            if snaps:
-                latest: dict[str, ComplianceSnapshot] = {}
-                for s in snaps:
-                    latest.setdefault(s.framework, s)
-                score = round(sum(s.score_percent for s in latest.values()) / len(latest), 2)
         summaries.append(
             AuditSummary(
                 audit_id=str(job.id),
@@ -504,10 +563,78 @@ async def list_audits(current_user=Depends(get_current_user), db: AsyncSession =
                 status=job.status,
                 created_at=job.created_at.isoformat() if job.created_at else "",
                 recurrence=job.recurrence or "none",
-                score_percent=score,
+                score_percent=scores.get(job.id),
             )
         )
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Total-Pages"] = str(ceil(total / limit) if total else 0)
+    response.headers["X-Page"] = str(page)
+    response.headers["X-Page-Size"] = str(limit)
     return summaries
+
+
+@router.post("/audit/{audit_id}/retry", response_model=AuditStartResponse, status_code=201)
+@limiter.limit("10/hour")
+async def retry_audit(
+    request: Request,
+    audit_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AuditStartResponse:
+    """Create and enqueue a new one-off copy of an owned failed audit."""
+    try:
+        job_uuid = uuid.UUID(audit_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    result = await db.execute(
+        select(AuditJob)
+        .where(AuditJob.id == job_uuid, AuditJob.user_id == current_user.id)
+        .with_for_update()
+    )
+    failed_job = result.scalar_one_or_none()
+    if failed_job is None:
+        raise HTTPException(status_code=404, detail="Audit not found")
+    if failed_job.status != "failed":
+        raise HTTPException(status_code=409, detail="Only failed audits can be retried.")
+
+    failed_job.status = "retried"
+    new_job = AuditJob(
+        id=uuid.uuid4(),
+        user_id=current_user.id,
+        company_name=failed_job.company_name,
+        role_arn=failed_job.role_arn,
+        audit_start_date=failed_job.audit_start_date,
+        audit_end_date=failed_job.audit_end_date,
+        frameworks=list(failed_job.frameworks or [DEFAULT_FRAMEWORK]),
+        recurrence="none",
+        status="pending",
+    )
+    db.add(new_job)
+    add_audit(db, user_id=current_user.id, action="compliance_audit_started", request=request, metadata={
+        "audit_id": str(new_job.id),
+        "retried_from": str(job_uuid),
+        "frameworks": list(new_job.frameworks or []),
+    })
+    await db.commit()
+    await db.refresh(new_job)
+
+    try:
+        from app.tasks.dev_worker import ensure_dev_worker_running
+
+        if not ensure_dev_worker_running():
+            raise RuntimeError("Celery worker is unavailable")
+        run_soc2_audit.apply_async(args=[str(new_job.id)], task_id=str(new_job.id))
+    except Exception as exc:
+        logger.exception("Failed to dispatch compliance retry %s", new_job.id)
+        new_job.status = "failed"
+        new_job.error_message = "Audit retry could not be dispatched. Please retry."
+        await db.commit()
+        raise HTTPException(status_code=503, detail="Audit retry could not be dispatched.") from exc
+    return AuditStartResponse(
+        audit_id=str(new_job.id),
+        status="pending",
+        message="Audit retry started. Use audit_id to check progress.",
+    )
 
 
 @router.get("/audit/{audit_id}/status", response_model=AuditStatusResponse)
@@ -621,6 +748,7 @@ async def _serve_report(db, audit_job, framework_id: str):
 
 @router.get("/audit/{audit_id}/report")
 async def download_audit_report(
+    request: Request,
     audit_id: str,
     framework: str | None = Query(default=None),
     format: str = Query(default="pdf"),
@@ -635,6 +763,13 @@ async def download_audit_report(
     framework_id = framework or (audit_job.frameworks or [DEFAULT_FRAMEWORK])[0]
     if not is_registered(framework_id):
         raise HTTPException(status_code=404, detail="Unknown framework")
+
+    add_audit(db, user_id=current_user.id, action="compliance_report_downloaded", request=request, metadata={
+        "audit_id": str(audit_job.id),
+        "framework": framework_id,
+        "format": format,
+    })
+    await db.commit()
 
     if format == "csv":
         res = await db.execute(
@@ -664,12 +799,20 @@ async def download_audit_report(
 
 @router.get("/audit/{audit_id}/evidence")
 async def download_evidence_pack(
-    audit_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    request: Request,
+    audit_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Download an auditor evidence pack ZIP: normalized signals + per-framework CSVs."""
     audit_job = await _load_owned_job(db, audit_id, current_user)
     if audit_job.status != "complete":
         raise HTTPException(status_code=400, detail="Audit not complete yet.")
+
+    add_audit(db, user_id=current_user.id, action="compliance_evidence_downloaded", request=request, metadata={
+        "audit_id": str(audit_job.id),
+    })
+    await db.commit()
 
     res = await db.execute(select(AuditResult).where(AuditResult.audit_job_id == audit_job.id))
     all_rows = list(res.scalars().all())
@@ -705,6 +848,7 @@ async def download_evidence_pack(
 
 @router.post("/audit/{audit_id}/share", response_model=ShareResponse)
 async def create_share_link(
+    request: Request,
     audit_id: str,
     expires_days: int = Query(default=7, ge=1, le=30),
     current_user=Depends(get_current_user),
@@ -713,6 +857,11 @@ async def create_share_link(
     """Create a scoped, expiring read-only share link for external auditors."""
     audit_job = await _load_owned_job(db, audit_id, current_user)
     token = security.create_audit_share_token(str(audit_job.id), expire_days=expires_days)
+    add_audit(db, user_id=current_user.id, action="compliance_audit_shared", request=request, metadata={
+        "audit_id": str(audit_job.id),
+        "expires_days": expires_days,
+    })
+    await db.commit()
     return ShareResponse(token=token, url=f"/api/v1/audit/shared/{token}", expires_days=expires_days)
 
 

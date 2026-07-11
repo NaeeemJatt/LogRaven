@@ -9,8 +9,6 @@
 # USAGE:
 #   from app.config import settings
 #   url = settings.DATABASE_URL
-#
-# TODO Month 1 Week 1: Implement this file.
 
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
@@ -45,6 +43,11 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # httpOnly cookies: set True behind HTTPS in production
     COOKIE_SECURE: bool = False
+    # Comma-separated emails allowed to call admin endpoints (tier changes).
+    # Empty = admin endpoints disabled entirely.
+    ADMIN_EMAILS: str = ""
+    # When True, users must verify their email before they can log in.
+    REQUIRE_VERIFIED_EMAIL_FOR_LOGIN: bool = False
     # When False, login/register/refresh JSON omits tokens (cookies only). Set True for non-browser API clients.
     INCLUDE_TOKENS_IN_AUTH_JSON: bool = False
     # When True, rate limits use first X-Forwarded-For hop (enable only behind a trusted reverse proxy)
@@ -68,6 +71,9 @@ class Settings(BaseSettings):
     # Logging: "text" (colored, dev) or "json" (production log aggregation).
     LOG_FORMAT: Literal["text", "json"] = "text"
 
+    # Error alerting: Sentry DSN for the API and Celery workers. Empty = disabled.
+    SENTRY_DSN: str = ""
+
     # Storage
     STORAGE_BACKEND: Literal["local", "s3"] = "local"
     LOCAL_STORAGE_PATH: str = "./local"
@@ -76,10 +82,9 @@ class Settings(BaseSettings):
     # Optional S3-compatible endpoint (MinIO, etc.)
     S3_ENDPOINT_URL: str = ""
 
-    # AI
+    # AI — single wired provider; other provider keys were removed because
+    # nothing consumed them and they made health/consent claim AI was enabled.
     GEMINI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
-    OPENAI_API_KEY: str = ""
 
     # S3 (production only)
     AWS_ACCESS_KEY_ID: str = ""
@@ -96,6 +101,16 @@ class Settings(BaseSettings):
     AI_CEILING_FREE: int = 2000
     AI_CEILING_PRO: int = 10000
     AI_CEILING_TEAM: int = 50000
+    # Per-tier daily analysis quota (investigations analyzed per UTC day).
+    # 0 disables the quota for that tier.
+    DAILY_ANALYSES_FREE: int = 5
+    DAILY_ANALYSES_PRO: int = 50
+    DAILY_ANALYSES_TEAM: int = 200
+    # Per-tier report retention in days; 0 = keep forever (default). When set,
+    # a daily maintenance task deletes reports (and their PDFs) older than this.
+    REPORT_RETENTION_DAYS_FREE: int = 0
+    REPORT_RETENTION_DAYS_PRO: int = 0
+    REPORT_RETENTION_DAYS_TEAM: int = 0
     # Hard cap before analysis/report generation to avoid memory blowups on pathological logs.
     MAX_PARSED_EVENTS_PER_FILE: int = 50000
     MAX_PARSED_EVENTS_PER_INVESTIGATION: int = 100000

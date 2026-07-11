@@ -1,32 +1,40 @@
 // LogRaven — Root Application Component
-import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useAuthStore } from './store/authStore'
+import { Suspense, lazy } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthBootstrap from './components/layout/AuthBootstrap'
 import ErrorBoundary from './components/layout/ErrorBoundary'
+import RequireAuth from './components/layout/RequireAuth'
 import Navbar from './components/layout/Navbar'
 
+// Public entry pages stay eager for the fastest first paint.
 import Login           from './pages/Auth/Login'
 import Register        from './pages/Auth/Register'
 import ForgotPassword  from './pages/Auth/ForgotPassword'
 import ResetPassword   from './pages/Auth/ResetPassword'
 import VerifyEmail     from './pages/Auth/VerifyEmail'
 import Landing         from './pages/Landing'
-import Dashboard       from './pages/Dashboard'
-import NewInvestigation from './pages/NewInvestigation'
-import Investigation   from './pages/Investigation'
-import JobStatus       from './pages/JobStatus'
-import Report          from './pages/Report'
-import PlayParser      from './pages/PlayParser'
-import AuditPage       from './pages/AuditPage'
-import ProfilePage     from './pages/Profile'
-import AlertFeed       from './pages/AlertFeed'
 import NotFound        from './pages/NotFound'
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  if (!isAuthenticated) return <Navigate to="/login" replace />
-  return <>{children}</>
+// Authenticated/heavy pages are route-split so the entry chunk stays small.
+const Dashboard        = lazy(() => import('./pages/Dashboard'))
+const NewInvestigation = lazy(() => import('./pages/NewInvestigation'))
+const Investigation    = lazy(() => import('./pages/Investigation'))
+const JobStatus        = lazy(() => import('./pages/JobStatus'))
+const Report           = lazy(() => import('./pages/Report'))
+const PlayParser       = lazy(() => import('./pages/PlayParser'))
+const AuditPage        = lazy(() => import('./pages/AuditPage'))
+const ProfilePage      = lazy(() => import('./pages/Profile'))
+const AlertFeed        = lazy(() => import('./pages/AlertFeed'))
+const SharedAudit      = lazy(() => import('./pages/SharedAudit'))
+const PrivacyPage      = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
+const TermsPage        = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
+
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-void" role="status" aria-label="Loading page">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ember border-t-transparent" />
+    </div>
+  )
 }
 
 export default function App() {
@@ -34,39 +42,46 @@ export default function App() {
     <ErrorBoundary>
       <BrowserRouter>
         <AuthBootstrap>
-          <Routes>
-            {/* Public */}
-            <Route path="/"                element={<Landing />} />
-            <Route path="/login"           element={<Login />} />
-            <Route path="/register"        element={<Register />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password"  element={<ResetPassword />} />
-            <Route path="/verify-email"    element={<VerifyEmail />} />
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
+              {/* Public */}
+              <Route path="/"                element={<Landing />} />
+              <Route path="/login"           element={<Login />} />
+              <Route path="/register"        element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password"  element={<ResetPassword />} />
+              <Route path="/verify-email"    element={<VerifyEmail />} />
+              <Route path="/shared/audit/:token" element={<SharedAudit />} />
+              <Route path="/privacy"         element={<PrivacyPage />} />
+              <Route path="/terms"           element={<TermsPage />} />
 
-            {/* Protected — shell wraps all authenticated pages */}
-            <Route
-              path="/*"
-              element={
-                <ProtectedRoute>
-                  <div className="min-h-screen bg-void">
-                    <Navbar />
-                    <Routes>
-                      <Route path="/dashboard"                      element={<Dashboard />} />
-                      <Route path="/investigations/new"             element={<NewInvestigation />} />
-                      <Route path="/investigations/:id"             element={<Investigation />} />
-                      <Route path="/investigations/:id/status"      element={<JobStatus />} />
-                      <Route path="/investigations/:id/report"      element={<Report />} />
-                      <Route path="/play-parser"                    element={<PlayParser />} />
-                      <Route path="/compliance"                     element={<AuditPage />} />
-                      <Route path="/alerts"                         element={<AlertFeed />} />
-                      <Route path="/profile"                        element={<ProfilePage />} />
-                      <Route path="*"                               element={<NotFound />} />
-                    </Routes>
-                  </div>
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              {/* Protected — shell wraps all authenticated pages */}
+              <Route
+                path="/*"
+                element={
+                  <RequireAuth>
+                    <div className="min-h-screen bg-void">
+                      <Navbar />
+                      <Suspense fallback={<RouteFallback />}>
+                        <Routes>
+                          <Route path="/dashboard"                      element={<Dashboard />} />
+                          <Route path="/investigations/new"             element={<NewInvestigation />} />
+                          <Route path="/investigations/:id"             element={<Investigation />} />
+                          <Route path="/investigations/:id/status"      element={<JobStatus />} />
+                          <Route path="/investigations/:id/report"      element={<Report />} />
+                          <Route path="/play-parser"                    element={<PlayParser />} />
+                          <Route path="/compliance"                     element={<AuditPage />} />
+                          <Route path="/alerts"                         element={<AlertFeed />} />
+                          <Route path="/profile"                        element={<ProfilePage />} />
+                          <Route path="*"                               element={<NotFound />} />
+                        </Routes>
+                      </Suspense>
+                    </div>
+                  </RequireAuth>
+                }
+              />
+            </Routes>
+          </Suspense>
         </AuthBootstrap>
       </BrowserRouter>
     </ErrorBoundary>

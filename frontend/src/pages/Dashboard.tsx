@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
@@ -9,21 +9,28 @@ import {
   ArrowUpDown, Radio, ShieldAlert,
 } from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
+import { normalizeApiError } from '../api/errors'
 import ConfirmModal from '../components/ui/ConfirmModal'
+import { useAuthStore } from '../store/authStore'
 import type { Investigation } from '../types/investigation'
+import { dateKey, formatDateTime, recentCalendarDays } from '../utils/dateTime'
 
 // ── Activity histogram (7-day) ─────────────────────────────
-function ActivityHistogram({ data }: { data: Investigation[] }) {
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-  const now = new Date()
-
-  const counts = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(now)
-    d.setDate(d.getDate() - (6 - i))
-    const dayStr = d.toISOString().slice(0, 10)
+function ActivityHistogram({
+  dates,
+  dailyCounts,
+  timezone,
+}: {
+  dates: string[]
+  dailyCounts?: Record<string, number>
+  timezone?: string | null
+}) {
+  const counts = recentCalendarDays(7, timezone).map((day) => {
     return {
-      label: days[(d.getDay() + 6) % 7],
-      count: data.filter((inv) => inv.created_at?.slice(0, 10) === dayStr).length,
+      label: day.label,
+      count:
+        dailyCounts?.[day.key] ??
+        dates.filter((createdAt) => dateKey(createdAt, timezone) === day.key).length,
     }
   })
 
@@ -71,17 +78,12 @@ function ActivityHistogram({ data }: { data: Investigation[] }) {
 }
 
 // ── Threat posture panel ───────────────────────────────────
-function ThreatPosture({ data }: { data: Investigation[] }) {
-  const agg = data.reduce(
-    (acc, inv) => {
-      const s = (inv as any).severity_summary
-      acc.critical += s?.critical ?? 0
-      acc.high += s?.high ?? 0
-      acc.findings += (inv as any).findings_count ?? 0
-      return acc
-    },
-    { critical: 0, high: 0, findings: 0 }
-  )
+function ThreatPosture({ counts }: { counts: Record<string, number> }) {
+  const agg = {
+    critical: counts.critical ?? 0,
+    high: counts.high ?? 0,
+    findings: Object.values(counts).reduce((sum, count) => sum + count, 0),
+  }
 
   const rows = [
     { label: 'Critical', value: agg.critical, color: '#D98C8C' },
@@ -150,14 +152,14 @@ function StatusBadge({ status }: { status: Investigation['status'] }) {
 
 // ── Severity pills ────────────────────────────────────────
 function SeverityPills({ inv }: { inv: Investigation }) {
-  const summary = (inv as any).severity_summary
-  if (!summary && !(inv as any).findings_count) {
+  const summary = inv.severity_summary
+  if (!summary && !inv.findings_count) {
     if (inv.status !== 'complete') return <span className="text-text-ghost font-mono text-[10px]">—</span>
   }
 
   const critical = summary?.critical ?? 0
   const high = summary?.high ?? 0
-  const total = (inv as any).findings_count ?? 0
+  const total = inv.findings_count ?? 0
 
   if (!critical && !high && !total) return <span className="text-text-ghost font-mono text-[10px]">—</span>
 
@@ -182,9 +184,12 @@ function SeverityPills({ inv }: { inv: Investigation }) {
 
 // ── Table row ─────────────────────────────────────────────
 function InvTableRow({
-  inv, index, onDelete,
+  inv, index, onDelete, timezone,
 }: {
-  inv: Investigation; index: number; onDelete: (inv: Investigation) => void
+  inv: Investigation
+  index: number
+  onDelete: (inv: Investigation) => void
+  timezone?: string | null
 }) {
   const navigate = useNavigate()
   const fileCount = (inv as any).file_count ?? inv.files?.length ?? 0
@@ -241,18 +246,18 @@ function InvTableRow({
       {/* Date */}
       <td className="px-4 py-3 whitespace-nowrap">
         <span className="font-mono text-[11px] text-text-muted">
-          {new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+          {formatDateTime(inv.created_at, timezone, { month: 'short', day: 'numeric', year: '2-digit' })}
         </span>
       </td>
 
       {/* Actions */}
       <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-1">
           {canView && (
             <Link
               to={`/investigations/${inv.id}/report`}
-              className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
-              title="View report"
+              className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
+              aria-label={`View report for ${inv.name}`}
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
@@ -260,8 +265,8 @@ function InvTableRow({
           {isProcessing && (
             <Link
               to={`/investigations/${inv.id}/status`}
-              className="p-1.5 rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
-              title="View status"
+              className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-indigo-500/10 text-text-muted hover:text-indigo-400 transition-all"
+              aria-label={`View status for ${inv.name}`}
             >
               {inv.status === 'processing'
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -270,8 +275,8 @@ function InvTableRow({
           )}
           <button
             onClick={() => onDelete(inv)}
-            className="p-1.5 rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-all"
-            title="Delete"
+            className="min-w-11 min-h-11 inline-flex items-center justify-center rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-all"
+            aria-label={`Delete ${inv.name}`}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -314,35 +319,50 @@ type SortDir = 'asc' | 'desc'
 
 export default function Dashboard() {
   const queryClient = useQueryClient()
+  const user = useAuthStore((state) => state.user)
+  const timezone = user?.timezone
   const [deleteTarget, setDeleteTarget] = useState<Investigation | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('created_at')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [page, setPage] = useState(1)
 
-  const { data, isLoading, error } = useQuery<Investigation[]>({
-    queryKey: ['investigations'],
-    queryFn: async () => {
-      const res = await investigationsApi.list()
-      return res.data
-    },
+  const { data, isLoading, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['investigations', user?.id, page, search, sortField, sortDir],
+    queryFn: () =>
+      investigationsApi.list({
+        page,
+        limit: 20,
+        search: search.trim() || undefined,
+        sort: sortField,
+        direction: sortDir,
+      }),
+  })
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetch: refetchStats,
+    isRefetching: statsRefetching,
+  } = useQuery({
+    queryKey: ['dashboard-stats', user?.id],
+    queryFn: investigationsApi.getDashboardStats,
   })
 
-  const list = data ?? []
-  const filtered = list
-    .filter((i) => !search || i.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      let cmp = 0
-      if (sortField === 'name') cmp = a.name.localeCompare(b.name)
-      else if (sortField === 'status') cmp = a.status.localeCompare(b.status)
-      else cmp = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-      return sortDir === 'asc' ? cmp : -cmp
-    })
+  const list = data?.items ?? []
+  const filteredTotal = data?.total ?? 0
+  const total = stats?.total_investigations ?? filteredTotal
+  const activeCount = stats?.active_investigations ?? 0
+  const completeCount = stats?.status_counts.complete ?? 0
+  const failedCount = stats?.status_counts.failed ?? 0
 
-  const total = list.length
-  const activeCount = list.filter((i) => ['queued', 'processing'].includes(i.status)).length
-  const completeCount = list.filter((i) => i.status === 'complete').length
-  const failedCount = list.filter((i) => i.status === 'failed').length
+  useEffect(() => {
+    if (!data) return
+    const lastPage = Math.max(1, data.totalPages)
+    if (page > lastPage) setPage(lastPage)
+  }, [data, page])
 
   const completionPct = total > 0 ? Math.round((completeCount / total) * 100) : 0
   const statusLegend = [
@@ -354,9 +374,13 @@ export default function Dashboard() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return
     setDeleting(true)
+    setActionError(null)
     try {
       await investigationsApi.delete(deleteTarget.id)
       queryClient.invalidateQueries({ queryKey: ['investigations'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    } catch (error) {
+      setActionError(normalizeApiError(error, 'Could not delete the investigation.').message)
     } finally {
       setDeleting(false)
       setDeleteTarget(null)
@@ -366,6 +390,7 @@ export default function Dashboard() {
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortField(field); setSortDir('desc') }
+    setPage(1)
   }
 
   const SortIcon = ({ field }: { field: SortField }) => (
@@ -409,13 +434,46 @@ export default function Dashboard() {
           </Link>
         </motion.div>
 
-        {error && (
-          <div className="mb-6 px-4 py-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.07] text-rose-400 text-xs font-mono">
-            Failed to load investigations. Check the API and try again.
+        {isError && (
+          <div role="alert" className="mb-6 px-4 py-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.07] text-rose-400 text-xs font-mono flex items-center justify-between gap-3">
+            <span>Failed to load investigations. No empty-state conclusion was made.</span>
+            <button
+              type="button"
+              onClick={() => void refetch()}
+              disabled={isRefetching}
+              className="min-h-11 px-3 rounded border border-rose-400/30 disabled:opacity-50"
+            >
+              {isRefetching ? 'Retrying…' : 'Retry'}
+            </button>
+          </div>
+        )}
+        {actionError && (
+          <div role="alert" className="mb-6 px-4 py-3 rounded-lg border border-rose-500/30 bg-rose-500/[0.07] text-rose-400 text-xs font-mono">
+            {actionError}
           </div>
         )}
 
         {/* Bento operations grid */}
+        {statsLoading ? (
+          <div className="ops-panel mb-4 flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+          </div>
+        ) : statsError ? (
+          <div role="alert" className="ops-panel mb-4 flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <ShieldAlert className="w-7 h-7 text-rose-400" />
+            <p className="text-sm text-text-secondary">
+              Dashboard totals and threat posture are unavailable. No nominal-state conclusion was made.
+            </p>
+            <button
+              type="button"
+              onClick={() => void refetchStats()}
+              disabled={statsRefetching}
+              className="btn-ghost min-h-11 px-4 rounded-lg text-sm text-text-secondary disabled:opacity-50"
+            >
+              {statsRefetching ? 'Retrying…' : 'Retry summary'}
+            </button>
+          </div>
+        ) : (
         <motion.div
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
           className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4"
@@ -456,11 +514,20 @@ export default function Dashboard() {
           </div>
 
           {/* Intake trend */}
-          <div className="md:col-span-2"><ActivityHistogram data={list} /></div>
+          <div className="md:col-span-2">
+            <ActivityHistogram
+              dates={stats?.recent_investigation_dates ?? []}
+              dailyCounts={stats?.recent_daily_counts}
+              timezone={timezone}
+            />
+          </div>
 
           {/* Threat posture */}
-          <div className="md:col-span-2"><ThreatPosture data={list} /></div>
+          <div className="md:col-span-2">
+            <ThreatPosture counts={stats?.severity_counts ?? {}} />
+          </div>
         </motion.div>
+        )}
 
         {/* Live feed table */}
         <motion.div
@@ -475,7 +542,7 @@ export default function Dashboard() {
                 Live feed
               </h2>
               <span className="font-mono text-[10px] text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded">
-                {filtered.length}/{total}
+                {list.length}/{filteredTotal}
               </span>
             </div>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-white/[0.1] bg-void/60 focus-within:border-indigo-500/50 transition-colors">
@@ -483,8 +550,12 @@ export default function Dashboard() {
               <input
                 type="text"
                 placeholder="Filter..."
+                aria-label="Search investigations"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
                 className="bg-transparent text-xs text-text-secondary placeholder-text-muted outline-none w-28 font-mono"
               />
             </div>
@@ -496,20 +567,26 @@ export default function Dashboard() {
             </div>
           )}
 
-          {!isLoading && (
+          {!isLoading && !isError && (
             <div className="overflow-x-auto">
               <table className="sovereign-table w-full">
                 <thead>
                   <tr>
-                    <th onClick={() => toggleSort('name')} className="cursor-pointer select-none px-4 py-2.5 text-left">
-                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                    <th
+                      aria-sort={sortField === 'name' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      className="px-4 py-2.5 text-left"
+                    >
+                      <button type="button" onClick={() => toggleSort('name')} className="min-h-11 font-mono text-[10px] text-text-muted tracking-widest uppercase">
                         Name <SortIcon field="name" />
-                      </span>
+                      </button>
                     </th>
-                    <th onClick={() => toggleSort('status')} className="cursor-pointer select-none px-4 py-2.5 text-left">
-                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                    <th
+                      aria-sort={sortField === 'status' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      className="px-4 py-2.5 text-left"
+                    >
+                      <button type="button" onClick={() => toggleSort('status')} className="min-h-11 font-mono text-[10px] text-text-muted tracking-widest uppercase">
                         Status <SortIcon field="status" />
-                      </span>
+                      </button>
                     </th>
                     <th className="px-4 py-2.5 text-left">
                       <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Findings</span>
@@ -517,39 +594,68 @@ export default function Dashboard() {
                     <th className="px-4 py-2.5 text-left">
                       <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Files</span>
                     </th>
-                    <th onClick={() => toggleSort('created_at')} className="cursor-pointer select-none px-4 py-2.5 text-left">
-                      <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+                    <th
+                      aria-sort={sortField === 'created_at' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      className="px-4 py-2.5 text-left"
+                    >
+                      <button type="button" onClick={() => toggleSort('created_at')} className="min-h-11 font-mono text-[10px] text-text-muted tracking-widest uppercase">
                         Date <SortIcon field="created_at" />
-                      </span>
+                      </button>
                     </th>
                     <th className="px-4 py-2.5" />
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 && list.length === 0 && <EmptyState />}
-                  {filtered.length === 0 && list.length > 0 && (
+                  {list.length === 0 && !search && total === 0 && <EmptyState />}
+                  {list.length === 0 && (search || total > 0) && (
                     <tr>
                       <td colSpan={6} className="py-12 text-center text-text-muted text-sm">
                         No investigations match your filter.
                       </td>
                     </tr>
                   )}
-                  {filtered.map((inv, i) => (
-                    <InvTableRow key={inv.id} inv={inv} index={i} onDelete={setDeleteTarget} />
+                  {list.map((inv, i) => (
+                    <InvTableRow
+                      key={inv.id}
+                      inv={inv}
+                      index={i}
+                      onDelete={setDeleteTarget}
+                      timezone={timezone}
+                    />
                   ))}
                 </tbody>
               </table>
             </div>
           )}
 
-          {list.length > 0 && (
-            <div className="px-4 py-2.5 border-t border-white/[0.06] flex items-center justify-between">
+          {filteredTotal > 0 && (
+            <div className="px-4 py-2.5 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-3">
               <span className="font-mono text-[10px] text-text-muted">
-                {filtered.length} of {total} investigations
+                Page {page} of {data?.totalPages ?? 1} · {filteredTotal} investigations
               </span>
-              <Link to="/compliance" className="font-mono text-[10px] text-indigo-400/70 hover:text-indigo-400 transition-colors flex items-center gap-1">
-                SOC 2 compliance <ChevronRight className="w-2.5 h-2.5" />
-              </Link>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-label="Previous page"
+                  disabled={page <= 1}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  className="min-h-11 px-3 rounded-lg border border-white/[0.08] text-xs text-text-secondary disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next page"
+                  disabled={page >= (data?.totalPages ?? 0)}
+                  onClick={() => setPage((current) => current + 1)}
+                  className="min-h-11 px-3 rounded-lg border border-white/[0.08] text-xs text-text-secondary disabled:opacity-40"
+                >
+                  Next
+                </button>
+                <Link to="/compliance" className="min-h-11 font-mono text-[10px] text-indigo-400/70 hover:text-indigo-400 transition-colors flex items-center gap-1">
+                  Compliance <ChevronRight className="w-2.5 h-2.5" />
+                </Link>
+              </div>
             </div>
           )}
         </motion.div>

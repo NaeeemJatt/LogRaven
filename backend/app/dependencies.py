@@ -7,7 +7,7 @@
 #   get_db()           — yields async SQLAlchemy session, always closes after request
 #   get_storage()      — returns correct StorageBackend based on config
 #   get_current_user() — validates JWT, returns authenticated User object
-#   require_pro_tier() — calls get_current_user + checks tier is pro/team
+#   ensure_pro_or_team_tier() — raises 403 unless the user's tier is pro/team
 
 from typing import AsyncGenerator
 import uuid
@@ -112,8 +112,3 @@ PRO_TIER_DETAIL = "This feature requires a pro or team tier account."
 def ensure_pro_or_team_tier(user, *, detail: str = PRO_TIER_DETAIL) -> None:
     if user.tier not in ("pro", "team"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
-
-
-async def require_pro_tier(current_user=Depends(get_current_user)):
-    ensure_pro_or_team_tier(current_user)
-    return current_user

@@ -1,9 +1,7 @@
 # LogRaven — Framework-agnostic AI control grader
 #
 # Grades a sanitized, PII-free evidence bundle against any registered framework.
-# Reuses the AI client + result-normalization primitives from soc2_mapper so the
-# existing SOC 2 path and its tests are untouched, while new frameworks plug in
-# as pure data (frameworks/*.py).
+# Frameworks plug in as pure data (frameworks/*.py); SOC 2 is just one of them.
 
 from __future__ import annotations
 
@@ -15,17 +13,64 @@ from google.genai import types
 
 from app.compliance.frameworks.base import Framework
 from app.compliance.signals import select_signals
-from app.compliance.soc2_mapper import (
-    AI_TIMEOUT_SECONDS,
-    MODEL,
-    RETRY_DELAY_SECONDS,
-    MappingError,
-    _get_client,
-    _normalize_control_result,
-)
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+MODEL = "gemini-2.5-flash"
+AI_TIMEOUT_SECONDS = 120
+RETRY_DELAY_SECONDS = 5
+
+
+class MappingError(Exception):
+    """Raised when the AI engine returns invalid or unusable JSON for control grading."""
+
+
+def _get_client():
+    from app.config import settings
+
+    api_key = settings.GEMINI_API_KEY
+    if not api_key:
+        raise MappingError("GEMINI_API_KEY is not configured")
+    from google import genai
+
+    return genai.Client(api_key=api_key)
+
+
+def _normalize_control_result(item: dict[str, Any], fallback: dict[str, str]) -> dict[str, Any]:
+    status = str(item.get("status", "PARTIAL")).upper()
+    if status not in {"PASS", "FAIL", "PARTIAL"}:
+        status = "PARTIAL"
+
+    confidence = str(item.get("confidence", "LOW")).upper()
+    if confidence not in {"HIGH", "MEDIUM", "LOW"}:
+        confidence = "LOW"
+
+    evidence_refs = item.get("evidence_references")
+    if not isinstance(evidence_refs, list):
+        evidence_refs = []
+    evidence_refs = [str(ref) for ref in evidence_refs if ref]
+
+    gaps = item.get("gaps")
+    if not isinstance(gaps, list):
+        gaps = []
+    gaps = [str(gap) for gap in gaps if gap]
+
+    description = str(item.get("ai_description") or "").strip()
+    if not description:
+        description = (
+            f"Assessment for {fallback['control_id']} could not be fully determined from available evidence."
+        )
+
+    return {
+        "control_id": fallback["control_id"],
+        "control_name": str(item.get("control_name") or fallback["control_name"]),
+        "status": status,
+        "confidence": confidence,
+        "evidence_references": evidence_refs,
+        "gaps": gaps,
+        "ai_description": description,
+    }
 
 
 def _system_prompt(framework: Framework) -> str:

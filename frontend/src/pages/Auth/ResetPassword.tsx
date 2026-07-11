@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
 import { authApi } from '../../api/auth'
+import LegalLinks from '../../components/layout/LegalLinks'
 
 const inputClass =
   'login-input w-full px-4 py-3 rounded text-sm focus:outline-none'
@@ -136,6 +137,7 @@ export default function ResetPassword() {
             </form>
           </>
         )}
+        <LegalLinks className="mt-10" />
       </div>
     </div>
   )

@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 // LogRaven — Vite Configuration
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,19 +10,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 /** Shared proxy for `vite dev` and `vite preview` so /api and /auth hit the FastAPI backend. */
 function createApiProxy(apiTarget: string) {
-  const logProxy = (label: string) => (proxy: { on: (ev: string, fn: (...args: unknown[]) => void) => void }) => {
-    proxy.on('proxyReq', (_proxyReq, req) => {
-      const r = req as { method?: string; url?: string }
-      console.log(`\x1b[36m→ ${label}\x1b[0m ${r.method?.padEnd(6)} ${r.url}`)
-    })
-    proxy.on('proxyRes', (proxyRes, req) => {
-      const res = proxyRes as { statusCode?: number }
-      const r = req as { method?: string; url?: string }
-      const s = res.statusCode ?? 0
-      const color = s < 300 ? '\x1b[32m' : s < 500 ? '\x1b[33m' : '\x1b[31m'
-      console.log(`\x1b[36m← ${label}\x1b[0m ${color}${s}\x1b[0m ${r.method?.padEnd(6)} ${r.url}`)
-    })
-  }
+  const logProxy =
+    (label: string) => (proxy: { on: (ev: string, fn: (...args: unknown[]) => void) => void }) => {
+      proxy.on('proxyReq', (_proxyReq, req) => {
+        const r = req as { method?: string; url?: string }
+        console.log(`\x1b[36m→ ${label}\x1b[0m ${r.method?.padEnd(6)} ${r.url}`)
+      })
+      proxy.on('proxyRes', (proxyRes, req) => {
+        const res = proxyRes as { statusCode?: number }
+        const r = req as { method?: string; url?: string }
+        const s = res.statusCode ?? 0
+        const color = s < 300 ? '\x1b[32m' : s < 500 ? '\x1b[33m' : '\x1b[31m'
+        console.log(`\x1b[36m← ${label}\x1b[0m ${color}${s}\x1b[0m ${r.method?.padEnd(6)} ${r.url}`)
+      })
+    }
 
   return {
     '/api': {
@@ -54,6 +56,19 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.VITE_API_URL': JSON.stringify(normalizeApiBase(env.VITE_API_URL)),
     },
     plugins: [react()],
+    build: {
+      // Budget: scripts/check-bundle-size.mjs fails the build in CI when any
+      // JS chunk exceeds its limit; this warning is the local early signal.
+      chunkSizeWarningLimit: 500,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+            'vendor-motion': ['framer-motion'],
+          },
+        },
+      },
+    },
     server: {
       port: 5173,
       strictPort: true,
@@ -61,6 +76,26 @@ export default defineConfig(({ mode }) => {
     },
     preview: {
       proxy: apiProxy,
+    },
+    test: {
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+      clearMocks: true,
+      exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
+      testTimeout: 10_000,
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json-summary', 'html'],
+        thresholds: {
+          // Whole-source baseline. Ratchet these upward as each phase adds tests.
+          statements: 13,
+          branches: 9,
+          functions: 12,
+          lines: 13,
+        },
+        include: ['src/**/*.{ts,tsx}'],
+        exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/vite-env.d.ts'],
+      },
     },
   }
 })

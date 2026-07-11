@@ -3,6 +3,32 @@ import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useInView } from 'framer-motion'
 import { Shield, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import client from '../api/client'
+import LegalLinks from '../components/layout/LegalLinks'
+
+interface PlatformStats {
+  detection_rules: number
+  log_formats: number
+  mitre_techniques: number
+}
+
+/** Real platform numbers from the public stats endpoint; conservative fallbacks while loading. */
+function usePlatformStats() {
+  const [stats, setStats] = useState<PlatformStats | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    client
+      .get<PlatformStats>('/api/v1/meta/stats')
+      .then((res) => { if (!cancelled) setStats(res.data) })
+      .catch(() => { /* keep fallbacks — landing must render without the API */ })
+    return () => { cancelled = true }
+  }, [])
+  return {
+    rules: stats ? stats.detection_rules.toLocaleString() : '2,000+',
+    formats: stats ? String(stats.log_formats) : '5',
+    mitre: stats ? String(stats.mitre_techniques) : '300+',
+  }
+}
 
 function SectionReveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null)
@@ -164,15 +190,15 @@ function Step({ num, title, description, index }: { num: string; title: string; 
   )
 }
 
-function TerminalPreview() {
+function TerminalPreview({ ruleCount }: { ruleCount: string }) {
   const lines = [
     { text: '$ lograven analyze --files Security.evtx Sysmon.evtx', color: '#E3B57E' },
     { text: '→ Parsed 284,712 events across 2 files', color: '#8FBDAD', delay: 0.3 },
-    { text: '→ Running 847 detection rules...', color: '#94A3B8', delay: 0.6 },
+    { text: `→ Running ${ruleCount} detection rules...`, color: '#94A3B8', delay: 0.6 },
     { text: '⚠ T1003.001  CRITICAL  Credential Dumping via LSASS', color: '#DB8585', delay: 0.9 },
     { text: '⚠ T1059.001  CRITICAL  Encoded PowerShell Execution', color: '#DB8585', delay: 1.1 },
     { text: '→ Correlating across 2 sources...', color: '#94A3B8', delay: 1.4 },
-    { text: '→ AI analysis complete', color: '#8FBDAD', delay: 1.7 },
+    { text: '→ Optional AI analysis complete (consented)', color: '#8FBDAD', delay: 1.7 },
     { text: '✓ Report ready: 12 findings, 3 critical', color: '#E3B57E', delay: 2.0 },
   ]
   return (
@@ -184,6 +210,7 @@ function TerminalPreview() {
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
         </div>
         <span className="ml-2 font-mono text-xs text-text-muted">lograven — analysis pipeline</span>
+        <span className="ml-auto font-mono text-[9px] text-text-ghost tracking-widest uppercase">Example output</span>
       </div>
       <div className="p-5 font-mono text-xs leading-7 space-y-0.5">
         {lines.map((line, i) => (
@@ -209,24 +236,25 @@ function TerminalPreview() {
 
 export default function Landing() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const stats = usePlatformStats()
   const { scrollY } = useScroll()
   const heroY = useTransform(scrollY, [0, 600], [0, -80])
   const heroOpacity = useTransform(scrollY, [0, 400], [1, 0])
 
   const features: Feature[] = [
-    { tag: 'Ingestion', title: 'Universal Log Ingestion', description: 'Upload EVTX, syslog, CloudTrail, Nginx, and firewall logs. Native parsers extract structured events from every format.' },
-    { tag: 'Detection', title: 'Multi-Engine Detection', description: '847+ YAML detection rules run across every log line. Choose between native parsers, decoder-manager, or run both side-by-side.' },
-    { tag: 'AI Layer', title: 'AI Analysis', description: 'Opt-in AI layer contextualizes findings, identifies attack chains, and generates executive-ready summaries for each investigation.' },
-    { tag: 'Mapping', title: 'MITRE ATT&CK Mapping', description: 'Every finding is automatically mapped to MITRE ATT&CK tactics and techniques, giving you the full kill chain at a glance.' },
+    { tag: 'Ingestion', title: 'Supported Log Ingestion', description: 'Upload EVTX, syslog, CloudTrail JSON, Nginx/IIS, and supported text logs. Native parsers extract structured events for recognized formats.' },
+    { tag: 'Detection', title: 'Multi-Engine Detection', description: `${stats.rules} YAML detection rules run over parsed events. Choose native parsers, decoder-manager where configured, or compare both.` },
+    { tag: 'AI Layer', title: 'Consent-Based AI Analysis', description: 'With explicit consent for each run, the optional AI layer contextualizes findings and generates executive summaries.' },
+    { tag: 'Mapping', title: 'MITRE ATT&CK Mapping', description: 'Detected techniques are mapped to MITRE ATT&CK tactics and techniques for investigation context.' },
     { tag: 'Correlation', title: 'Cross-Source Correlation', description: 'Correlate findings across multiple log files to surface multi-stage attack patterns invisible in any single source.' },
-    { tag: 'Reporting', title: 'PDF Evidence Packages', description: 'Generate professional PDF reports with all findings, IOCs, and AI commentary — ready for security reviews or incident response.' },
+    { tag: 'Reporting', title: 'PDF Evidence Packages', description: 'Generate PDF reports with findings, IOCs, and optional AI commentary for security reviews or incident response.' },
   ]
 
   const steps = [
-    { title: 'Upload your log files', description: 'Drag in any combination of log formats. LogRaven automatically detects source type and selects the appropriate parser.', num: '01' },
-    { title: 'Configure & run analysis', description: 'Enable cross-file correlation, toggle AI enrichment, and kick off the pipeline. Results stream in real-time.', num: '02' },
+    { title: 'Upload supported log files', description: 'Add EVTX, syslog, CloudTrail JSON, Nginx/IIS, or supported text logs. LogRaven detects a parser for recognized content.', num: '01' },
+    { title: 'Configure & run analysis', description: 'Choose correlation, explicitly consent to optional cloud AI, and start the pipeline. Progress refreshes every 2 seconds.', num: '02' },
     { title: 'Review findings', description: 'Explore prioritized findings, correlated attack chains, IOCs, and MITRE mappings in a rich interactive dashboard.', num: '03' },
-    { title: 'Export & respond', description: 'Download a forensic-grade PDF report or review findings directly with your team. Every IOC is actionable.', num: '04' },
+    { title: 'Export & respond', description: 'Download a PDF report to share with authorized reviewers. Validate findings before taking action.', num: '04' },
   ]
 
   return (
@@ -293,7 +321,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
               className="text-text-secondary text-lg max-w-xl mb-9 leading-relaxed"
             >
-              Upload any log format. Run 847 detection rules. Correlate across sources.
+              Upload supported security logs. Run {stats.rules} detection rules. Correlate across sources.
               Map findings to MITRE ATT&CK — with optional AI enrichment.
             </motion.p>
 
@@ -321,10 +349,10 @@ export default function Landing() {
               className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 pt-8 border-t border-white/[0.06]"
             >
               {[
-                { label: 'Detection Rules', value: '847+' },
-                { label: 'Log Formats', value: '8' },
-                { label: 'MITRE Techniques', value: '200+' },
-                { label: 'Avg Analysis', value: '< 5m' },
+                { label: 'Detection Rules', value: stats.rules },
+                { label: 'Parser Formats', value: stats.formats },
+                { label: 'MITRE Techniques', value: stats.mitre },
+                { label: 'Compliance Frameworks', value: '12' },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <div className="font-display font-bold text-2xl text-text-primary">{value}</div>
@@ -342,7 +370,7 @@ export default function Landing() {
           >
             <div className="absolute -inset-4 bg-hero-mesh opacity-40 blur-2xl rounded-3xl pointer-events-none" />
             <div className="relative">
-              <TerminalPreview />
+              <TerminalPreview ruleCount={stats.rules} />
             </div>
           </motion.div>
         </div>
@@ -372,24 +400,30 @@ export default function Landing() {
                 <div className="p-6 rounded-2xl border border-white/[0.06] bg-surface/60 backdrop-blur-xl mb-4">
                   <div className="flex items-center gap-2 mb-4">
                     <Shield className="w-4 h-4 text-indigo-400" />
-                    <span className="font-mono text-xs text-indigo-400 tracking-widest uppercase">SOC 2 Compliance</span>
+                    <span className="font-mono text-xs text-indigo-400 tracking-widest uppercase">Compliance Automation</span>
                   </div>
                   <h3 className="font-display font-semibold text-text-primary text-lg mb-2">
                     Automated AWS Compliance Audits
                   </h3>
                   <p className="text-text-secondary text-sm mb-4 leading-relaxed">
                     Provide an IAM role ARN and let LogRaven collect CloudTrail, IAM, and GuardDuty evidence.
-                    Get a scored SOC 2 CC6/CC7 report in minutes.
+                    Get scored reports across 12 frameworks, including SOC 2, ISO 27001, and CIS AWS.
                   </p>
-                  <Link to="/compliance" className="flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
-                    View compliance module <ArrowRight className="w-3.5 h-3.5" />
+                  <Link
+                    to={isAuthenticated ? '/compliance' : '/register'}
+                    className="flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    {isAuthenticated ? 'View compliance module' : 'Create an account to start'} <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
                 <div className="p-5 rounded-2xl border border-rose-500/15 bg-rose-500/5">
                   <div className="mb-3">
-                    <div className="font-mono text-[10px] text-rose-400/70 tracking-widest uppercase mb-1">Live threat indicator</div>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <span className="font-mono text-[10px] text-rose-400/70 tracking-widest uppercase">Threat indicator</span>
+                      <span className="font-mono text-[9px] text-text-ghost tracking-widest uppercase">Illustrative</span>
+                    </div>
                     <div className="font-display font-bold text-3xl text-text-primary">12</div>
-                    <div className="text-text-secondary text-xs mt-0.5">active findings detected</div>
+                    <div className="text-text-secondary text-xs mt-0.5">findings in a sample investigation</div>
                   </div>
                   <div className="flex gap-2">
                     {[['3', 'critical', '#DB8585'], ['4', 'high', '#E0A86F'], ['5', 'med', '#D9C27E']].map(([n, label, color]) => (
@@ -417,10 +451,7 @@ export default function Landing() {
             </span>
           </div>
           <span className="font-mono text-xs text-text-muted">© 2026 LogRaven — Watch your logs. Find the threat.</span>
-          <div className="flex items-center gap-4 text-xs text-text-muted">
-            <Link to="/login" className="hover:text-text-secondary transition-colors">Sign in</Link>
-            <Link to="/register" className="hover:text-text-secondary transition-colors">Register</Link>
-          </div>
+          <LegalLinks />
         </div>
       </footer>
     </div>

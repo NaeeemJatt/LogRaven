@@ -149,12 +149,14 @@ async def update_profile(
 
 @router.post("/password/change", status_code=204)
 async def change_password(
+    request: Request,
     body: ChangePasswordRequest,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Change password after verifying the current one."""
     from datetime import datetime
+    from app.utils.audit import add_audit
     from app.utils.security import verify_password, hash_password
 
     if not verify_password(body.current_password, current_user.password_hash):
@@ -165,6 +167,7 @@ async def change_password(
 
     current_user.password_hash = hash_password(body.new_password)
     current_user.updated_at = datetime.utcnow()
+    add_audit(db, user_id=current_user.id, action="password_changed", request=request, metadata={})
     await db.commit()
 
 

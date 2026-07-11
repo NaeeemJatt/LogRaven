@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
 import { authApi } from '../api/auth'
+import { formatDateTime } from '../utils/dateTime'
 
 type Tone = 'success' | 'error'
 
@@ -66,6 +67,29 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 // = PROFILE FORM =
 
+// Common IANA zones + whatever the browser reports, so the saved value is a
+// valid tz string the backend stores verbatim.
+const TIMEZONES: string[] = (() => {
+  const fallback = [
+    'UTC',
+    'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+    'Europe/Moscow', 'Africa/Cairo', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Kolkata',
+    'Asia/Dhaka', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo',
+    'Australia/Sydney', 'Pacific/Auckland',
+  ]
+  try {
+    const supportedValuesOf = (
+      Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
+    ).supportedValuesOf
+    const base = supportedValuesOf ? ['UTC', ...supportedValuesOf('timeZone')] : fallback
+    const local = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (local && !base.includes(local)) base.unshift(local)
+    return base
+  } catch { /* ignore — fall back to the static list */ }
+  return fallback
+})()
+
 function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) {
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
@@ -73,10 +97,11 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
 
   const defaultName = user?.name ?? user?.email?.split('@')[0] ?? ''
   const [name, setName] = useState(defaultName)
+  const [timezone, setTimezone] = useState(user?.timezone ?? '')
 
   const handleSave = async () => {
     try {
-      const res = await updateProfile({ name })
+      const res = await updateProfile({ name, timezone })
       if (res?.data) setUser(res.data)
       notify('Profile updated successfully', 'success')
     } catch {
@@ -89,6 +114,19 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
       <Field label="Display name" hint="Shown across the platform">
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={120}
           className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm" placeholder="Your name" />
+      </Field>
+
+      <Field label="Timezone" hint="Used to display dates and times in your local zone">
+        <select
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm"
+        >
+          <option value="">Not set (use UTC)</option>
+          {TIMEZONES.map((tz) => (
+            <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
       </Field>
 
       <Field label="Email address" hint="Used for login — contact support to change">
@@ -127,6 +165,28 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
           <Save className="w-4 h-4" /> {isUpdatingProfile ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+    </SettingsCard>
+  )
+}
+
+function PlanBlock() {
+  const tier = useAuthStore((state) => state.user?.tier?.toUpperCase() ?? 'FREE')
+  return (
+    <SettingsCard
+      icon={ShieldCheck}
+      title={`${tier} plan`}
+      description="Plan limits control upload size, analysis quota, and correlation access"
+    >
+      <p className="text-sm text-text-secondary">
+        Plan changes are handled by an administrator.{' '}
+        <a
+          href="mailto:support@lograven.io"
+          className="text-indigo-300 hover:text-indigo-200 underline"
+        >
+          Contact support
+        </a>{' '}
+        for help.
+      </p>
     </SettingsCard>
   )
 }
@@ -310,7 +370,11 @@ export default function ProfilePage() {
   const initials = displayName.slice(0, 2).toUpperCase()
   const tier = user?.tier?.toUpperCase() ?? 'FREE'
   const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatDateTime(user.created_at, user.timezone, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     : '—'
 
   const notify = (msg: string, tone: Tone) => setToast({ msg, tone })
@@ -371,6 +435,7 @@ export default function ProfilePage() {
             className="space-y-6"
           >
             <ProfileForm notify={notify} />
+            <PlanBlock />
             <SecurityForm notify={notify} />
             <DangerZone notify={notify} />
           </motion.div>

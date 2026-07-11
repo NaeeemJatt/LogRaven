@@ -10,8 +10,6 @@
 #
 # PDF:
 #   pdf_storage_key points to lograven-report-{uuid}.pdf in local/reports/
-#
-# TODO Month 4 Week 1: Implement this model.
 
 import uuid
 from datetime import datetime

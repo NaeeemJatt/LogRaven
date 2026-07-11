@@ -1,0 +1,27 @@
+# LogRaven — TLS overlay for the production stack.
+#
+# Terminates HTTPS in the bundled nginx using Let's Encrypt certificates from
+# the host. One-time setup on the server:
+#
+#   sudo apt install -y certbot
+#   sudo certbot certonly --standalone --cert-name lograven -d yourdomain.com
+#
+# Then run the stack with both files (and COOKIE_SECURE=true in .env):
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml up -d --build
+#
+# Renewals: certbot renews on the host; reload nginx afterwards with
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tls.yml exec web nginx -s reload
+
+services:
+  web:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot
+      - ./frontend/nginx-tls.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  certbot-webroot:

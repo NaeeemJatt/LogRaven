@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Download, Loader2, RotateCcw, FileText, ListChecks, AlertOctagon,
-  Wrench, Network, FileSpreadsheet, TrendingUp, TrendingDown,
+  Wrench, Network, FileSpreadsheet, TrendingUp, TrendingDown, Share2,
 } from 'lucide-react'
 import type {
   AuditStatusResponse, ControlResult, CrosswalkResponse, FrameworkResult,
@@ -18,7 +18,11 @@ import { downloadAuditReport, downloadEvidencePack, getCrosswalk } from '../../a
 interface AuditResultsProps {
   results: AuditStatusResponse
   auditId: string
-  onStartNew: () => void
+  onStartNew?: () => void
+  /** When set, shows a Share button in the actions column. */
+  onShare?: () => void
+  /** Public share view: hides authenticated-only actions (downloads / new / share). */
+  readOnly?: boolean
 }
 
 const STATUS_ORDER: Record<string, number> = { FAIL: 0, PARTIAL: 1, PASS: 2 }
@@ -88,7 +92,7 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
   )
 }
 
-export default function AuditResults({ results, auditId, onStartNew }: AuditResultsProps) {
+export default function AuditResults({ results, auditId, onStartNew, onShare, readOnly = false }: AuditResultsProps) {
   const frameworks = useMemo(() => deriveFrameworks(results), [results])
   const [activeFwId, setActiveFwId] = useState(frameworks[0]?.framework_id ?? 'soc2')
   const [view, setView] = useState<ViewMode>('controls')
@@ -99,7 +103,7 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
   const [crosswalk, setCrosswalk] = useState<CrosswalkResponse | null>(null)
 
   const active = frameworks.find((f) => f.framework_id === activeFwId) ?? frameworks[0]
-  const controls = active?.results ?? []
+  const controls = useMemo(() => active?.results ?? [], [active])
   const sorted = useMemo(() => sortedResults(controls), [controls])
   const company = results.company_name ?? ''
   const score = active?.score_percent ?? 0
@@ -208,38 +212,50 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:w-48">
-          <button
-            onClick={() => { void handleDownloadPdf() }}
-            disabled={downloading !== null}
-            className="btn-sovereign py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {downloading === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            PDF
-          </button>
-          <button
-            onClick={() => { void handleDownloadCsv() }}
-            disabled={downloading !== null}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            {downloading === 'csv' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-            CSV
-          </button>
-          <button
-            onClick={() => { void handleDownloadZip() }}
-            disabled={downloading !== null}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            {downloading === 'zip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Evidence ZIP
-          </button>
-          <button
-            onClick={onStartNew}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> New audit
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:w-48">
+            <button
+              onClick={() => { void handleDownloadPdf() }}
+              disabled={downloading !== null}
+              className="btn-sovereign py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {downloading === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              PDF
+            </button>
+            <button
+              onClick={() => { void handleDownloadCsv() }}
+              disabled={downloading !== null}
+              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+            >
+              {downloading === 'csv' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+              CSV
+            </button>
+            <button
+              onClick={() => { void handleDownloadZip() }}
+              disabled={downloading !== null}
+              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+            >
+              {downloading === 'zip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Evidence ZIP
+            </button>
+            {onShare && (
+              <button
+                onClick={onShare}
+                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </button>
+            )}
+            {onStartNew && (
+              <button
+                onClick={onStartNew}
+                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> New audit
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {downloadError && (
@@ -248,7 +264,8 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
         </p>
       )}
 
-      {/* ── View switch ──────────────────────────────────────────────────── */}
+      {/* ── View switch (crosswalk needs an authenticated session) ────────── */}
+      {!readOnly && (
       <div className="flex gap-1.5">
         {([
           { key: 'controls' as ViewMode, label: 'Control browser', icon: ListChecks },
@@ -266,6 +283,7 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
           </button>
         ))}
       </div>
+      )}
 
       {view === 'crosswalk' ? (
         <CrosswalkView data={crosswalk} />

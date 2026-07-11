@@ -4,8 +4,13 @@ from app.config import settings
 
 
 def cloud_ai_enabled() -> bool:
-    """Return True when any external AI provider is configured."""
-    return any([settings.GEMINI_API_KEY, settings.ANTHROPIC_API_KEY, settings.OPENAI_API_KEY])
+    """
+    Return True when the wired AI provider is configured.
+
+    Only the primary engine (GEMINI_API_KEY) is ever invoked by the pipeline;
+    other provider keys must not make the app claim AI is available.
+    """
+    return bool(settings.GEMINI_API_KEY)
 
 
 def require_cloud_ai_consent(consent_given: bool) -> None:

@@ -133,3 +133,39 @@ async def send_job_failed_email(to_email: str, investigation_name: str, error_me
             "Open dashboard",
         ),
     )
+
+
+async def send_audit_complete_email(
+    to_email: str, company_name: str, frameworks: list[str], overall_score: float | None
+) -> bool:
+    link = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/compliance"
+    fw = ", ".join(frameworks)
+    score_line = f" Overall readiness: {overall_score:.0f}%." if overall_score is not None else ""
+    return await send_email(
+        to_email,
+        f"LogRaven compliance audit complete — {company_name}",
+        f"Your compliance audit for '{company_name}' ({fw}) is complete.{score_line}\n\n"
+        f"View the results: {link}",
+        _button_html(
+            "Compliance audit complete",
+            f"Your audit for <b>{company_name}</b> ({fw}) finished.{score_line}",
+            link,
+            "View results",
+        ),
+    )
+
+
+async def send_audit_failed_email(to_email: str, company_name: str, error_message: str) -> bool:
+    link = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/compliance"
+    return await send_email(
+        to_email,
+        f"LogRaven compliance audit failed — {company_name}",
+        f"Your compliance audit for '{company_name}' failed:\n{error_message[:500]}\n\n"
+        f"You can start a new audit here: {link}",
+        _button_html(
+            "Compliance audit failed",
+            f"Your audit for <b>{company_name}</b> failed: {error_message[:300]}",
+            link,
+            "Open compliance",
+        ),
+    )

@@ -31,6 +31,10 @@ node_modules/
 dist/
 .next/
 .nuxt/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
 # IDE
 .vscode/

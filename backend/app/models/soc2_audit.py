@@ -18,7 +18,7 @@
 
 import uuid
 from datetime import date, datetime, timezone
-from sqlalchemy import String, DateTime, Date, ForeignKey, Text, Integer, Float
+from sqlalchemy import String, DateTime, Date, ForeignKey, Text, Integer, Float, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
@@ -28,14 +28,19 @@ class AuditJob(Base):
     __tablename__ = "soc2_audit_jobs"
 
     id:               Mapped[uuid.UUID]   = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id:          Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
+    user_id:          Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", name="fk_soc2_audit_jobs_user_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     company_name:     Mapped[str]         = mapped_column(String(255), nullable=False)
     role_arn:         Mapped[str]         = mapped_column(String(1024), nullable=False)
     audit_start_date: Mapped[date]        = mapped_column(Date, nullable=False)
     audit_end_date:   Mapped[date]        = mapped_column(Date, nullable=False)
     # Multi-framework: ids selected for this job (default keeps legacy SOC 2 behavior).
     frameworks:       Mapped[list]        = mapped_column(JSONB, default=lambda: ["soc2"])
-    status:           Mapped[str]         = mapped_column(String(20), nullable=False, default="pending")
+    status:           Mapped[str]         = mapped_column(String(20), nullable=False, default="pending", index=True)
     error_message:    Mapped[str | None]  = mapped_column(Text, nullable=True)
     raw_evidence:     Mapped[dict]        = mapped_column(JSONB, default=dict)
     sanitized_evidence: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
@@ -64,6 +69,9 @@ class AuditJob(Base):
 
 class AuditResult(Base):
     __tablename__ = "soc2_audit_results"
+    __table_args__ = (
+        Index("ix_soc2_audit_results_job_framework", "audit_job_id", "framework"),
+    )
 
     id:                     Mapped[uuid.UUID]  = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     audit_job_id:           Mapped[uuid.UUID]  = mapped_column(

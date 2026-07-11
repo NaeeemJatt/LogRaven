@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 
+from app.tasks.async_runner import run_async
 from app.tasks.celery_app import celery_app
 from app.utils.logger import get_logger
 
@@ -31,7 +32,7 @@ def run_soc2_audit(self, audit_job_id: str) -> dict:
     The task name is kept as "compliance.run_soc2_audit" for backward
     compatibility; it now grades every framework selected on the job.
     """
-    return asyncio.run(_run_audit_pipeline(self, audit_job_id))
+    return run_async(_run_audit_pipeline(self, audit_job_id))
 
 
 # Generic alias for clarity in new code paths.
@@ -41,7 +42,7 @@ run_compliance_audit = run_soc2_audit
 @celery_app.task(name="compliance.rescan_due_audits")
 def rescan_due_audits() -> dict:
     """Celery-beat entry point: re-run audits whose continuous-monitoring schedule is due."""
-    return asyncio.run(_rescan_due())
+    return run_async(_rescan_due())
 
 
 def _compute_next_run(recurrence: str, now: datetime | None = None) -> datetime | None:
@@ -274,6 +275,8 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             await db.commit()
             task_self.update_state(state="PROGRESS", meta={"step": "complete", "percent": 100})
 
+            await _notify_user(db, audit_job, complete=True, scores=per_framework)
+
             # ── Step 8: Summary ─────────────────────────────────────────────
             summary = {
                 "audit_job_id": str(job_uuid),
@@ -291,6 +294,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                     audit_job.status = "failed"
                     audit_job.error_message = f"Unexpected error in audit pipeline: {e}"
                     await db.commit()
+                    await _notify_user(db, audit_job, complete=False, error=str(e))
                 except Exception:  # noqa: BLE001
                     pass
             return {"status": "failed", "error": str(e)}
@@ -301,7 +305,41 @@ async def _fail(db, audit_job, message: str) -> dict:
     audit_job.status = "failed"
     audit_job.error_message = message
     await db.commit()
+    await _notify_user(db, audit_job, complete=False, error=message)
     return {"status": "failed", "error": message}
+
+
+async def _notify_user(db, audit_job, *, complete: bool, error: str | None = None, scores: dict | None = None) -> None:
+    """Best-effort audit complete/failed email — must never fail the pipeline."""
+    try:
+        from app.models.user import User
+        from app.services import email_service
+
+        res = await db.execute(select(User).where(User.id == audit_job.user_id))
+        user = res.scalar_one_or_none()
+        if user is None:
+            return
+
+        frameworks = [str(f) for f in (audit_job.frameworks or [])]
+        if complete:
+            overall = None
+            if scores:
+                values = [
+                    s["score_percent"]
+                    for s in scores.values()
+                    if isinstance(s, dict) and isinstance(s.get("score_percent"), (int, float))
+                ]
+                if values:
+                    overall = sum(values) / len(values)
+            await email_service.send_audit_complete_email(
+                user.email, audit_job.company_name, frameworks, overall
+            )
+        else:
+            await email_service.send_audit_failed_email(
+                user.email, audit_job.company_name, error or "Unknown error"
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Audit notification email skipped: %s", exc)
 
 
 async def _generate_reports(db, audit_job, frameworks: list[str]) -> None:

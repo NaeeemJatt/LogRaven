@@ -44,9 +44,24 @@ _conf = {
             "task": "maintenance.reconcile_stuck_jobs",
             "schedule": 900.0,  # every 15 min
         },
+        # Compliance: enforce the 1-year audit-trail retention policy.
+        "purge-expired-audit-logs": {
+            "task": "maintenance.purge_expired_audit_logs",
+            "schedule": 86400.0,  # daily
+        },
+        # Per-tier report retention (no-op unless REPORT_RETENTION_DAYS_* set).
+        "purge-expired-reports": {
+            "task": "maintenance.purge_expired_reports",
+            "schedule": 86400.0,  # daily
+        },
     },
 }
 # Prefork-only; solo/threads pools on Windows ignore or warn on this.
 if os.name != "nt":
     _conf["worker_max_tasks_per_child"] = 100
 celery_app.conf.update(_conf)
+
+# Optional external error alerting (no-op unless SENTRY_DSN is set).
+from app.utils.alerting import init_error_alerting  # noqa: E402
+
+init_error_alerting("worker")

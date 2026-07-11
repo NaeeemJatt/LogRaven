@@ -9,8 +9,6 @@
 #   UserLogin       — POST /auth/login request body
 #   UserResponse    — GET /user/me response (never includes password_hash)
 #   TokenResponse   — response after register/login/refresh
-#
-# TODO Month 1 Week 1: Implement this file.
 
 from pydantic import BaseModel, EmailStr, ConfigDict
 from uuid import UUID

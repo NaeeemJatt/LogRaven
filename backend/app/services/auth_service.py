@@ -143,6 +143,24 @@ async def login_user(
         await db.commit()
         raise invalid_exc
 
+    # Optional gate: block login until the email is verified. Checked only
+    # AFTER the password succeeds so it can't be used to enumerate accounts.
+    from app.config import settings
+
+    if settings.REQUIRE_VERIFIED_EMAIL_FOR_LOGIN and not user.email_verified:
+        db.add(AuditLog(
+            user_id=user.id,
+            action="failed_login",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata_={"reason": "email_not_verified"},
+        ))
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in. Check your inbox for the verification link.",
+        )
+
     # Success — audit log
     db.add(AuditLog(
         user_id=user.id,

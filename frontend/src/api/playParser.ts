@@ -30,10 +30,6 @@ export interface PlayParserEvaluateItem {
   sample_events: PlayParserSampleEvent[] | null
 }
 
-export interface PlayParserEvaluateResponse {
-  results: PlayParserEvaluateItem[]
-}
-
 export interface PlayParserDetectCandidate {
   log_type: string
   confidence: number
@@ -90,13 +86,6 @@ export interface PlayParserPreviewResponse {
 export type PlayParserRunMode = 'parsers_only' | 'decoders_only' | 'both'
 
 export const playParserApi = {
-  evaluate: (file: File, parserKeys: string[]) => {
-    const form = new FormData()
-    form.append('file', file)
-    form.append('parser_keys', JSON.stringify(parserKeys))
-    return client.post<PlayParserEvaluateResponse>('/api/v1/play-parser/evaluate', form)
-  },
-
   detect: (file: File) => {
     const form = new FormData()
     form.append('file', file)

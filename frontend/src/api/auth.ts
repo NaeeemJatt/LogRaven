@@ -16,9 +16,7 @@ export const authApi = {
   login: (email: string, password: string) =>
     client.post<AuthSessionResponse>('/auth/login', { email, password }),
 
-  /** Uses httpOnly refresh cookie when body omitted. */
-  refresh: () => client.post<AuthSessionResponse>('/auth/refresh', {}),
-
+  // Session refresh lives in api/client.ts (raw axios interceptor, avoids recursion).
   me: () => client.get('/auth/me'),
 
   logout: () => client.post('/auth/logout'),

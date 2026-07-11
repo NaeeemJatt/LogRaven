@@ -9,15 +9,18 @@ import {
   Loader2, Cpu
 } from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
+import { normalizeApiError } from '../api/errors'
+import AlertModal from '../components/ui/AlertModal'
+import { useAuthStore } from '../store/authStore'
 import type { Investigation, InvestigationFile } from '../types/investigation'
 
 const SOURCE_TYPES = [
   { value: 'windows_endpoint', label: 'Windows Endpoint', icon: Monitor, color: '#E3B57E', extensions: '.evtx, .xml' },
-  { value: 'linux_endpoint', label: 'Linux / Syslog', icon: Server, color: '#14B8A6', extensions: '.log, .gz' },
+  { value: 'linux_endpoint', label: 'Linux / Syslog', icon: Server, color: '#14B8A6', extensions: '.log, .txt' },
   { value: 'firewall', label: 'Firewall', icon: AlertCircle, color: '#F97316', extensions: '.log, .txt' },
-  { value: 'network', label: 'Network', icon: Wifi, color: '#FBBF24', extensions: '.pcap, .log' },
+  { value: 'network', label: 'Network', icon: Wifi, color: '#FBBF24', extensions: '.log, .txt' },
   { value: 'web_server', label: 'Web / Nginx', icon: Globe, color: '#F43F5E', extensions: '.log, .txt' },
-  { value: 'cloudtrail', label: 'AWS CloudTrail', icon: Cloud, color: '#8A9CB8', extensions: '.json, .gz' },
+  { value: 'cloudtrail', label: 'AWS CloudTrail', icon: Cloud, color: '#8A9CB8', extensions: '.json' },
 ]
 
 function guessSourceType(filename: string): string {
@@ -34,6 +37,24 @@ const FILE_STATUS_STYLE: Record<string, string> = {
   failed:  'bg-rose-500/10 border-rose-500/20 text-rose-400',
 }
 
+// Read-only status indicator for pipeline capabilities that reflect server /
+// investigation state (not user-toggleable), so the UI doesn't imply an
+// interactive control it can't back.
+function StatusTag({ on, onLabel, offLabel }: { on: boolean; onLabel: string; offLabel: string }) {
+  return (
+    <span
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 font-mono text-[10px] px-2 py-1 rounded-md border uppercase tracking-wider ${
+        on
+          ? 'bg-teal-500/10 border-teal-500/25 text-teal-400'
+          : 'bg-white/[0.04] border-white/[0.08] text-text-muted'
+      }`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-teal-400' : 'bg-text-muted'}`} />
+      {on ? onLabel : offLabel}
+    </span>
+  )
+}
+
 interface PendingFile {
   file: File
   sourceType: string
@@ -44,18 +65,23 @@ export default function Investigation() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const userId = useAuthStore((state) => state.user?.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [dragOver, setDragOver] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadPlanLimit, setUploadPlanLimit] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [cloudAiConsent, setCloudAiConsent] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [analysisPlanLimit, setAnalysisPlanLimit] = useState(false)
+  const [updatingCorrelation, setUpdatingCorrelation] = useState(false)
+  const [correlationError, setCorrelationError] = useState<string | null>(null)
 
   const { data: inv, isLoading } = useQuery<Investigation>({
-    queryKey: ['investigation', id],
+    queryKey: ['investigation', userId, id],
     queryFn: async () => (await investigationsApi.get(id!)).data,
     enabled: !!id,
   })
@@ -93,17 +119,17 @@ export default function Investigation() {
   const handleUploadAll = async () => {
     setUploading(true)
     setUploadError(null)
+    setUploadPlanLimit(false)
     try {
       for (const { file, sourceType, ingestionMode } of pendingFiles) {
         await investigationsApi.uploadFile(id!, file, sourceType, ingestionMode)
       }
       setPendingFiles([])
-      queryClient.invalidateQueries({ queryKey: ['investigation', id] })
+      queryClient.invalidateQueries({ queryKey: ['investigation', userId, id] })
     } catch (err: unknown) {
-      const detail = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : undefined
-      setUploadError(detail ?? 'Upload failed.')
+      const normalized = normalizeApiError(err, 'Upload failed.')
+      setUploadError(normalized.message)
+      setUploadPlanLimit(normalized.isPlanLimit)
     } finally {
       setUploading(false)
     }
@@ -111,20 +137,38 @@ export default function Investigation() {
 
   const handleDeleteFile = async (fileId: string) => {
     await investigationsApi.deleteFile(id!, fileId)
-    queryClient.invalidateQueries({ queryKey: ['investigation', id] })
+    queryClient.invalidateQueries({ queryKey: ['investigation', userId, id] })
+  }
+
+  const handleCorrelationChange = async (correlationEnabled: boolean) => {
+    setUpdatingCorrelation(true)
+    setCorrelationError(null)
+    try {
+      const response = await investigationsApi.update(id!, {
+        correlation_enabled: correlationEnabled,
+      })
+      queryClient.setQueryData(['investigation', userId, id], response.data)
+    } catch (err: unknown) {
+      const detail = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined
+      setCorrelationError(detail ?? 'Could not update correlation.')
+    } finally {
+      setUpdatingCorrelation(false)
+    }
   }
 
   const handleAnalyze = async () => {
     setAnalyzing(true)
     setAnalysisError(null)
+    setAnalysisPlanLimit(false)
     try {
       await investigationsApi.analyze(id!, inv?.cloud_ai_enabled ? cloudAiConsent : false)
       navigate(`/investigations/${id}/status`)
     } catch (err: unknown) {
-      const detail = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : undefined
-      setAnalysisError(detail ?? 'Could not start analysis.')
+      const normalized = normalizeApiError(err, 'Could not start analysis.')
+      setAnalysisError(normalized.message)
+      setAnalysisPlanLimit(normalized.isPlanLimit)
     } finally {
       setAnalyzing(false)
     }
@@ -221,7 +265,7 @@ export default function Investigation() {
                   <Upload className="w-6 h-6 text-indigo-400" />
                 </div>
                 <p className="font-medium text-text-primary mb-1">Drop log files here</p>
-                <p className="text-sm text-text-muted mb-4">EVTX, syslog, CloudTrail, Nginx, firewall — any format</p>
+                <p className="text-sm text-text-muted mb-4">Supported: EVTX, syslog, CloudTrail JSON, Nginx/IIS, and text logs</p>
                 <span className="btn-ghost px-4 py-2 rounded-lg text-sm font-medium text-text-secondary pointer-events-none">
                   Browse files
                 </span>
@@ -298,6 +342,11 @@ export default function Investigation() {
                   {uploadError && (
                     <div className="px-5 py-2.5 border-t border-white/[0.04] font-mono text-xs text-rose-400">
                       {uploadError}
+                      {uploadPlanLimit && (
+                        <a href="mailto:support@lograven.io" className="ml-2 underline text-indigo-300">
+                          Contact support
+                        </a>
+                      )}
                     </div>
                   )}
                   <div className="px-5 py-3 border-t border-indigo-500/10 flex justify-end">
@@ -405,7 +454,7 @@ export default function Investigation() {
             >
               <div className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
                 <Settings2 className="w-3.5 h-3.5 text-text-muted" />
-                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Analysis options</span>
+                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Analysis pipeline</span>
               </div>
               <div className="p-5 space-y-5">
                 <div className="flex items-start justify-between gap-4">
@@ -415,17 +464,41 @@ export default function Investigation() {
                       <span className="text-sm font-medium text-text-primary">Cross-file correlation</span>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
-                      Link events across log sources to surface multi-stage attack chains
+                      {inv.correlation_enabled
+                        ? 'Runs when 2+ uploaded files parse successfully'
+                        : 'Disabled for this investigation'}
                     </p>
                   </div>
-                  <div className={`flex-shrink-0 w-10 h-5 rounded-full border relative ${
-                    inv.correlation_enabled ? 'bg-indigo-500/40 border-indigo-500/50' : 'bg-white/5 border-white/10'
-                  }`}>
-                    <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
-                      inv.correlation_enabled ? 'left-[20px] bg-indigo-400' : 'left-[2px] bg-text-muted'
-                    }`} />
-                  </div>
+                  {canEdit ? (
+                    <label className="relative inline-flex flex-shrink-0 cursor-pointer items-center">
+                      <input
+                        type="checkbox"
+                        aria-label="Cross-file correlation"
+                        checked={inv.correlation_enabled}
+                        disabled={updatingCorrelation}
+                        onChange={(event) => handleCorrelationChange(event.target.checked)}
+                        className="peer sr-only"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="h-6 w-11 rounded-full border border-white/10 bg-white/5 transition-colors peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-deep peer-disabled:opacity-50"
+                      >
+                        <span className={`block h-4 w-4 translate-y-[3px] rounded-full transition-transform ${
+                          inv.correlation_enabled
+                            ? 'translate-x-6 bg-indigo-300'
+                            : 'translate-x-1 bg-text-muted'
+                        }`} />
+                      </span>
+                    </label>
+                  ) : (
+                    <StatusTag on={inv.correlation_enabled} onLabel="On" offLabel="Off" />
+                  )}
                 </div>
+                {correlationError && (
+                  <p role="alert" className="font-mono text-[10px] text-rose-400">
+                    {correlationError}
+                  </p>
+                )}
                 <div className="h-px bg-white/[0.04]" />
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -437,16 +510,12 @@ export default function Investigation() {
                       </span>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
-                      Contextualizes findings and generates executive summaries
+                      {inv.cloud_ai_enabled
+                        ? 'Contextualizes findings and generates executive summaries (consent required below)'
+                        : 'No AI provider configured on this server — analysis runs rules and correlation only'}
                     </p>
                   </div>
-                  <div className={`flex-shrink-0 w-10 h-5 rounded-full border relative ${
-                    inv.cloud_ai_enabled ? 'bg-violet-500/40 border-violet-500/50' : 'bg-white/5 border-white/10'
-                  }`}>
-                    <div className={`absolute top-0.5 w-3.5 h-3.5 rounded-full transition-all ${
-                      inv.cloud_ai_enabled ? 'left-[20px] bg-violet-400' : 'left-[2px] bg-text-muted'
-                    }`} />
-                  </div>
+                  <StatusTag on={inv.cloud_ai_enabled} onLabel="Available" offLabel="Off" />
                 </div>
               </div>
             </motion.div>
@@ -502,6 +571,11 @@ export default function Investigation() {
             {analysisError && (
               <div className="px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 font-mono text-xs text-rose-400">
                 {analysisError}
+                {analysisPlanLimit && (
+                  <a href="mailto:support@lograven.io" className="ml-2 underline text-indigo-300">
+                    Contact support
+                  </a>
+                )}
               </div>
             )}
 
@@ -528,6 +602,23 @@ export default function Investigation() {
           </div>
         </div>
       </div>
+
+      <AlertModal
+        isOpen={!!analysisError}
+        title="Cannot start analysis"
+        message={analysisError ?? ''}
+        tone="warning"
+        actionLabel={analysisPlanLimit ? 'Contact support' : undefined}
+        onAction={
+          analysisPlanLimit
+            ? () => {
+                window.location.href = 'mailto:support@lograven.io'
+              }
+            : undefined
+        }
+        dismissLabel="OK"
+        onDismiss={() => setAnalysisError(null)}
+      />
     </div>
   )
 }

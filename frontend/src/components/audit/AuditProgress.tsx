@@ -1,11 +1,11 @@
-// LogRaven — SOC 2 Audit Progress (Control Room stage)
+// LogRaven — Compliance Audit Progress (Control Room stage)
 //
 // Polls /api/v1/audit/{auditId}/status every 5s. Renders a single-stage
 // "scan console": prominent status, a horizontal pipeline, and a live log.
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Check, Loader2, WifiOff, Radio, Clock, X, Plug, Database, BrainCircuit, FileArchive } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, WifiOff, Radio, Clock, X, Plug, Database, BrainCircuit, FileArchive, RefreshCw } from 'lucide-react'
 import type { AuditStatusResponse } from '../../types/audit'
 import { getAuditStatus } from '../../api/compliance'
 
@@ -13,7 +13,9 @@ interface AuditProgressProps {
   auditId: string
   companyName: string
   onComplete: (results: AuditStatusResponse) => void
-  onError: (error: string) => void
+  onLeave: () => void
+  onRetry: () => Promise<void>
+  isRetrying: boolean
 }
 
 const STEPS = [
@@ -33,7 +35,7 @@ function checkedCount(percent: number): number {
 function stepLabel(step: string | null | undefined, percent: number): string {
   if (step === 'collecting') return 'Collecting AWS evidence...'
   if (step === 'sanitizing') return 'Sanitizing evidence...'
-  if (step === 'mapping')    return 'Mapping to SOC 2 controls with AI...'
+  if (step === 'mapping')    return 'Mapping evidence to selected framework controls...'
   if (step === 'saving')     return 'Saving results...'
   if (percent >= 75) return 'Generating evidence package...'
   if (percent >= 50) return 'Analyzing controls with AI...'
@@ -41,22 +43,30 @@ function stepLabel(step: string | null | undefined, percent: number): string {
   return 'Connecting to AWS account...'
 }
 
-export default function AuditProgress({ auditId, companyName, onComplete, onError }: AuditProgressProps) {
+export default function AuditProgress({
+  auditId,
+  companyName,
+  onComplete,
+  onLeave,
+  onRetry,
+  isRetrying,
+}: AuditProgressProps) {
   const [percent, setPercent]           = useState(0)
   const [currentStep, setCurrentStep]   = useState<string | null>(null)
   const [connectionLost, setConnectionLost] = useState(false)
   const [elapsed, setElapsed]           = useState(0)
+  const [failure, setFailure]           = useState<string | null>(null)
 
   const doneRef     = useRef(false)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
-    timerRef.current = setInterval(() => setElapsed((s) => s + 1), 1000)
-    return () => { if (timerRef.current) clearInterval(timerRef.current) }
-  }, [])
-
-  useEffect(() => {
+    doneRef.current = false
+    setFailure(null)
+    setPercent(0)
+    setElapsed(0)
+    timerRef.current = setInterval(() => setElapsed((seconds) => seconds + 1), 1000)
     const poll = async () => {
       if (doneRef.current) return
       try {
@@ -73,7 +83,7 @@ export default function AuditProgress({ auditId, companyName, onComplete, onErro
           doneRef.current = true
           if (intervalRef.current) clearInterval(intervalRef.current)
           if (timerRef.current)    clearInterval(timerRef.current)
-          onError(data.error ?? 'Audit failed')
+          setFailure(data.error ?? 'Audit failed')
         }
       } catch {
         setConnectionLost(true)
@@ -81,15 +91,18 @@ export default function AuditProgress({ auditId, companyName, onComplete, onErro
     }
     void poll()
     intervalRef.current = setInterval(() => { void poll() }, 5000)
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auditId])
 
-  const handleCancel = () => {
+  const handleLeave = () => {
     doneRef.current = true
     if (intervalRef.current) clearInterval(intervalRef.current)
     if (timerRef.current)    clearInterval(timerRef.current)
-    onError('Audit cancelled by user')
+    onLeave()
   }
 
   const minutes = Math.floor(elapsed / 60)
@@ -101,6 +114,33 @@ export default function AuditProgress({ auditId, companyName, onComplete, onErro
     ...STEPS.slice(0, checked).map((s) => ({ kind: 'done' as const, text: `${s.label.toLowerCase()} — ${s.detail} ✓` })),
     ...(checked < STEPS.length ? [{ kind: 'active' as const, text: stepLabel(currentStep, percent) }] : []),
   ]
+
+  if (failure) {
+    return (
+      <div className="ops-panel p-8 flex flex-col items-center text-center gap-4">
+        <AlertTriangle className="w-8 h-8 text-threat-critical" />
+        <div>
+          <h2 className="font-display text-lg font-bold text-text-primary">Compliance audit failed</h2>
+          <p className="text-sm text-text-muted mt-2 max-w-lg">{failure}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            void onRetry()
+          }}
+          disabled={isRetrying}
+          className="btn-sovereign min-h-11 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50"
+        >
+          {isRetrying ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          {isRetrying ? 'Starting retry…' : 'Retry as new audit'}
+        </button>
+      </div>
+    )
+  }
 
   return (
     <motion.div
@@ -116,10 +156,10 @@ export default function AuditProgress({ auditId, companyName, onComplete, onErro
           <h2 className="font-display text-base font-bold text-text-primary truncate">{companyName}</h2>
         </div>
         <button
-          onClick={handleCancel}
+          onClick={handleLeave}
           className="btn-ghost px-3 py-1.5 rounded-lg text-xs font-medium text-text-secondary hover:text-text-primary inline-flex items-center gap-1.5 flex-shrink-0"
         >
-          <X className="w-3.5 h-3.5" /> Cancel
+          <X className="w-3.5 h-3.5" /> Leave progress
         </button>
       </div>
 

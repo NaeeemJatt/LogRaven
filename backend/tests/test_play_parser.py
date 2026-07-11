@@ -1,4 +1,4 @@
-# Tests — PlayParser sandbox API (auth, validation, evaluate response shape)
+# Tests — PlayParser sandbox API (auth, validation, evaluate-compare response shape)
 
 import io
 import uuid
@@ -16,7 +16,14 @@ def _fake_user():
 
 
 @pytest.fixture
-def client_authed():
+def client_authed(monkeypatch):
+    async def _no_mgr():
+        return False
+
+    monkeypatch.setattr(
+        "app.api.play_parser.routes.decoder_manager_is_healthy_cached",
+        _no_mgr,
+    )
     user = _fake_user()
 
     async def override_user():
@@ -28,22 +35,34 @@ def client_authed():
     app.dependency_overrides.pop(get_current_user, None)
 
 
-def test_evaluate_syslog_and_nginx_multi_parser_shape(client_authed):
+def _compare_payload(parser_keys='["syslog"]'):
+    return {
+        "parser_keys": parser_keys,
+        "source_type": "linux_endpoint",
+        "include_decoders": "true",
+        "play_mode": "both",
+    }
+
+
+def test_evaluate_compare_syslog_and_nginx_multi_parser_shape(client_authed):
     client, _user = client_authed
     body = (
         b"Jan  2 12:00:00 web01 sshd[1234]: Failed password for root from 192.0.2.1 port 22 ssh2\n"
         b"Jan  2 12:00:01 web01 sudo: pam_unix(sudo:session): session opened for user alice\n"
     )
     files = {"file": ("sample.log", io.BytesIO(body), "text/plain")}
-    data = {"parser_keys": '["syslog", "nginx"]'}
-    r = client.post("/api/v1/play-parser/evaluate", files=files, data=data)
+    r = client.post(
+        "/api/v1/play-parser/evaluate-compare",
+        files=files,
+        data=_compare_payload('["syslog", "nginx"]'),
+    )
     assert r.status_code == 200, r.text
     payload = r.json()
-    assert "results" in payload
-    assert len(payload["results"]) == 2
-    keys = {row["parser_key"] for row in payload["results"]}
+    assert "parser_results" in payload
+    assert len(payload["parser_results"]) == 2
+    keys = {row["parser_key"] for row in payload["parser_results"]}
     assert keys == {"syslog", "nginx"}
-    for row in payload["results"]:
+    for row in payload["parser_results"]:
         assert "ok" in row
         assert "event_count" in row
         if row["ok"]:
@@ -56,12 +75,15 @@ def test_evaluate_syslog_and_nginx_multi_parser_shape(client_authed):
             assert isinstance(q["score"], (int, float))
 
 
-def test_evaluate_unknown_parser_400(client_authed):
+def test_evaluate_compare_unknown_parser_400(client_authed):
     client, _ = client_authed
     body = b"hello\n"
     files = {"file": ("x.log", io.BytesIO(body), "text/plain")}
-    data = {"parser_keys": '["not_a_parser"]'}
-    r = client.post("/api/v1/play-parser/evaluate", files=files, data=data)
+    r = client.post(
+        "/api/v1/play-parser/evaluate-compare",
+        files=files,
+        data=_compare_payload('["not_a_parser"]'),
+    )
     assert r.status_code == 400
     assert "Unknown parser" in (r.json().get("detail") or "")
 
@@ -73,31 +95,22 @@ def test_meta_public_200():
     assert r.status_code == 200
     body = r.json()
     assert body.get("service") == "play-parser"
-    assert "/evaluate" in str(body.get("endpoints"))
     assert "evaluate-compare" in str(body.get("endpoints"))
     assert "/preview" in str(body.get("endpoints"))
+    assert "/detect" in str(body.get("endpoints"))
 
 
-def test_evaluate_compare_shape_decoder_unreachable(client_authed, monkeypatch):
-    async def _no_mgr():
-        return False
-
-    monkeypatch.setattr(
-        "app.api.play_parser.routes.decoder_manager_is_healthy_cached",
-        _no_mgr,
-    )
+def test_evaluate_compare_shape_decoder_unreachable(client_authed):
     client, _user = client_authed
     body = (
         b"Jan  2 12:00:00 web01 sshd[1234]: Failed password for root from 192.0.2.1 port 22 ssh2\n"
     )
     files = {"file": ("sample.log", io.BytesIO(body), "text/plain")}
-    data = {
-        "parser_keys": '["syslog"]',
-        "source_type": "linux_endpoint",
-        "include_decoders": "true",
-        "play_mode": "both",
-    }
-    r = client.post("/api/v1/play-parser/evaluate-compare", files=files, data=data)
+    r = client.post(
+        "/api/v1/play-parser/evaluate-compare",
+        files=files,
+        data=_compare_payload(),
+    )
     assert r.status_code == 200, r.text
     payload = r.json()
     assert "parser_results" in payload
@@ -106,11 +119,14 @@ def test_evaluate_compare_shape_decoder_unreachable(client_authed, monkeypatch):
     assert payload["decoders"]["ok"] is False
 
 
-def test_evaluate_unauthenticated_401():
+def test_evaluate_compare_unauthenticated_401():
     app.dependency_overrides.pop(get_current_user, None)
     body = b"Jan  2 12:00:00 h test: msg\n"
     files = {"file": ("s.log", io.BytesIO(body), "text/plain")}
-    data = {"parser_keys": '["syslog"]'}
     with TestClient(app) as client:
-        r = client.post("/api/v1/play-parser/evaluate", files=files, data=data)
+        r = client.post(
+            "/api/v1/play-parser/evaluate-compare",
+            files=files,
+            data=_compare_payload(),
+        )
     assert r.status_code == 401

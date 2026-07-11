@@ -4,7 +4,9 @@
 // auth cookies, the 401 → refresh interceptor, and withCredentials are
 // applied automatically — identical to investigations.ts / reports.ts.
 
+import axios from 'axios'
 import client from './client'
+import { normalizeApiBase } from './normalizeApiBase'
 import type {
   AuditStartResponse,
   AuditStatusResponse,
@@ -28,6 +30,11 @@ export async function listFrameworks(): Promise<FrameworkInfo[]> {
 
 export async function startAudit(body: AuditStartBody): Promise<AuditStartResponse> {
   const res = await client.post<AuditStartResponse>('/api/v1/audit/start', body)
+  return res.data
+}
+
+export async function retryAudit(auditId: string): Promise<AuditStartResponse> {
+  const res = await client.post<AuditStartResponse>(`/api/v1/audit/${auditId}/retry`)
   return res.data
 }
 
@@ -58,9 +65,40 @@ export async function getCrosswalk(frameworks?: string[]): Promise<CrosswalkResp
   return res.data
 }
 
-export async function getPosture(): Promise<Record<string, unknown>> {
-  const res = await client.get('/api/v1/compliance/posture')
-  return res.data as Record<string, unknown>
+export interface PostureCard {
+  framework_id: string
+  framework_name: string
+  score_percent: number
+  pass_count: number
+  fail_count: number
+  partial_count: number
+  score_delta: number | null
+  as_of: string | null
+}
+
+export interface PostureResponse {
+  frameworks: PostureCard[]
+  overall_score: number | null
+  reuse_factor: number | null
+  total_audits: number
+}
+
+export async function getPosture(): Promise<PostureResponse> {
+  const res = await client.get<PostureResponse>('/api/v1/compliance/posture')
+  return res.data
+}
+
+/**
+ * Public, token-scoped read-only audit results (no auth).
+ *
+ * Uses a bare axios call: the shared client's 401 interceptor would try to
+ * refresh a session and bounce anonymous visitors to /login, but here a 401
+ * simply means the share link is invalid or expired.
+ */
+export async function getSharedAudit(token: string): Promise<AuditStatusResponse> {
+  const base = normalizeApiBase(import.meta.env.VITE_API_URL)
+  const res = await axios.get<AuditStatusResponse>(`${base}/api/v1/audit/shared/${token}`)
+  return res.data
 }
 
 export interface AuditSummary {
@@ -73,9 +111,21 @@ export interface AuditSummary {
   score_percent?: number | null
 }
 
-export async function listAudits(): Promise<AuditSummary[]> {
-  const res = await client.get<AuditSummary[]>('/api/v1/audits')
-  return res.data
+export interface AuditHistoryPage {
+  items: AuditSummary[]
+  page: number
+  total: number
+  totalPages: number
+}
+
+export async function listAudits(page = 1, limit = 20): Promise<AuditHistoryPage> {
+  const res = await client.get<AuditSummary[]>('/api/v1/audits', { params: { page, limit } })
+  return {
+    items: res.data,
+    page: Number(res.headers['x-page'] ?? page),
+    total: Number(res.headers['x-total-count'] ?? res.data.length),
+    totalPages: Number(res.headers['x-total-pages'] ?? (res.data.length ? 1 : 0)),
+  }
 }
 
 export async function createShareLink(

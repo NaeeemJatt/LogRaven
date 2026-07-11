@@ -2,11 +2,10 @@
 # NOTE: boto3 also used for S3 storage and SOC 2 AWS collector
 
 # Web framework
-# fastapi 0.115.x pulls Starlette >=0.40.0, which fixes the multipart/form-data
-# memory-exhaustion DoS (CVE-2024-47874) present in the Starlette <0.38 range
-# that fastapi 0.111 depended on.
-fastapi==0.115.7
-starlette>=0.40.0,<0.41.0
+# Keep FastAPI/Starlette current together; both packages receive request-parsing
+# security fixes and are audited in CI.
+fastapi==0.139.0
+starlette>=1.3.1,<1.4.0
 uvicorn[standard]==0.30.1
 
 # Database
@@ -17,15 +16,15 @@ psycopg2-binary==2.9.11
 
 # Validation (2.12+ pulls pydantic-core wheels for Python 3.14 on Windows; older pins require Rust to build)
 pydantic==2.12.5
-pydantic-settings==2.13.1
+pydantic-settings==2.14.2
 email-validator==2.2.0
 
 # Auth
-PyJWT[crypto]==2.9.0
+PyJWT[crypto]==2.13.0
 slowapi==0.1.9
 passlib[bcrypt]==1.7.4
 bcrypt==4.1.3
-python-multipart==0.0.22
+python-multipart==0.0.32
 
 # Task queue
 celery==5.3.6
@@ -40,11 +39,9 @@ mitreattack-python==5.4.0
 
 # AI
 google-genai==1.69.0
-anthropic==0.28.0
-openai==1.35.0
 
 # PDF generation
-weasyprint==68.1      # best quality (Linux/Docker — needs GTK3)
+weasyprint==69.0      # best quality (Linux/Docker — needs GTK3)
 xhtml2pdf==0.2.17     # pure-Python fallback (Windows dev, no system deps needed)
 reportlab==4.0.9      # SOC 2 compliance report generation
 jinja2==3.1.6
@@ -60,9 +57,15 @@ boto3==1.34.131
 httpx==0.28.1
 
 # Testing
-pytest==8.2.2
-pytest-asyncio==0.23.7
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pytest-cov==7.1.0
+pip-audit==2.10.0
 httpx==0.28.1
+ruff==0.15.21
 
 # Logging
 structlog==24.2.0
+
+# Error alerting (optional — active only when SENTRY_DSN is set)
+sentry-sdk==2.64.0

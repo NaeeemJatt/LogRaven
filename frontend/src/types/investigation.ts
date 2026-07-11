@@ -34,6 +34,11 @@ export interface Investigation {
   cloud_ai_enabled: boolean
   files: InvestigationFile[]
   created_at: string
+  queued_at: string | null
+  /** Total findings from the analysis report (0 until analysis completes). */
+  findings_count: number
+  /** Per-severity counts from the report, e.g. { critical: 2, high: 1 }. */
+  severity_summary: Record<string, number>
 }
 
 export interface InvestigationStatus {
@@ -41,5 +46,6 @@ export interface InvestigationStatus {
   status: string
   progress_stage: string | null
   error_message?: string | null
+  queued_at?: string | null
   files: InvestigationFile[]
 }

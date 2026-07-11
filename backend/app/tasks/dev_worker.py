@@ -50,10 +50,13 @@ def ensure_dev_worker_running() -> bool:
     """
     # Rely on AUTO_START_DEV_WORKER (not DEBUG): DEBUG defaults false and would
     # leave tasks stuck in Redis with no consumer for typical local .env setups.
-    if settings.CELERY_TASK_ALWAYS_EAGER or not settings.AUTO_START_DEV_WORKER:
-        return False
+    if settings.CELERY_TASK_ALWAYS_EAGER:
+        return True
 
     if _has_active_worker():
+        return True
+
+    if not settings.AUTO_START_DEV_WORKER:
         return False
 
     # Do not skip startup based on pidfile alone: Windows PID reuse or a non-Celery

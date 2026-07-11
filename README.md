@@ -5,7 +5,7 @@
 LogRaven is a cybersecurity platform with two modes:
 
 - **Threat Detection** — upload log files (EVTX, syslog, CloudTrail, Nginx), AI maps events to MITRE ATT&CK, generates a PDF incident report
-- **SOC 2 Compliance Audit** — connect an AWS account via STS AssumeRole, collect CloudTrail / IAM / GuardDuty evidence, AI maps to SOC 2 CC6/CC7 controls, generates a PDF evidence package
+- **Compliance Audit (12 frameworks)** — connect an AWS account via STS AssumeRole, collect CloudTrail / IAM / GuardDuty and extended evidence, AI grades the evidence against SOC 2, ISO 27001, CIS AWS, PCI DSS, HIPAA, GDPR, NIST CSF, NIST 800-53, FedRAMP, CSA CCM, ISO 27017 and ISO 27018, and generates per-framework PDF/CSV evidence packages
 
 ## Stack
 
@@ -65,7 +65,7 @@ Services started: `lograven` (API on :8000), `lograven-worker` (Celery), `lograv
 
 > **Note:** `JWT_SECRET_KEY` is required — Docker Compose will refuse to start without it.
 
-## SOC 2 Compliance Audit — AWS Setup
+## Compliance Audit — AWS Setup
 
 1. In the **customer's** AWS account, create an IAM role with the policy in the `/compliance` helper UI.
 2. Set the trust principal to LogRaven's AWS account ID (`VITE_AWS_ACCOUNT_ID` in `.env`).
@@ -81,7 +81,7 @@ See `.env.example` for the full list. Key variables:
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET_KEY` | Yes | 32+ random characters |
-| `GEMINI_API_KEY` | Yes | Cloud AI provider API key — used for both threat detection and SOC 2 |
+| `GEMINI_API_KEY` | Yes | Cloud AI provider API key — used for threat detection and compliance grading |
 | `REDIS_URL` | Yes | Redis connection string |
 | `STORAGE_BACKEND` | No | `local` (default) or `s3` |
 | `VITE_AWS_ACCOUNT_ID` | No | Your AWS account ID shown in the IAM role trust-policy helper |

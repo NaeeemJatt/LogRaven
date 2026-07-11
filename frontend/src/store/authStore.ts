@@ -1,5 +1,6 @@
 // LogRaven — Auth state (no tokens in JS; httpOnly cookies hold JWTs)
 import { create } from 'zustand'
+import { queryClient } from '../queryClient'
 
 export interface AuthUser {
   id: string
@@ -22,11 +23,21 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   isAuthenticated: false,
 
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  setUser: (user) =>
+    set((state) => {
+      if (state.user?.id !== user?.id) {
+        void queryClient.cancelQueries()
+        queryClient.clear()
+      }
+      return { user, isAuthenticated: !!user }
+    }),
 
-  logout: () =>
+  logout: () => {
+    void queryClient.cancelQueries()
+    queryClient.clear()
     set({
       user: null,
       isAuthenticated: false,
-    }),
+    })
+  },
 }))

@@ -20,9 +20,8 @@ export interface Report {
   investigation_id: string
   summary: string | null
   severity_counts: Record<string, number>
-  correlated_findings: Finding[]
-  single_source_findings: Finding[]
   mitre_techniques: string[]
+  // Both correlated and single-source findings, distinguished by finding_type.
   findings: Finding[]
   created_at: string
 }

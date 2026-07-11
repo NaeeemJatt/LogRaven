@@ -6,7 +6,6 @@
 
 import json
 import logging
-import os
 import sys
 
 
@@ -54,15 +53,18 @@ class _ColorFormatter(logging.Formatter):
 
 
 def get_logger(name: str) -> logging.Logger:
+    # Imported lazily so this module stays importable even if config isn't
+    # loadable yet (e.g. tooling that imports utils in isolation).
+    from app.config import settings
+
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
-        if os.getenv("LOG_FORMAT", "text").lower() == "json":
+        if str(settings.LOG_FORMAT).lower() == "json":
             handler.setFormatter(_JsonFormatter())
         else:
             handler.setFormatter(_ColorFormatter())
         logger.addHandler(handler)
         logger.propagate = False   # don't double-print via root logger
-    level = logging.DEBUG if os.getenv("DEBUG", "").lower() in ("true", "1") else logging.INFO
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
     return logger

@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { MailCheck, KeyRound, ArrowLeft } from 'lucide-react'
 import { authApi } from '../../api/auth'
+import LegalLinks from '../../components/layout/LegalLinks'
 
 const inputClass =
   'login-input w-full px-4 py-3 rounded text-sm focus:outline-none'
@@ -101,6 +102,7 @@ export default function ForgotPassword() {
             </p>
           </>
         )}
+        <LegalLinks className="mt-10" />
       </div>
     </div>
   )

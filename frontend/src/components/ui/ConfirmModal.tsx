@@ -1,6 +1,6 @@
 // LogRaven — Confirm modal (matches dashboard / card chrome)
-import { useEffect, useRef } from 'react'
 import { AlertTriangle } from 'lucide-react'
+import { useModalFocus } from '../../hooks/useModalFocus'
 
 interface ConfirmModalProps {
   isOpen: boolean
@@ -21,20 +21,7 @@ export default function ConfirmModal({
   onCancel,
   isLoading = false,
 }: ConfirmModalProps) {
-  const cancelRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => {
-    if (isOpen) cancelRef.current?.focus()
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [isOpen, onCancel])
+  const dialogRef = useModalFocus<HTMLDivElement>(isOpen, onCancel)
 
   if (!isOpen) return null
 
@@ -45,7 +32,9 @@ export default function ConfirmModal({
       role="presentation"
     >
       <div
-        className="w-full max-w-md overflow-hidden rounded-xl border border-raven-700 bg-raven-900 shadow-2xl shadow-black/50"
+        ref={dialogRef}
+        tabIndex={-1}
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-xl border border-raven-700 bg-raven-900 shadow-2xl shadow-black/50"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -69,7 +58,7 @@ export default function ConfirmModal({
 
         <div className="flex items-center justify-end gap-3 border-t border-raven-700 bg-raven-950 px-5 py-4">
           <button
-            ref={cancelRef}
+            data-autofocus
             type="button"
             onClick={onCancel}
             disabled={isLoading}

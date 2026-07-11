@@ -46,6 +46,22 @@ services:
       - lograven-redis
     command: celery -A app.tasks.celery_app worker --loglevel=info
 
+  lograven-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: lograven-beat
+    environment:
+      - DATABASE_URL=postgresql://postgres:lgrpass@lograven-db:5432/lograven
+      - REDIS_URL=redis://lograven-redis:6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY?JWT_SECRET_KEY is required}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - lograven-db
+      - lograven-redis
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+
   lograven-db:
     image: postgres:15-alpine
     container_name: lograven-db

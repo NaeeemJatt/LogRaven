@@ -184,6 +184,7 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
   const [copied, setCopied] = useState(false)
   const [showPolicy, setShowPolicy] = useState(false)
   const [frameworks, setFrameworks] = useState<FrameworkInfo[]>([])
+  const [frameworkError, setFrameworkError] = useState(false)
   const [fwCategory, setFwCategory] = useState<string>('recommended')
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     org: true, aws: true, window: true, frameworks: true, monitoring: false,
@@ -197,7 +198,9 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
     let active = true
     listFrameworks()
       .then((list) => { if (active) setFrameworks(list) })
-      .catch(() => { /* non-fatal: form still works with the soc2 default */ })
+      .catch(() => {
+        if (active) setFrameworkError(true)
+      })
     return () => { active = false }
   }, [])
 
@@ -352,6 +355,12 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           <p className="text-[11px] text-text-muted mb-4">
             Evidence is collected once and graded against every framework you select.
           </p>
+          {frameworkError && (
+            <p role="alert" className="text-[11px] text-amber-300 mb-4">
+              The framework catalog could not be loaded. SOC 2 is available as a fallback; retry
+              the page before selecting other frameworks.
+            </p>
+          )}
 
           {/* Selected summary chips (cross-category) */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -576,6 +585,10 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
             <span>{formData.frameworks.length} framework{formData.frameworks.length === 1 ? '' : 's'}</span>
             <span>{windowDays ? `${windowDays}-day window` : 'No window set'} · {recurrenceLabel}</span>
           </div>
+          <p className="mb-3 text-[11px] text-text-muted">
+            Starting the audit sends sanitized aggregate AWS evidence to the configured cloud AI
+            provider for control grading.
+          </p>
           <button
             onClick={handleSubmit}
             disabled={!isFormValid || isLoading}

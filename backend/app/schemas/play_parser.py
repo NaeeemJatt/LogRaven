@@ -34,10 +34,6 @@ class PlayParserEvaluateItem(BaseModel):
     sample_events: list[PlayParserSampleEvent] | None = None
 
 
-class PlayParserEvaluateResponse(BaseModel):
-    results: list[PlayParserEvaluateItem]
-
-
 class PlayParserDetectCandidate(BaseModel):
     log_type: str
     confidence: float
