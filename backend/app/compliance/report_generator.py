@@ -40,6 +40,7 @@ ACCENT = HexColor("#2F81F7")
 PASS_GREEN = HexColor("#3FB950")
 FAIL_RED = HexColor("#F85149")
 PARTIAL_YELLOW = HexColor("#D29922")
+SUPPRESSED_PURPLE = HexColor("#A371F7")
 TEXT_PRIMARY = HexColor("#E6EDF3")
 TEXT_SECONDARY = HexColor("#8B949E")
 BACKGROUND = HexColor("#0D1117")
@@ -52,6 +53,7 @@ _HEX_ACCENT = "#2F81F7"
 _HEX_PASS = "#3FB950"
 _HEX_FAIL = "#F85149"
 _HEX_PARTIAL = "#D29922"
+_HEX_SUPPRESSED = "#A371F7"
 _HEX_TEXT_PRIMARY = "#E6EDF3"
 _HEX_TEXT_SECONDARY = "#8B949E"
 
@@ -188,6 +190,12 @@ def generate_compliance_report(
         story.append(Spacer(1, 0.3 * cm))
         story.append(PageBreak())
 
+    # Exceptions Log Section (Auditor documentation if any suppressed controls exist)
+    exceptions_story = _build_exceptions_section(audit_results)
+    if exceptions_story:
+        story.extend(exceptions_story)
+        story.append(PageBreak())
+
     # Final Page: Appendix
     story.extend(_build_appendix())
 
@@ -298,41 +306,45 @@ def _build_executive_summary(
     story.append(Spacer(1, 0.3 * cm))
 
     pass_count = sum(1 for r in audit_results if r.status == "PASS")
+    suppressed_count = sum(1 for r in audit_results if r.status == "SUPPRESSED")
     fail_count = sum(1 for r in audit_results if r.status == "FAIL")
     partial_count = sum(1 for r in audit_results if r.status == "PARTIAL")
     total = len(audit_results)
-    score_percent = (pass_count / total * 100) if total > 0 else 0.0
+    raw_score_percent = (pass_count / total * 100) if total > 0 else 0.0
+    effective_denom = max(total - suppressed_count, 1)
+    adjusted_score_percent = (pass_count / effective_denom * 100) if effective_denom > 0 else 0.0
 
-    story.append(
-        Paragraph(
-            f"<font color='{_HEX_ACCENT}' size=24><b>{score_percent:.1f}%</b></font>",
-            normal_style,
-        )
+    score_display = (
+        f"<font color='{_HEX_ACCENT}' size=24><b>{adjusted_score_percent:.1f}%</b></font>"
     )
-    story.append(
-        Paragraph(
-            f"<font color='{_HEX_TEXT_SECONDARY}' size=10>Overall Compliance Score</font>",
-            secondary_style,
-        )
+    story.append(Paragraph(score_display, normal_style))
+    subtext = (
+        f"<font color='{_HEX_TEXT_SECONDARY}' size=10>Adjusted Compliance Score "
+        f"({suppressed_count} business exceptions authorized) | Raw: {raw_score_percent:.1f}%</font>"
+        if suppressed_count > 0
+        else f"<font color='{_HEX_TEXT_SECONDARY}' size=10>Overall Compliance Score</font>"
     )
+    story.append(Paragraph(subtext, secondary_style))
     story.append(Spacer(1, 0.5 * cm))
 
     table_data = [
         [
-            f"<font color='{_HEX_TEXT_PRIMARY}' size=10><b>Controls Assessed</b></font>",
-            f"<font color='{_HEX_PASS}' size=10><b>PASS</b></font>",
-            f"<font color='{_HEX_FAIL}' size=10><b>FAIL</b></font>",
-            f"<font color='{_HEX_PARTIAL}' size=10><b>PARTIAL</b></font>",
+            f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Assessed</b></font>",
+            f"<font color='{_HEX_PASS}' size=9><b>PASS</b></font>",
+            f"<font color='{_HEX_SUPPRESSED}' size=9><b>EXCEPTIONS</b></font>",
+            f"<font color='{_HEX_FAIL}' size=9><b>FAIL</b></font>",
+            f"<font color='{_HEX_PARTIAL}' size=9><b>PARTIAL</b></font>",
         ],
         [
             f"<font color='{_HEX_TEXT_PRIMARY}' size=10>{total}</font>",
             f"<font color='{_HEX_PASS}' size=10><b>{pass_count}</b></font>",
+            f"<font color='{_HEX_SUPPRESSED}' size=10><b>{suppressed_count}</b></font>",
             f"<font color='{_HEX_FAIL}' size=10><b>{fail_count}</b></font>",
             f"<font color='{_HEX_PARTIAL}' size=10><b>{partial_count}</b></font>",
         ],
     ]
 
-    table = Table(table_data, colWidths=[3.5 * cm, 2 * cm, 2 * cm, 2 * cm])
+    table = Table(table_data, colWidths=[2.6 * cm, 1.8 * cm, 2.5 * cm, 1.8 * cm, 1.8 * cm])
     table.setStyle(
         TableStyle(
             [
@@ -340,14 +352,14 @@ def _build_executive_summary(
                 ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
                 ("ALIGN", (0, 0), (-1, -1), "CENTER"),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, 0), 10),
-                ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+                ("FONTSIZE", (0, 0), (-1, 0), 9),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
                 ("BACKGROUND", (0, 1), (-1, -1), NAVY),
                 ("TEXTCOLOR", (0, 1), (-1, -1), TEXT_PRIMARY),
                 ("FONTSIZE", (0, 1), (-1, -1), 10),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [NAVY, SURFACE]),
                 ("GRID", (0, 0), (-1, -1), 1, BORDER),
-                ("PADDING", (0, 0), (-1, -1), 8),
+                ("PADDING", (0, 0), (-1, -1), 6),
             ]
         )
     )
@@ -357,8 +369,9 @@ def _build_executive_summary(
     posture_text = (
         f"This audit assessed {total} {escape(framework_name)} controls. "
         f"The assessment found {pass_count} controls operating effectively, "
+        f"{suppressed_count} controls with authorized business exceptions, "
         f"{fail_count} controls requiring attention, and {partial_count} controls with partial implementation. "
-        f"The overall compliance posture is rated at {score_percent:.1f}%."
+        f"The adjusted compliance posture is rated at {adjusted_score_percent:.1f}%."
     )
     story.append(Paragraph(posture_text, normal_style))
     story.append(Spacer(1, 0.5 * cm))
@@ -402,6 +415,9 @@ def _build_control_detail(audit_result: "AuditResult") -> list:
     if audit_result.status == "PASS":
         badge_hex = _HEX_PASS
         badge_text = "PASS"
+    elif audit_result.status == "SUPPRESSED":
+        badge_hex = _HEX_SUPPRESSED
+        badge_text = "SUPPRESSED (BUSINESS EXCEPTION)"
     elif audit_result.status == "FAIL":
         badge_hex = _HEX_FAIL
         badge_text = "FAIL"
@@ -416,6 +432,23 @@ def _build_control_detail(audit_result: "AuditResult") -> list:
         )
     )
     story.append(Spacer(1, 0.2 * cm))
+
+    # If suppressed, render business justification callout
+    exc = (audit_result.raw_evidence_summary or {}).get("exception")
+    if exc:
+        justification = exc.get("business_justification", "Documented business logic requirement")
+        compensating = exc.get("compensating_controls") or "None documented"
+        suppressed_by = exc.get("suppressed_by", "Security Officer")
+        story.append(
+            Paragraph(
+                f"<font color='{_HEX_SUPPRESSED}' size=10><b>Authorized Business Logic Exception</b></font><br/>"
+                f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Justification:</b> {escape(justification)}</font><br/>"
+                f"<font color='{_HEX_TEXT_SECONDARY}' size=9><b>Compensating Controls:</b> {escape(compensating)}</font><br/>"
+                f"<font color='{_HEX_TEXT_SECONDARY}' size=8>Authorized by: {escape(suppressed_by)}</font>",
+                normal_style,
+            )
+        )
+        story.append(Spacer(1, 0.3 * cm))
 
     story.append(
         Paragraph(
@@ -480,6 +513,29 @@ def _build_control_detail(audit_result: "AuditResult") -> list:
                 normal_style,
             )
         )
+
+    remediation_guide = audit_result.raw_evidence_summary.get("remediation_guide")
+    if remediation_guide:
+        cli_cmd = remediation_guide.get("aws_cli_command")
+        verify_cmd = remediation_guide.get("verification_command")
+        if cli_cmd and not cli_cmd.startswith("# Note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.append(
+                Paragraph(
+                    f"<font color='{_HEX_TEXT_SECONDARY}' size=8><b>AWS CLI Remediation:</b></font><br/>"
+                    f"<font color='{_HEX_ACCENT}' face='Courier' size=8>{escape(cli_cmd[:300])}</font>",
+                    normal_style,
+                )
+            )
+        if verify_cmd and not verify_cmd.startswith("# Re-run"):
+            story.append(Spacer(1, 0.1 * cm))
+            story.append(
+                Paragraph(
+                    f"<font color='{_HEX_TEXT_SECONDARY}' size=8><b>Verification Command:</b></font><br/>"
+                    f"<font color='{_HEX_PASS}' face='Courier' size=8>{escape(verify_cmd[:250])}</font>",
+                    normal_style,
+                )
+            )
 
     story.append(Spacer(1, 0.2 * cm))
     story.append(Paragraph("<hr/><br/>", normal_style))
@@ -554,3 +610,77 @@ def _build_appendix() -> list:
     )
 
     return story
+
+
+def _build_exceptions_section(audit_results: list["AuditResult"]) -> list:
+    """Build dedicated business logic exceptions & compensating controls log for auditors."""
+    suppressed = [r for r in audit_results if r.status == "SUPPRESSED"]
+    if not suppressed:
+        return []
+
+    story = []
+    story.append(
+        Paragraph(
+            f"<font color='{_HEX_NAVY}' size=16><b>Auditor Log: Business Exceptions & Compensating Controls</b></font>",
+            heading_style,
+        )
+    )
+    story.append(Spacer(1, 0.3 * cm))
+    story.append(
+        Paragraph(
+            f"<font color='{_HEX_TEXT_SECONDARY}' size=10>The following {len(suppressed)} controls have authorized business logic exceptions approved with documented compensating controls. These items have been reviewed and accepted by security leadership.</font>",
+            secondary_style,
+        )
+    )
+    story.append(Spacer(1, 0.5 * cm))
+
+    table_data = [
+        [
+            f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Control</b></font>",
+            f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Business Justification</b></font>",
+            f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Compensating Controls</b></font>",
+            f"<font color='{_HEX_TEXT_PRIMARY}' size=9><b>Review By / Expiry</b></font>",
+        ]
+    ]
+
+    for r in suppressed:
+        exc = (r.raw_evidence_summary or {}).get("exception") or {}
+        justification = exc.get("business_justification") or "Documented business logic requirement"
+        compensating = exc.get("compensating_controls") or "N/A"
+        suppressed_by = exc.get("suppressed_by") or "Security Lead"
+        expires_at = exc.get("expires_at")
+        expiry_str = expires_at.split("T")[0] if expires_at else "Perpetual"
+
+        table_data.append(
+            [
+                f"<font color='{_HEX_SUPPRESSED}' size=8><b>{escape(r.control_id)}</b><br/>{escape(r.control_name[:40])}</font>",
+                f"<font color='{_HEX_TEXT_PRIMARY}' size=8>{escape(justification[:180])}</font>",
+                f"<font color='{_HEX_TEXT_SECONDARY}' size=8>{escape(compensating[:180])}</font>",
+                f"<font color='{_HEX_TEXT_SECONDARY}' size=8>{escape(suppressed_by)}<br/>Exp: {escape(expiry_str)}</font>",
+            ]
+        )
+
+    table = Table(table_data, colWidths=[3.5 * cm, 5.5 * cm, 5.5 * cm, 3.5 * cm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), SURFACE),
+                ("TEXTCOLOR", (0, 0), (-1, 0), ACCENT),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("BACKGROUND", (0, 1), (-1, -1), NAVY),
+                ("TEXTCOLOR", (0, 1), (-1, -1), TEXT_PRIMARY),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [NAVY, SURFACE]),
+                ("GRID", (0, 0), (-1, -1), 0.5, BORDER),
+            ]
+        )
+    )
+    story.append(table)
+    return story
+

@@ -17,10 +17,10 @@ import type { Investigation, InvestigationFile } from '../types/investigation'
 const SOURCE_TYPES = [
   { value: 'windows_endpoint', label: 'Windows Endpoint', icon: Monitor, color: '#E3B57E', extensions: '.evtx, .xml' },
   { value: 'linux_endpoint', label: 'Linux / Syslog', icon: Server, color: '#14B8A6', extensions: '.log, .txt' },
-  { value: 'firewall', label: 'Firewall', icon: AlertCircle, color: '#F97316', extensions: '.log, .txt' },
-  { value: 'network', label: 'Network', icon: Wifi, color: '#FBBF24', extensions: '.log, .txt' },
   { value: 'web_server', label: 'Web / Nginx', icon: Globe, color: '#F43F5E', extensions: '.log, .txt' },
   { value: 'cloudtrail', label: 'AWS CloudTrail', icon: Cloud, color: '#8A9CB8', extensions: '.json' },
+  { value: 'firewall', label: 'Firewall (Syslog/Text)', icon: AlertCircle, color: '#F97316', extensions: '.log, .txt' },
+  { value: 'network', label: 'Network (Syslog/Text)', icon: Wifi, color: '#FBBF24', extensions: '.log, .txt' },
 ]
 
 function guessSourceType(filename: string): string {

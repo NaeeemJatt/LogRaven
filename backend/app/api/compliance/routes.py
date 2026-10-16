@@ -20,7 +20,7 @@ import uuid
 import zipfile
 import json
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from math import ceil
 from pathlib import Path
 
@@ -33,7 +33,7 @@ from celery.result import AsyncResult
 
 from app.dependencies import get_current_user, get_db
 from app.limiter import limiter
-from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot
+from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException
 from app.compliance.tasks import run_soc2_audit
 from app.compliance.report_generator import generate_compliance_report
 from app.compliance.frameworks import (
@@ -118,13 +118,15 @@ class ControlResult(BaseModel):
     control_name: str
     status: str
     confidence: str
-    ai_description: str
+    ai_description: str = ""
     gaps: list[str] = Field(default_factory=list)
     evidence_references: list[str] = Field(default_factory=list)
     framework: str | None = None
     category: str | None = None
     automatable: bool | None = None
     remediation: str | None = None
+    exception: dict | None = None
+    remediation_guide: dict | None = None
 
 
 class FrameworkResult(BaseModel):
@@ -134,7 +136,9 @@ class FrameworkResult(BaseModel):
     pass_count: int
     fail_count: int
     partial_count: int
+    suppressed_count: int = 0
     score_percent: float
+    raw_score_percent: float | None = None
     score_delta: float | None = None
     results: list[ControlResult] = Field(default_factory=list)
 
@@ -151,17 +155,48 @@ class AuditStatusResponse(BaseModel):
     pass_count: int | None = None
     fail_count: int | None = None
     partial_count: int | None = None
+    suppressed_count: int | None = None
     score_percent: float | None = None
+    raw_score_percent: float | None = None
     results: list[ControlResult] | None = None
     # Multi-framework breakdown:
     framework_results: list[FrameworkResult] | None = None
     error: str | None = None
 
 
+class SuppressControlRequest(BaseModel):
+    business_justification: str = Field(..., min_length=5, max_length=2000)
+    compensating_controls: str | None = Field(default=None, max_length=2000)
+    risk_level: str = Field(default="medium")
+    expires_at: datetime | None = Field(default=None)
+
+    @field_validator("risk_level")
+    @classmethod
+    def validate_risk(cls, v: str) -> str:
+        if v.lower() not in ("low", "medium", "high", "critical"):
+            raise ValueError("risk_level must be one of: low, medium, high, critical")
+        return v.lower()
+
+
+class ExceptionResponse(BaseModel):
+    id: str
+    company_name: str
+    framework: str
+    control_id: str
+    business_justification: str
+    compensating_controls: str | None = None
+    risk_level: str
+    suppressed_by: str
+    status: str
+    expires_at: str | None = None
+    created_at: str
+
+
 class AuditStartResponse(BaseModel):
     audit_id: str
     status: str
     message: str
+
 
 
 class FrameworkInfo(BaseModel):
@@ -208,18 +243,29 @@ async def _load_owned_job(db: AsyncSession, audit_id: str, user) -> AuditJob:
 
 def _control_model(r: AuditResult) -> ControlResult:
     summary = r.raw_evidence_summary or {}
+    guide = summary.get("remediation_guide")
+    if not guide and r.status != "PASS":
+        from app.compliance.remediation import get_remediation_guide
+        guide = get_remediation_guide(
+            control_id=r.control_id,
+            control_name=r.control_name,
+            guidance=summary.get("remediation") or "",
+        ).model_dump()
+
     return ControlResult(
         control_id=r.control_id,
         control_name=r.control_name,
         status=r.status,
         confidence=summary.get("confidence", "LOW"),
-        ai_description=r.ai_description,
+        ai_description=r.ai_description or "",
         gaps=summary.get("gaps", []),
         evidence_references=summary.get("evidence_references", []),
         framework=r.framework,
         category=summary.get("category"),
         automatable=summary.get("automatable"),
         remediation=summary.get("remediation") or None,
+        exception=summary.get("exception"),
+        remediation_guide=guide,
     )
 
 
@@ -250,9 +296,13 @@ def _build_framework_results(
     out: list[FrameworkResult] = []
     for framework_id, rows in grouped.items():
         pass_count = sum(1 for r in rows if r.status == "PASS")
+        suppressed_count = sum(1 for r in rows if r.status == "SUPPRESSED")
         fail_count = sum(1 for r in rows if r.status == "FAIL")
         partial_count = sum(1 for r in rows if r.status == "PARTIAL")
         total = len(rows)
+        raw_score = round(pass_count / total * 100, 2) if total else 0.0
+        effective_denom = max(total - suppressed_count, 1)
+        adjusted_score = round(pass_count / effective_denom * 100, 2) if effective_denom else 0.0
         try:
             name = get_framework(framework_id).name
         except KeyError:
@@ -265,7 +315,9 @@ def _build_framework_results(
                 pass_count=pass_count,
                 fail_count=fail_count,
                 partial_count=partial_count,
-                score_percent=round(pass_count / total * 100, 2) if total else 0.0,
+                suppressed_count=suppressed_count,
+                score_percent=adjusted_score,
+                raw_score_percent=raw_score,
                 score_delta=deltas.get(framework_id),
                 results=[_control_model(r) for r in rows],
             )
@@ -333,10 +385,13 @@ async def _build_status_response(db: AsyncSession, audit_job: AuditJob) -> Audit
             pass_count=primary.pass_count if primary else 0,
             fail_count=primary.fail_count if primary else 0,
             partial_count=primary.partial_count if primary else 0,
+            suppressed_count=primary.suppressed_count if primary else 0,
             score_percent=primary.score_percent if primary else 0.0,
+            raw_score_percent=primary.raw_score_percent if primary else None,
             results=primary.results if primary else [],
             framework_results=framework_results,
         )
+
 
     if audit_job.status == "failed":
         return AuditStatusResponse(
@@ -472,13 +527,21 @@ async def start_audit(
 
     logger.info("Created AuditJob %s", audit_job.id)
     try:
+        from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if not ensure_dev_worker_running():
-            raise RuntimeError("Celery worker is unavailable")
-        task_result = run_soc2_audit.apply_async(
-            args=[str(audit_job.id)], task_id=str(audit_job.id)
-        )
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
+            logger.info("Celery worker unavailable; running compliance audit %s in-process via asyncio", audit_job.id)
+            from app.compliance.tasks import run_compliance_audit_inline
+
+            asyncio.create_task(run_compliance_audit_inline(str(audit_job.id)))
+        else:
+            if not ensure_dev_worker_running():
+                raise RuntimeError("Celery worker is unavailable")
+            task_result = run_soc2_audit.apply_async(
+                args=[str(audit_job.id)], task_id=str(audit_job.id)
+            )
+            logger.info("Enqueued Celery task %s", task_result.id)
     except Exception as exc:
         logger.exception("Failed to dispatch compliance audit %s", audit_job.id)
         audit_job.status = "failed"
@@ -619,11 +682,18 @@ async def retry_audit(
     await db.refresh(new_job)
 
     try:
+        from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if not ensure_dev_worker_running():
-            raise RuntimeError("Celery worker is unavailable")
-        run_soc2_audit.apply_async(args=[str(new_job.id)], task_id=str(new_job.id))
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
+            logger.info("Celery worker unavailable; running compliance retry %s in-process via asyncio", new_job.id)
+            from app.compliance.tasks import run_compliance_audit_inline
+
+            asyncio.create_task(run_compliance_audit_inline(str(new_job.id)))
+        else:
+            if not ensure_dev_worker_running():
+                raise RuntimeError("Celery worker is unavailable")
+            run_soc2_audit.apply_async(args=[str(new_job.id)], task_id=str(new_job.id))
     except Exception as exc:
         logger.exception("Failed to dispatch compliance retry %s", new_job.id)
         new_job.status = "failed"
@@ -686,6 +756,15 @@ async def get_remediation(
     items = []
     for r in res.scalars().all():
         s = r.raw_evidence_summary or {}
+        guide = s.get("remediation_guide")
+        if not guide:
+            from app.compliance.remediation import get_remediation_guide
+            guide = get_remediation_guide(
+                control_id=r.control_id,
+                control_name=r.control_name,
+                guidance=s.get("remediation", ""),
+            ).model_dump()
+
         items.append(
             {
                 "framework": r.framework,
@@ -695,6 +774,7 @@ async def get_remediation(
                 "gaps": s.get("gaps", []),
                 "remediation": s.get("remediation", ""),
                 "category": s.get("category", ""),
+                "remediation_guide": guide,
             }
         )
     return {"audit_id": audit_id, "items": items, "total": len(items)}
@@ -878,3 +958,284 @@ async def get_shared_audit(token: str, db: AsyncSession = Depends(get_db)) -> Au
     if audit_job is None:
         raise HTTPException(status_code=404, detail="Audit not found")
     return await _build_status_response(db, audit_job)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Finding Suppression & Business Logic Exceptions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+@router.post("/audit/{audit_id}/controls/{control_id}/suppress", response_model=ControlResult)
+async def suppress_control(
+    request: Request,
+    audit_id: str,
+    control_id: str,
+    body: SuppressControlRequest,
+    framework: str = Query(..., description="Framework identifier, e.g. soc2"),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ControlResult:
+    """Suppress a failing or partial control with a business justification (risk acceptance)."""
+    audit_job = await _load_owned_job(db, audit_id, current_user)
+
+    res = await db.execute(
+        select(AuditResult).where(
+            AuditResult.audit_job_id == audit_job.id,
+            AuditResult.framework == framework,
+            AuditResult.control_id == control_id,
+        )
+    )
+    audit_result = res.scalar_one_or_none()
+    if not audit_result:
+        raise HTTPException(status_code=404, detail=f"Control {control_id} in {framework} not found in this audit")
+
+    exc_q = await db.execute(
+        select(ComplianceException).where(
+            ComplianceException.company_name == audit_job.company_name,
+            ComplianceException.framework == framework,
+            ComplianceException.control_id == control_id,
+            ComplianceException.status == "active",
+        )
+    )
+    existing_exc = exc_q.scalar_one_or_none()
+    if existing_exc:
+        existing_exc.business_justification = body.business_justification
+        existing_exc.compensating_controls = body.compensating_controls
+        existing_exc.risk_level = body.risk_level
+        existing_exc.suppressed_by = current_user.email or str(current_user.id)
+        existing_exc.expires_at = body.expires_at
+        existing_exc.updated_at = datetime.now(timezone.utc)
+        exception_record = existing_exc
+    else:
+        exception_record = ComplianceException(
+            user_id=current_user.id,
+            company_name=audit_job.company_name,
+            framework=framework,
+            control_id=control_id,
+            business_justification=body.business_justification,
+            compensating_controls=body.compensating_controls,
+            risk_level=body.risk_level,
+            suppressed_by=current_user.email or str(current_user.id),
+            status="active",
+            expires_at=body.expires_at,
+        )
+        db.add(exception_record)
+
+    await db.flush()
+
+    audit_result.status = "SUPPRESSED"
+    raw_summary = dict(audit_result.raw_evidence_summary or {})
+    raw_summary["exception"] = {
+        "id": str(exception_record.id),
+        "business_justification": exception_record.business_justification,
+        "compensating_controls": exception_record.compensating_controls,
+        "risk_level": exception_record.risk_level,
+        "suppressed_by": exception_record.suppressed_by,
+        "expires_at": exception_record.expires_at.isoformat() if exception_record.expires_at else None,
+    }
+    audit_result.raw_evidence_summary = raw_summary
+
+    all_res = await db.execute(
+        select(AuditResult).where(
+            AuditResult.audit_job_id == audit_job.id,
+            AuditResult.framework == framework,
+        )
+    )
+    framework_rows = list(all_res.scalars().all())
+    pass_cnt = sum(1 for r in framework_rows if r.status == "PASS")
+    suppressed_cnt = sum(1 for r in framework_rows if r.status == "SUPPRESSED")
+    fail_cnt = sum(1 for r in framework_rows if r.status == "FAIL")
+    partial_cnt = sum(1 for r in framework_rows if r.status == "PARTIAL")
+    effective_denom = max(len(framework_rows) - suppressed_cnt, 1)
+    new_score = round(pass_cnt / effective_denom * 100, 2)
+
+    snap_q = await db.execute(
+        select(ComplianceSnapshot)
+        .where(
+            ComplianceSnapshot.audit_job_id == audit_job.id,
+            ComplianceSnapshot.framework == framework,
+        )
+        .order_by(ComplianceSnapshot.created_at.desc())
+        .limit(1)
+    )
+    snap = snap_q.scalar_one_or_none()
+    if snap:
+        snap.pass_count = pass_cnt
+        snap.fail_count = fail_cnt
+        snap.partial_count = partial_cnt
+        snap.suppressed_count = suppressed_cnt
+        snap.score_percent = new_score
+
+    audit_job.report_keys = {}
+    audit_job.pdf_storage_key = None
+
+    add_audit(
+        db,
+        user_id=current_user.id,
+        action="compliance_control_suppressed",
+        request=request,
+        metadata={
+            "audit_id": str(audit_job.id),
+            "framework": framework,
+            "control_id": control_id,
+            "business_justification": body.business_justification[:100],
+        },
+    )
+    await db.commit()
+
+    return _control_model(audit_result)
+
+
+@router.delete("/audit/{audit_id}/controls/{control_id}/suppress", response_model=ControlResult)
+async def unsuppress_control(
+    request: Request,
+    audit_id: str,
+    control_id: str,
+    framework: str = Query(..., description="Framework identifier, e.g. soc2"),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ControlResult:
+    """Revoke a business logic exception, reverting control status to FAIL or PARTIAL."""
+    audit_job = await _load_owned_job(db, audit_id, current_user)
+
+    res = await db.execute(
+        select(AuditResult).where(
+            AuditResult.audit_job_id == audit_job.id,
+            AuditResult.framework == framework,
+            AuditResult.control_id == control_id,
+        )
+    )
+    audit_result = res.scalar_one_or_none()
+    if not audit_result:
+        raise HTTPException(status_code=404, detail=f"Control {control_id} in {framework} not found in this audit")
+
+    exc_q = await db.execute(
+        select(ComplianceException).where(
+            ComplianceException.company_name == audit_job.company_name,
+            ComplianceException.framework == framework,
+            ComplianceException.control_id == control_id,
+            ComplianceException.status == "active",
+        )
+    )
+    active_exc = exc_q.scalar_one_or_none()
+    if active_exc:
+        active_exc.status = "revoked"
+        active_exc.updated_at = datetime.now(timezone.utc)
+
+    raw_summary = dict(audit_result.raw_evidence_summary or {})
+    gaps = raw_summary.get("gaps", [])
+    audit_result.status = "FAIL" if gaps else "PARTIAL"
+    raw_summary.pop("exception", None)
+    audit_result.raw_evidence_summary = raw_summary
+
+    all_res = await db.execute(
+        select(AuditResult).where(
+            AuditResult.audit_job_id == audit_job.id,
+            AuditResult.framework == framework,
+        )
+    )
+    framework_rows = list(all_res.scalars().all())
+    pass_cnt = sum(1 for r in framework_rows if r.status == "PASS")
+    suppressed_cnt = sum(1 for r in framework_rows if r.status == "SUPPRESSED")
+    fail_cnt = sum(1 for r in framework_rows if r.status == "FAIL")
+    partial_cnt = sum(1 for r in framework_rows if r.status == "PARTIAL")
+    effective_denom = max(len(framework_rows) - suppressed_cnt, 1)
+    new_score = round(pass_cnt / effective_denom * 100, 2)
+
+    snap_q = await db.execute(
+        select(ComplianceSnapshot)
+        .where(
+            ComplianceSnapshot.audit_job_id == audit_job.id,
+            ComplianceSnapshot.framework == framework,
+        )
+        .order_by(ComplianceSnapshot.created_at.desc())
+        .limit(1)
+    )
+    snap = snap_q.scalar_one_or_none()
+    if snap:
+        snap.pass_count = pass_cnt
+        snap.fail_count = fail_cnt
+        snap.partial_count = partial_cnt
+        snap.suppressed_count = suppressed_cnt
+        snap.score_percent = new_score
+
+    audit_job.report_keys = {}
+    audit_job.pdf_storage_key = None
+
+    add_audit(
+        db,
+        user_id=current_user.id,
+        action="compliance_control_unsuppressed",
+        request=request,
+        metadata={
+            "audit_id": str(audit_job.id),
+            "framework": framework,
+            "control_id": control_id,
+        },
+    )
+    await db.commit()
+
+    return _control_model(audit_result)
+
+
+@router.get("/audit/{audit_id}/exceptions", response_model=list[ExceptionResponse])
+async def list_audit_exceptions(
+    audit_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[ExceptionResponse]:
+    """List all business logic exceptions for this audit's company."""
+    audit_job = await _load_owned_job(db, audit_id, current_user)
+    res = await db.execute(
+        select(ComplianceException)
+        .where(ComplianceException.company_name == audit_job.company_name)
+        .order_by(ComplianceException.created_at.desc())
+    )
+    exceptions = list(res.scalars().all())
+    return [
+        ExceptionResponse(
+            id=str(e.id),
+            company_name=e.company_name,
+            framework=e.framework,
+            control_id=e.control_id,
+            business_justification=e.business_justification,
+            compensating_controls=e.compensating_controls,
+            risk_level=e.risk_level,
+            suppressed_by=e.suppressed_by,
+            status=e.status,
+            expires_at=e.expires_at.isoformat() if e.expires_at else None,
+            created_at=e.created_at.isoformat() if e.created_at else "",
+        )
+        for e in exceptions
+    ]
+
+
+@router.get("/compliance/exceptions", response_model=list[ExceptionResponse])
+async def list_user_exceptions(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> list[ExceptionResponse]:
+    """List all business logic exceptions created by the current user."""
+    res = await db.execute(
+        select(ComplianceException)
+        .where(ComplianceException.user_id == current_user.id)
+        .order_by(ComplianceException.created_at.desc())
+    )
+    exceptions = list(res.scalars().all())
+    return [
+        ExceptionResponse(
+            id=str(e.id),
+            company_name=e.company_name,
+            framework=e.framework,
+            control_id=e.control_id,
+            business_justification=e.business_justification,
+            compensating_controls=e.compensating_controls,
+            risk_level=e.risk_level,
+            suppressed_by=e.suppressed_by,
+            status=e.status,
+            expires_at=e.expires_at.isoformat() if e.expires_at else None,
+            created_at=e.created_at.isoformat() if e.created_at else "",
+        )
+        for e in exceptions
+    ]
+

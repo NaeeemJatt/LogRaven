@@ -27,7 +27,7 @@ Before sending: strip PII from raw_message (replace internal hostnames with [HOS
 Prompt structure: system prompt (SOC analyst persona) + structured events JSON
 Output: strict JSON array of finding objects
 Retry: 3 attempts with exponential backoff (2s, 4s, 8s)
-Log token count per request to cost_tracking table
+Log token count per request from model usage_metadata
 
 ## ai/cloud/consent.py
 verify_consent(user) -> bool

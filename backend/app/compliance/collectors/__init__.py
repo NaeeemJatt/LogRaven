@@ -1,9 +1,19 @@
 # LogRaven — Compliance evidence collectors
 #
-# The base CloudTrail/IAM/GuardDuty collectors live in app.compliance.aws_collector
-# (kept for backward compatibility). This package adds the deep AWS collectors that
-# broaden the evidence base so one collection run can grade many frameworks.
+# Multi-cloud collector architecture supporting AWS, Google Cloud Platform (GCP),
+# and Microsoft Azure.
 
-from app.compliance.collectors.aws_extended import collect_extended_evidence  # noqa: F401
+from app.compliance.collectors.base import BaseCloudCollector
+from app.compliance.collectors.aws_extended import collect_extended_evidence
+from app.compliance.collectors.gcp import GCPCollector
+from app.compliance.collectors.azure import AzureCollector
+from app.compliance.collectors.factory import AWSCollector, get_collector
 
-__all__ = ["collect_extended_evidence"]
+__all__ = [
+    "BaseCloudCollector",
+    "collect_extended_evidence",
+    "GCPCollector",
+    "AzureCollector",
+    "AWSCollector",
+    "get_collector",
+]

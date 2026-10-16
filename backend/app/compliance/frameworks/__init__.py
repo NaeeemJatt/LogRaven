@@ -29,6 +29,8 @@ from app.compliance.frameworks import fedramp  # noqa: F401,E402
 from app.compliance.frameworks import csa_ccm  # noqa: F401,E402
 from app.compliance.frameworks import iso27017  # noqa: F401,E402
 from app.compliance.frameworks import iso27018  # noqa: F401,E402
+from app.compliance.frameworks import cis_gcp  # noqa: F401,E402
+from app.compliance.frameworks import cis_azure  # noqa: F401,E402
 
 DEFAULT_FRAMEWORK = "soc2"
 

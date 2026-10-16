@@ -17,19 +17,22 @@ import AuditProgress from '../components/audit/AuditProgress'
 import AuditResults from '../components/audit/AuditResults'
 import AuditHistory from '../components/audit/AuditHistory'
 import CompliancePosture from '../components/audit/CompliancePosture'
+import CloudAccountsManager from '../components/audit/CloudAccountsManager'
 import ShareAuditModal from '../components/audit/ShareAuditModal'
+import AuditorShareModal from '../components/audit/AuditorShareModal'
 import type { AuditFormData } from '../components/audit/AuditForm'
 import type { AuditStatusResponse } from '../types/audit'
 import { startAudit, getAuditStatus, retryAudit } from '../api/compliance'
 import type { AuditSummary } from '../api/compliance'
 
 type AuditStep = 'form' | 'progress' | 'results'
-type PageTab = 'audit' | 'history' | 'posture'
+type PageTab = 'audit' | 'accounts' | 'history' | 'posture'
 
 const PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
-  { key: 'audit',   label: 'New audit', icon: PlusCircle },
-  { key: 'history', label: 'History',   icon: History },
-  { key: 'posture', label: 'Posture',   icon: Gauge },
+  { key: 'audit',    label: 'New audit',      icon: PlusCircle },
+  { key: 'accounts', label: 'Cloud accounts', icon: Cloud },
+  { key: 'history',  label: 'History',        icon: History },
+  { key: 'posture',  label: 'Posture',        icon: Gauge },
 ]
 
 const STEPS: { key: AuditStep; label: string; hint: string; icon: React.ElementType }[] = [
@@ -148,6 +151,7 @@ export default function AuditPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryingAuditId, setRetryingAuditId] = useState<string | null>(null)
   const [shareTarget, setShareTarget]   = useState<{ auditId: string; companyName?: string } | null>(null)
+  const [isAuditorModalOpen, setIsAuditorModalOpen] = useState(false)
 
   const handleFormSubmit = async (formData: AuditFormData) => {
     setIsSubmitting(true)
@@ -251,46 +255,56 @@ export default function AuditPage() {
                 Compliance Control Room
               </h1>
             </div>
-            {/* Page tabs: new audit flow / history / posture */}
-            <div role="tablist" aria-label="Compliance views" className="ops-panel p-1.5 mb-4 inline-flex flex-wrap gap-1">
-              {PAGE_TABS.map(({ key, label, icon: Icon }) => {
-                const isActive = tab === key
-                return (
-                  <button
-                    key={key}
-                    id={`compliance-tab-${key}`}
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls="compliance-tabpanel"
-                    tabIndex={isActive ? 0 : -1}
-                    onClick={() => setTab(key)}
-                    onKeyDown={(event) => {
-                      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-                      event.preventDefault()
-                      const current = PAGE_TABS.findIndex((item) => item.key === key)
-                      const nextIndex =
-                        event.key === 'Home'
-                          ? 0
-                          : event.key === 'End'
-                            ? PAGE_TABS.length - 1
-                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
-                              PAGE_TABS.length
-                      const next = PAGE_TABS[nextIndex].key
-                      setTab(next)
-                      requestAnimationFrame(() =>
-                        document.getElementById(`compliance-tab-${next}`)?.focus(),
-                      )
-                    }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${
-                      isActive
-                        ? 'bg-indigo-500/12 text-indigo-300 border border-indigo-500/40'
-                        : 'text-text-muted hover:text-text-secondary border border-transparent'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" /> {label}
-                  </button>
-                )
-              })}
+            {/* Page tabs: new audit flow / history / posture + Invite Auditor */}
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <div role="tablist" aria-label="Compliance views" className="ops-panel p-1.5 inline-flex flex-wrap gap-1">
+                {PAGE_TABS.map(({ key, label, icon: Icon }) => {
+                  const isActive = tab === key
+                  return (
+                    <button
+                      key={key}
+                      id={`compliance-tab-${key}`}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls="compliance-tabpanel"
+                      tabIndex={isActive ? 0 : -1}
+                      onClick={() => setTab(key)}
+                      onKeyDown={(event) => {
+                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                        event.preventDefault()
+                        const current = PAGE_TABS.findIndex((item) => item.key === key)
+                        const nextIndex =
+                          event.key === 'Home'
+                            ? 0
+                            : event.key === 'End'
+                              ? PAGE_TABS.length - 1
+                              : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
+                                PAGE_TABS.length
+                        const next = PAGE_TABS[nextIndex].key
+                        setTab(next)
+                        requestAnimationFrame(() =>
+                          document.getElementById(`compliance-tab-${next}`)?.focus(),
+                        )
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${
+                        isActive
+                          ? 'bg-indigo-500/12 text-indigo-300 border border-indigo-500/40'
+                          : 'text-text-muted hover:text-text-secondary border border-transparent'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAuditorModalOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition-colors shadow-sm"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Invite Auditor
+              </button>
             </div>
 
             {errorMessage && (
@@ -333,6 +347,17 @@ export default function AuditPage() {
                     retryingAuditId={retryingAuditId}
                   />
                 )}
+                {tab === 'accounts' && (
+                  <CloudAccountsManager
+                    onStartAudit={(accAuditId, accName) => {
+                      setAuditId(accAuditId)
+                      setCompanyName(accName)
+                      setAuditResults(null)
+                      setCurrentStep('progress')
+                      setTab('audit')
+                    }}
+                  />
+                )}
                 {tab === 'posture' && <CompliancePosture />}
                 {tab === 'audit' && currentStep === 'form' && (
                   <AuditForm onSubmit={(data) => { void handleFormSubmit(data) }} isLoading={isSubmitting} />
@@ -372,6 +397,12 @@ export default function AuditPage() {
           onClose={() => setShareTarget(null)}
         />
       )}
+
+      <AuditorShareModal
+        isOpen={isAuditorModalOpen}
+        companyName={companyName || 'Organization'}
+        onClose={() => setIsAuditorModalOpen(false)}
+      />
     </div>
   )
 }

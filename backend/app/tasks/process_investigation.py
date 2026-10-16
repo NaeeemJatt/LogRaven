@@ -656,7 +656,7 @@ async def recover_orphaned_investigations() -> int:
         result = await db.execute(
             update(Investigation)
             .where(Investigation.status.in_(["queued", "processing"]))
-            .values(status="failed", error_message=message)
+            .values(status="failed", progress_stage="failed", error_message=message)
         )
         await db.commit()
         return result.rowcount or 0

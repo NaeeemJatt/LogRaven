@@ -26,6 +26,7 @@ const AuditPage        = lazy(() => import('./pages/AuditPage'))
 const ProfilePage      = lazy(() => import('./pages/Profile'))
 const AlertFeed        = lazy(() => import('./pages/AlertFeed'))
 const SharedAudit      = lazy(() => import('./pages/SharedAudit'))
+const AuditorPortalPage = lazy(() => import('./pages/AuditorPortalPage'))
 const PrivacyPage      = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
 const TermsPage        = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
 
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/reset-password"  element={<ResetPassword />} />
               <Route path="/verify-email"    element={<VerifyEmail />} />
               <Route path="/shared/audit/:token" element={<SharedAudit />} />
+              <Route path="/auditor/portal/:token" element={<AuditorPortalPage />} />
               <Route path="/privacy"         element={<PrivacyPage />} />
               <Route path="/terms"           element={<TermsPage />} />
 

@@ -221,28 +221,44 @@ async def grade_framework(framework: Framework, all_signals: dict[str, Any]) -> 
     else:  # pragma: no cover
         raise MappingError(f"AI grading for {framework.id} failed after retry")
 
-    # Annotate with category + remediation guidance from the framework definition.
+    # Annotate with category + remediation guidance + actionable guide from catalog.
+    from app.compliance.remediation import get_remediation_guide
+
     for result in results:
         control = framework.get_control(result["control_id"])
         if control is not None:
             result["category"] = control.category
             result["automatable"] = control.automatable
-            if result["status"] != "PASS" and control.guidance:
-                result["remediation"] = control.guidance
+            if result["status"] != "PASS":
+                if control.guidance:
+                    result["remediation"] = control.guidance
+                guide = get_remediation_guide(
+                    control_id=control.control_id,
+                    signals=control.signals,
+                    control_name=control.name,
+                    guidance=control.guidance,
+                )
+                result["remediation_guide"] = guide.model_dump()
     logger.info("AI grading complete for %s: %d controls assessed", framework.id, len(results))
     return results
 
 
 def score_results(results: list[dict[str, Any]], total: int | None = None) -> dict[str, Any]:
-    """Aggregate counts + conservative score (PARTIAL counts as 0)."""
+    """Aggregate counts + conservative score (PARTIAL counts as 0, SUPPRESSED adjusted)."""
     pass_count = sum(1 for r in results if r.get("status") == "PASS")
+    suppressed_count = sum(1 for r in results if r.get("status") == "SUPPRESSED")
     fail_count = sum(1 for r in results if r.get("status") == "FAIL")
     partial_count = sum(1 for r in results if r.get("status") == "PARTIAL")
     denom = total or len(results)
-    score_percent = round((pass_count / denom) * 100.0, 2) if denom else 0.0
+    raw_score_percent = round((pass_count / denom) * 100.0, 2) if denom else 0.0
+    effective_denom = max(denom - suppressed_count, 1)
+    score_percent = round((pass_count / effective_denom) * 100.0, 2) if effective_denom else 0.0
     return {
         "pass_count": pass_count,
+        "suppressed_count": suppressed_count,
         "fail_count": fail_count,
         "partial_count": partial_count,
+        "raw_score_percent": raw_score_percent,
         "score_percent": score_percent,
     }
+
