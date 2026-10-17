@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -288,7 +288,7 @@ async def get_auditor_portal_overview(
     # Fetch audit jobs for this company
     stmt = (
         select(AuditJob)
-        .options(selectinload(AuditJob.results))
+        .options(selectinload(AuditJob.results), selectinload(AuditJob.snapshots))
         .where(
             AuditJob.company_name == token_record.company_name,
             AuditJob.status == "complete",
@@ -299,10 +299,19 @@ async def get_auditor_portal_overview(
     res = await db.execute(stmt)
     jobs = res.scalars().all()
 
+    def _calc_job_score(j: AuditJob) -> float:
+        if getattr(j, "snapshots", None) and len(j.snapshots) > 0:
+            return round(float(sum(s.score_percent for s in j.snapshots) / len(j.snapshots)), 1)
+        results = getattr(j, "results", None) or []
+        if not results:
+            return 0.0
+        passed = sum(1 for r in results if r.status == "PASS")
+        return round(float((passed / len(results)) * 100), 1)
+
     # Active business exceptions
     exc_stmt = select(ComplianceException).where(
         ComplianceException.company_name == token_record.company_name,
-        ComplianceException.status == "ACTIVE",
+        func.lower(ComplianceException.status) == "active",
     )
     exc_res = await db.execute(exc_stmt)
     exceptions = exc_res.scalars().all()
@@ -311,10 +320,11 @@ async def get_auditor_portal_overview(
     if jobs:
         latest = jobs[0]
         results_list = latest.results or []
+        job_score = _calc_job_score(latest)
         latest_dict = {
             "audit_id": str(latest.id),
-            "score_percent": latest.score_percent,
-            "raw_score_percent": latest.raw_score_percent or latest.score_percent,
+            "score_percent": job_score,
+            "raw_score_percent": job_score,
             "frameworks": latest.frameworks,
             "completed_at": (getattr(latest, "completed_at", None) or getattr(latest, "created_at", None)).isoformat()
             if (getattr(latest, "completed_at", None) or getattr(latest, "created_at", None))
@@ -329,8 +339,8 @@ async def get_auditor_portal_overview(
     recent_audits = [
         {
             "audit_id": str(j.id),
-            "score_percent": j.score_percent,
-            "raw_score_percent": j.raw_score_percent or j.score_percent,
+            "score_percent": _calc_job_score(j),
+            "raw_score_percent": _calc_job_score(j),
             "frameworks": j.frameworks,
             "completed_at": (getattr(j, "completed_at", None) or getattr(j, "created_at", None)).isoformat()
             if (getattr(j, "completed_at", None) or getattr(j, "created_at", None))
@@ -364,7 +374,7 @@ async def get_auditor_portal_exceptions(
         select(ComplianceException)
         .where(
             ComplianceException.company_name == token_record.company_name,
-            ComplianceException.status == "ACTIVE",
+            func.lower(ComplianceException.status) == "active",
         )
         .order_by(ComplianceException.control_id)
     )
@@ -377,9 +387,9 @@ async def get_auditor_portal_exceptions(
             "control_id": e.control_id,
             "framework": e.framework,
             "status": e.status,
-            "justification": e.justification,
+            "justification": getattr(e, "business_justification", None) or getattr(e, "justification", ""),
             "compensating_controls": e.compensating_controls,
-            "authorized_by": e.authorized_by,
+            "authorized_by": getattr(e, "suppressed_by", None) or getattr(e, "authorized_by", ""),
             "expires_at": e.expires_at.isoformat() if e.expires_at else None,
             "created_at": e.created_at.isoformat() if e.created_at else None,
         }
@@ -405,7 +415,7 @@ async def download_auditor_evidence_vault(
     # Fetch audit jobs
     stmt = (
         select(AuditJob)
-        .options(selectinload(AuditJob.results))
+        .options(selectinload(AuditJob.results), selectinload(AuditJob.snapshots))
         .where(
             AuditJob.company_name == token_record.company_name,
             AuditJob.status == "complete",
@@ -419,7 +429,7 @@ async def download_auditor_evidence_vault(
     # Fetch exceptions
     exc_stmt = select(ComplianceException).where(
         ComplianceException.company_name == token_record.company_name,
-        ComplianceException.status == "ACTIVE",
+        func.lower(ComplianceException.status) == "active",
     )
     exc_res = await db.execute(exc_stmt)
     exceptions = list(exc_res.scalars().all())

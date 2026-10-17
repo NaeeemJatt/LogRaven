@@ -5,6 +5,7 @@ local/uploads/
 local/reports/
 local/temp/
 local/
+temp/
 
 # Environment files & secrets
 .env

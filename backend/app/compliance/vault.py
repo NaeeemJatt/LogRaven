@@ -90,13 +90,23 @@ def build_evidence_vault_zip(
             },
         }
 
+        def _calc_vault_score(j: AuditJob) -> float:
+            if getattr(j, "snapshots", None) and len(j.snapshots) > 0:
+                return round(float(sum(s.score_percent for s in j.snapshots) / len(j.snapshots)), 1)
+            results = getattr(j, "results", None) or []
+            if not results:
+                return 0.0
+            passed = sum(1 for r in results if r.status == "PASS")
+            return round(float((passed / len(results)) * 100), 1)
+
         if latest_job:
+            vault_score = _calc_vault_score(latest_job)
             exec_summary["latest_audit"] = {
                 "audit_id": str(latest_job.id),
                 "status": latest_job.status,
                 "frameworks": latest_job.frameworks or ["soc2"],
-                "score_percent": latest_job.score_percent,
-                "raw_score_percent": latest_job.raw_score_percent or latest_job.score_percent,
+                "score_percent": vault_score,
+                "raw_score_percent": vault_score,
                 "completed_at": (
                     getattr(latest_job, "completed_at", None)
                     or getattr(latest_job, "created_at", None)
@@ -127,9 +137,9 @@ def build_evidence_vault_zip(
                 exc.control_id,
                 exc.framework,
                 exc.status,
-                exc.justification,
+                getattr(exc, "business_justification", None) or getattr(exc, "justification", "N/A"),
                 exc.compensating_controls or "N/A",
-                exc.authorized_by or "N/A",
+                getattr(exc, "suppressed_by", None) or getattr(exc, "authorized_by", "N/A"),
                 exc.expires_at.isoformat() if exc.expires_at else "Never",
                 exc.created_at.isoformat() if exc.created_at else "",
             ])
@@ -160,10 +170,10 @@ def build_evidence_vault_zip(
                     "control_name": res.control_name,
                     "status": res.status,
                     "framework": res.framework,
-                    "evidence_summary": res.evidence_summary,
-                    "remediation": res.remediation,
-                    "referenced_signals": res.referenced_signals or [],
-                    "assessed_at": res.assessed_at.isoformat() if res.assessed_at else None,
+                    "evidence_summary": getattr(res, "evidence_summary", None) or getattr(res, "ai_description", ""),
+                    "remediation": getattr(res, "remediation", None) or "",
+                    "referenced_signals": getattr(res, "referenced_signals", None) or [],
+                    "assessed_at": (getattr(res, "assessed_at", None) or getattr(res, "created_at", None)).isoformat() if (getattr(res, "assessed_at", None) or getattr(res, "created_at", None)) else None,
                 }
                 safe_ctrl = _sanitize_filename(res.control_id)
                 write_file(

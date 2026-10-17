@@ -174,7 +174,7 @@ class CloudAccount(Base):
     name:               Mapped[str]              = mapped_column(String(255), nullable=False)
     provider:           Mapped[str]              = mapped_column(String(50), nullable=False, default="aws")
     role_arn:           Mapped[str | None]       = mapped_column(String(1024), nullable=True)
-    account_id:         Mapped[str | None]       = mapped_column(String(30), nullable=True)
+    account_id:         Mapped[str | None]       = mapped_column(String(255), nullable=True)
     # Multi-Cloud Fleet (GCP & Azure)
     gcp_project_id:             Mapped[str | None] = mapped_column(String(100), nullable=True)
     gcp_service_account_email:  Mapped[str | None] = mapped_column(String(255), nullable=True)
