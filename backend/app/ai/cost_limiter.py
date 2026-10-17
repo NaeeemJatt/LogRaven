@@ -5,10 +5,10 @@
 #   Prevents unbounded API costs regardless of file size.
 #   Makes AI cost predictable: maximum $0.10-0.15 per investigation.
 #
-# TIER LIMITS:
-#   free:  2,000 events max sent to AI
-#   pro:   10,000 events max
-#   team:  50,000 events max
+# TIER LIMITS (configurable via AI_CEILING_FREE / _PRO / _TEAM env vars):
+#   free:  2,000 events max sent to AI (default)
+#   pro:   10,000 events max (default)
+#   team:  50,000 events max (default)
 #
 # SELECTION PRIORITY (when ceiling is hit):
 #   1. Flagged events (any flag in flags list) over unflagged
@@ -17,11 +17,16 @@
 
 from datetime import datetime
 
-TIER_CEILINGS = {
-    "free":  2_000,
-    "pro":  10_000,
-    "team": 50_000,
-}
+from app.config import settings
+
+
+def tier_ceilings() -> dict[str, int]:
+    """Per-tier AI event ceilings, sourced from config so env overrides apply."""
+    return {
+        "free": settings.AI_CEILING_FREE,
+        "pro":  settings.AI_CEILING_PRO,
+        "team": settings.AI_CEILING_TEAM,
+    }
 
 _SEVERITY_ORDER = {
     "critical":      0,
@@ -45,7 +50,7 @@ def enforce_ceiling(events: list, user_tier: str) -> tuple[list, bool]:
     Select events within the tier ceiling using priority-based selection.
     Returns (selected_events, was_truncated).
     """
-    ceiling = TIER_CEILINGS.get(user_tier, 2_000)
+    ceiling = tier_ceilings().get(user_tier, settings.AI_CEILING_FREE)
     if len(events) <= ceiling:
         return events, False
 

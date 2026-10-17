@@ -6,6 +6,7 @@ import {
   GitMerge, FileText, ArrowRight, Cpu, Loader2
 } from 'lucide-react'
 import { useJobStatus } from '../hooks/useJobStatus'
+import AlertModal from '../components/ui/AlertModal'
 
 const STEPS = [
   { key: 'queued',          label: 'Queued',               description: 'Investigation accepted and waiting to start.' },
@@ -45,15 +46,49 @@ const FILE_STATUS_STYLE: Record<string, string> = {
   failed:  'bg-rose-500/10 border-rose-500/20 text-rose-400',
 }
 
+function ParserMetadata({ file }: { file: ReturnType<typeof useJobStatus>['files'][number] }) {
+  const detail = file.parser_selection_detail
+  if (!detail && file.parser_detection_confidence == null) return null
+  const requested = detail?.requested_ingestion_mode
+  const actual = detail?.actual_ingestion_path
+  const warnings = [...(detail?.parse_warnings ?? []), ...(detail?.user_warnings ?? [])]
+  const fallback = detail?.fallback_used || detail?.fallback_reason
+
+  return (
+    <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-text-muted">
+        {file.parser_detection_confidence != null && (
+          <span>{Math.round(file.parser_detection_confidence * 100)}% confidence</span>
+        )}
+        {requested && actual && (
+          <span className="capitalize">{requested} → {actual}</span>
+        )}
+        {fallback && <span className="text-amber-400">Fallback used</span>}
+      </div>
+      {warnings.length > 0 && (
+        <ul aria-label={`Parser warnings for ${file.filename}`} className="mt-1 space-y-1 text-[10px] text-amber-300/80">
+          {warnings.map((warning) => <li key={warning}>{warning}</li>)}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export default function JobStatus() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [elapsed, setElapsed] = useState(0)
+  const [failModalDismissed, setFailModalDismissed] = useState(false)
 
   const {
     status, progressStage, errorMessage, files,
     isLoading, isError, isComplete, isFailed, isDraft,
   } = useJobStatus(id ?? null)
+
+  // Re-arm the failure popup if a retry later fails again.
+  useEffect(() => {
+    if (!isFailed) setFailModalDismissed(false)
+  }, [isFailed])
 
   useEffect(() => {
     if (!isComplete && !isFailed) {
@@ -299,7 +334,7 @@ export default function JobStatus() {
             </div>
 
             {/* Complete CTA / report link */}
-            {(isComplete || (!isFailed && files.length > 0)) && (
+            {isComplete && (
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -351,6 +386,7 @@ export default function JobStatus() {
                           </>
                         )}
                       </div>
+                      <ParserMetadata file={f} />
                     </div>
                   ))}
                 </div>
@@ -372,6 +408,19 @@ export default function JobStatus() {
           </div>
         </div>
       </div>
+
+      <AlertModal
+        isOpen={isFailed && !failModalDismissed}
+        title="Analysis stopped"
+        message={
+          (errorMessage || 'The investigation could not be completed due to an unexpected problem.') +
+          '\n\nNo report was generated. You can adjust your files and run the analysis again.'
+        }
+        actionLabel="Back to files & setup"
+        onAction={() => navigate(`/investigations/${id}`)}
+        dismissLabel="Dismiss"
+        onDismiss={() => setFailModalDismissed(true)}
+      />
     </div>
   )
 }

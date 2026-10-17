@@ -1,13 +1,15 @@
 // LogRaven — useJobStatus polling (uses backend progress_stage for live pipeline)
 import { useQuery } from '@tanstack/react-query'
 import { investigationsApi } from '../api/investigations'
+import { useAuthStore } from '../store/authStore'
 import type { InvestigationStatus } from '../types/investigation'
 
 const TERMINAL = ['complete', 'failed']
 
 export function useJobStatus(investigationId: string | null) {
+  const userId = useAuthStore((state) => state.user?.id)
   const query = useQuery<InvestigationStatus>({
-    queryKey: ['status', investigationId],
+    queryKey: ['status', userId, investigationId],
     queryFn: async () => {
       const res = await investigationsApi.getStatus(investigationId!)
       return res.data

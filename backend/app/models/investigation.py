@@ -16,7 +16,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import String, DateTime, Boolean, ForeignKey, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
@@ -29,6 +29,9 @@ if TYPE_CHECKING:
 
 class Investigation(Base):
     __tablename__ = "investigations"
+    __table_args__ = (
+        Index("ix_investigations_status_queued_at", "status", "queued_at"),
+    )
 
     id:                  Mapped[uuid.UUID]         = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id:             Mapped[uuid.UUID]         = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
@@ -36,9 +39,8 @@ class Investigation(Base):
     status:              Mapped[str]               = mapped_column(String(20), nullable=False, default="draft")
     progress_stage:      Mapped[str | None]        = mapped_column(String(64), nullable=True)
     correlation_enabled: Mapped[bool]              = mapped_column(Boolean, default=True)
-    time_window_start:   Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
-    time_window_end:     Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
     created_at:          Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow)
+    queued_at:           Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
     completed_at:        Mapped[datetime | None]   = mapped_column(DateTime, nullable=True)
     error_message:       Mapped[str | None]        = mapped_column(Text, nullable=True)
 

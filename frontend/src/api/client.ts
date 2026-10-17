@@ -51,12 +51,16 @@ client.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    const requestUrl = String(originalRequest.url ?? '')
+    const isSessionProbe =
+      String(originalRequest.method ?? '').toLowerCase() === 'get' &&
+      (requestUrl === '/auth/me' || requestUrl.endsWith('/auth/me'))
     originalRequest._retry = true
     try {
       await refreshSession()
       return client(originalRequest)
     } catch {
-      redirectToLogin()
+      if (!isSessionProbe) redirectToLogin()
       return Promise.reject(error)
     }
   },

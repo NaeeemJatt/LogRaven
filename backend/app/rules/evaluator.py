@@ -15,12 +15,20 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime
 
 from app.rules.schema import RuleDefinition, SimpleCondition, SimpleMatch, ThresholdMatch
 from app.utils.logger import get_logger
 
 logger = get_logger("lograven.rules")
+
+
+@dataclass(frozen=True)
+class RuleMatch:
+    rule: RuleDefinition
+    events: list
+
 
 _SEVERITY_RANK: dict[str, int] = {
     "critical": 5, "high": 4, "medium": 3,
@@ -102,10 +110,10 @@ def _evaluate_simple(event, rule: RuleDefinition) -> bool:
 
 # ── Threshold evaluation ──────────────────────────────────────────────────────
 
-def _evaluate_threshold(events: list, rule: RuleDefinition) -> None:
+def _evaluate_threshold(events: list, rule: RuleDefinition) -> list:
     match = rule.match
     if not isinstance(match, ThresholdMatch):
-        return
+        return []
 
     filtered = [
         e for e in events
@@ -113,7 +121,7 @@ def _evaluate_threshold(events: list, rule: RuleDefinition) -> None:
         and (not match.event_type or e.event_type == match.event_type)
     ]
     if not filtered:
-        return
+        return []
 
     groups: dict[str, list] = defaultdict(list)
     for ev in filtered:
@@ -121,12 +129,13 @@ def _evaluate_threshold(events: list, rule: RuleDefinition) -> None:
         if key:
             groups[key].append(ev)
 
+    matched_events: list = []
     for group_events in groups.values():
         with_ts = sorted(
             [e for e in group_events if e.timestamp is not None],
             key=lambda e: e.timestamp,
         )
-        triggered = False
+        triggered_event_ids: set[int] = set()
         for i in range(len(with_ts)):
             t0 = with_ts[i].timestamp
             window = [
@@ -134,14 +143,19 @@ def _evaluate_threshold(events: list, rule: RuleDefinition) -> None:
                 if (e.timestamp - t0).total_seconds() <= match.window_seconds
             ]
             if len(window) >= match.count:
-                triggered = True
-                break
+                triggered_event_ids.update(id(event) for event in window)
 
-        if triggered:
-            for ev in group_events:
+        if triggered_event_ids:
+            triggered_events = [
+                event for event in group_events
+                if id(event) in triggered_event_ids
+            ]
+            matched_events.extend(triggered_events)
+            for ev in triggered_events:
                 if rule.flag and rule.flag not in ev.flags:
                     ev.flags.append(rule.flag)
                 _upgrade_severity(ev, rule.severity)
+    return matched_events
 
 
 # ── Index builder ─────────────────────────────────────────────────────────────
@@ -203,17 +217,19 @@ def _build_index(rules: list[RuleDefinition]):
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-def run_yaml_rules(events: list, rules: list[RuleDefinition]) -> list:
+def run_yaml_rules_with_matches(
+    events: list,
+    rules: list[RuleDefinition],
+) -> tuple[list, list[RuleMatch]]:
     """
     Apply all YAML rules to the event list, modifying events in-place.
-    Returns the same events list (mutations applied).
+    Return the same event list plus one aggregate match per fired rule.
     """
     if not events or not rules:
-        return events
+        return events, []
 
     log_type_index, rules_any_log_type, threshold_rules = _build_index(rules)
-
-    matched_ids: set[str] = set()
+    matched_events: dict[str, list] = defaultdict(list)
 
     # ── Simple rules — per event, indexed lookup ──────────────────────────────
     for event in events:
@@ -234,21 +250,24 @@ def run_yaml_rules(events: list, rules: list[RuleDefinition]) -> list:
                 if rule.flag and rule.flag not in event.flags:
                     event.flags.append(rule.flag)
                 _upgrade_severity(event, rule.severity)
-                matched_ids.add(rule.id)
+                matched_events[rule.id].append(event)
 
     # ── Threshold rules — aggregate ───────────────────────────────────────────
     for rule in threshold_rules:
-        before = (
-            sum(1 for e in events if rule.flag in e.flags)
-            if rule.flag else 0
-        )
-        _evaluate_threshold(events, rule)
-        after = (
-            sum(1 for e in events if rule.flag in e.flags)
-            if rule.flag else 0
-        )
-        if after > before:
-            matched_ids.add(rule.id)
+        matched_events[rule.id].extend(_evaluate_threshold(events, rule))
 
-    logger.info("  yaml   : %d unique rules fired across %d events", len(matched_ids), len(events))
-    return events
+    matches: list[RuleMatch] = []
+    emitted_ids: set[str] = set()
+    for rule in rules:
+        rule_events = matched_events.get(rule.id, [])
+        if rule_events and rule.id not in emitted_ids:
+            matches.append(RuleMatch(rule=rule, events=rule_events))
+            emitted_ids.add(rule.id)
+
+    logger.info("  yaml   : %d unique rules fired across %d events", len(matches), len(events))
+    return events, matches
+
+
+def run_yaml_rules(events: list, rules: list[RuleDefinition]) -> list:
+    """Compatibility entry point returning only the mutated events."""
+    return run_yaml_rules_with_matches(events, rules)[0]

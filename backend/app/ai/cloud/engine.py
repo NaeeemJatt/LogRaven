@@ -50,6 +50,14 @@ async def _call_model(client, system_prompt: str, user_prompt: str) -> list[dict
                     max_output_tokens=8192,
                 ),
             )
+            usage = getattr(response, "usage_metadata", None)
+            if usage:
+                logger.info(
+                    "AI token usage [gemini-2.5-flash]: prompt=%s candidates=%s total=%s",
+                    getattr(usage, "prompt_token_count", 0),
+                    getattr(usage, "candidates_token_count", 0),
+                    getattr(usage, "total_token_count", 0),
+                )
             text = response.text
             if not text:
                 logger.warning("AI returned empty response on attempt %d", attempt + 1)

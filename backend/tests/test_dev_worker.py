@@ -14,6 +14,7 @@ class DummyProcess:
 def test_dev_worker_skips_when_auto_start_disabled(monkeypatch):
     monkeypatch.setattr(dev_worker.settings, "CELERY_TASK_ALWAYS_EAGER", False, raising=False)
     monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", False, raising=False)
+    monkeypatch.setattr(dev_worker, "_has_active_worker", lambda: False)
 
     started = {"called": False}
 
@@ -27,7 +28,7 @@ def test_dev_worker_skips_when_auto_start_disabled(monkeypatch):
     assert started["called"] is False
 
 
-def test_dev_worker_skips_when_worker_already_active(monkeypatch):
+def test_dev_worker_reports_ready_when_worker_already_active(monkeypatch):
     monkeypatch.setattr(dev_worker.settings, "CELERY_TASK_ALWAYS_EAGER", False, raising=False)
     monkeypatch.setattr(dev_worker.settings, "AUTO_START_DEV_WORKER", True, raising=False)
     monkeypatch.setattr(dev_worker, "_has_active_worker", lambda: True)
@@ -40,7 +41,7 @@ def test_dev_worker_skips_when_worker_already_active(monkeypatch):
 
     monkeypatch.setattr(dev_worker.subprocess, "Popen", fake_popen)
 
-    assert dev_worker.ensure_dev_worker_running() is False
+    assert dev_worker.ensure_dev_worker_running() is True
     assert started["called"] is False
 
 

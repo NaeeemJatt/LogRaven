@@ -9,11 +9,8 @@
 #   single     — found in a single log file
 #
 # SOURCE_FILES:
-#   JSON array of investigation_file IDs that contributed to this finding.
-#   For correlated findings: 2+ file IDs.
-#   For single findings: 1 file ID.
-#
-# TODO Month 4 Week 1: Implement this model.
+#   JSON array of human-readable upload labels that contributed to this finding.
+#   Labels remain plain filenames unless duplicates need a short file-ID suffix.
 
 import uuid
 from datetime import datetime

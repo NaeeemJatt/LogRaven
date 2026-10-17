@@ -20,44 +20,26 @@ def _request(host: str = "127.0.0.1"):
 # ---------------------------------------------------------------------------
 
 class TestCheckAi:
+    """Only the wired provider (GEMINI_API_KEY) counts toward "AI enabled"."""
 
-    def _run(self, gemini="", anthropic="", openai=""):
-        """Helper: call _check_ai with patched settings."""
+    def _run(self, gemini=""):
+        """Helper: call _check_ai with patched provider key."""
         from app.api.health import routes as health_module
         mock_settings = MagicMock()
-        mock_settings.GEMINI_API_KEY    = gemini
-        mock_settings.ANTHROPIC_API_KEY = anthropic
-        mock_settings.OPENAI_API_KEY    = openai
-        with patch("app.api.health.routes._check_ai") as _:
-            # Call directly by re-implementing inline to avoid import complexity
-            pass
-        # Call the actual function with patched settings import
-        with patch("app.config.settings", mock_settings):
+        mock_settings.GEMINI_API_KEY = gemini
+        # cloud_ai_enabled binds settings at consent-module import — patch there.
+        with patch("app.ai.cloud.consent.settings", mock_settings):
             return health_module._check_ai()
 
-    def test_gemini_key_returns_ok(self):
+    def test_provider_key_returns_ok(self):
         result = self._run(gemini="AIza_test_key")
         assert result == "ok"
 
-    def test_anthropic_key_returns_ok(self):
-        result = self._run(anthropic="sk-ant-test")
-        assert result == "ok"
-
-    def test_openai_key_returns_ok(self):
-        result = self._run(openai="sk-test-openai")
-        assert result == "ok"
-
-    def test_no_keys_returns_no_key(self):
+    def test_no_key_returns_no_key(self):
         result = self._run()
         assert result == "no_key"
 
-    def test_all_keys_set_returns_ok(self):
-        result = self._run(gemini="g", anthropic="a", openai="o")
-        assert result == "ok"
-
-    def test_whitespace_only_key_is_falsy(self):
-        # Empty string is falsy in Python, so whitespace-only is truthy — acceptable
-        # but empty string means "no_key"
+    def test_empty_key_is_falsy(self):
         result = self._run(gemini="")
         assert result == "no_key"
 

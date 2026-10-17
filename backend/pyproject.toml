@@ -15,3 +15,15 @@ description = "LogRaven FastAPI backend"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["app*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+# Existing style debt stays out of Phase 1; enforce syntax/runtime-critical rules repo-wide.
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.ruff.format]
+quote-style = "double"

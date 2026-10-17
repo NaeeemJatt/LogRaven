@@ -5,10 +5,15 @@ local/uploads/
 local/reports/
 local/temp/
 local/
+temp/
 
-# Environment
+# Environment files & secrets
 .env
 *.env
+.env.local
+.env.*.local
+*.pem
+*.key
 
 # Python
 __pycache__/
@@ -23,37 +28,41 @@ env/
 dist/
 build/
 .pytest_cache/
+.ruff_cache/
 .coverage
 htmlcov/
 
-# Node
+# Node & Frontend
 node_modules/
+frontend/dist/
 dist/
 .next/
 .nuxt/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
-# IDE
+# IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS
+# OS & Environment shims
 .DS_Store
 Thumbs.db
+desktop.ini
+powershell.bat
+**/powershell.bat
 
-# Logs
+# Logs & Test Data
 *.log
 logs/
-
-# Secrets
-*.pem
-*.key
-
 test-data/
 
-# Agent / AI tooling
+# Agent & AI Tooling Caches
 .agents/
+.playwright-mcp/
 frontend-mockup/
 memory-bank/
-skills-lock.json

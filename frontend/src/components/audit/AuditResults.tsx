@@ -8,27 +8,40 @@ import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   Download, Loader2, RotateCcw, FileText, ListChecks, AlertOctagon,
-  Wrench, Network, FileSpreadsheet, TrendingUp, TrendingDown,
+  Network, FileSpreadsheet, TrendingUp, TrendingDown, Share2,
+  ShieldAlert, Undo2, Flame,
 } from 'lucide-react'
 import type {
-  AuditStatusResponse, ControlResult, CrosswalkResponse, FrameworkResult,
+  AuditStatusResponse, ControlResult, CrosswalkResponse, FrameworkResult, ExceptionResponse,
 } from '../../types/audit'
-import { downloadAuditReport, downloadEvidencePack, getCrosswalk } from '../../api/compliance'
+import {
+  downloadAuditReport, downloadEvidencePack, getCrosswalk,
+  suppressControl, unsuppressControl, listAuditExceptions,
+  type SuppressControlBody,
+} from '../../api/compliance'
+import SuppressFindingModal from './SuppressFindingModal'
+import RemediationStudio from './RemediationStudio'
+import AttackPathCanvas from './AttackPathCanvas'
 
 interface AuditResultsProps {
   results: AuditStatusResponse
   auditId: string
-  onStartNew: () => void
+  onStartNew?: () => void
+  /** When set, shows a Share button in the actions column. */
+  onShare?: () => void
+  /** Public share view: hides authenticated-only actions (downloads / new / share). */
+  readOnly?: boolean
 }
 
-const STATUS_ORDER: Record<string, number> = { FAIL: 0, PARTIAL: 1, PASS: 2 }
+const STATUS_ORDER: Record<string, number> = { FAIL: 0, PARTIAL: 1, SUPPRESSED: 2, PASS: 3 }
 const STATUS_COLOR: Record<string, string> = {
-  PASS:    '#8FBDAD',
-  FAIL:    '#DB8585',
-  PARTIAL: '#D9C27E',
+  PASS:       '#8FBDAD',
+  FAIL:       '#DB8585',
+  PARTIAL:    '#D9C27E',
+  SUPPRESSED: '#A371F7',
 }
-type StatusFilter = 'ALL' | 'FAIL' | 'PARTIAL' | 'PASS'
-type ViewMode = 'controls' | 'crosswalk'
+type StatusFilter = 'ALL' | 'FAIL' | 'PARTIAL' | 'SUPPRESSED' | 'PASS'
+type ViewMode = 'controls' | 'crosswalk' | 'exceptions' | 'attack_path'
 
 function sortedResults(results: ControlResult[]): ControlResult[] {
   return [...results].sort((a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3))
@@ -45,10 +58,13 @@ function deriveFrameworks(results: AuditStatusResponse): FrameworkResult[] {
     pass_count: results.pass_count ?? 0,
     fail_count: results.fail_count ?? 0,
     partial_count: results.partial_count ?? 0,
+    suppressed_count: results.suppressed_count ?? 0,
     score_percent: results.score_percent ?? 0,
+    raw_score_percent: results.raw_score_percent ?? results.score_percent ?? 0,
     results: controls,
   }]
 }
+
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob)
@@ -88,8 +104,11 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
   )
 }
 
-export default function AuditResults({ results, auditId, onStartNew }: AuditResultsProps) {
-  const frameworks = useMemo(() => deriveFrameworks(results), [results])
+export default function AuditResults({ results, auditId, onStartNew, onShare, readOnly = false }: AuditResultsProps) {
+  const [localResults, setLocalResults] = useState<AuditStatusResponse>(results)
+  useEffect(() => { setLocalResults(results) }, [results])
+
+  const frameworks = useMemo(() => deriveFrameworks(localResults), [localResults])
   const [activeFwId, setActiveFwId] = useState(frameworks[0]?.framework_id ?? 'soc2')
   const [view, setView] = useState<ViewMode>('controls')
   const [downloading, setDownloading] = useState<string | null>(null)
@@ -97,13 +116,20 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
   const [filter, setFilter] = useState<StatusFilter>('ALL')
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [crosswalk, setCrosswalk] = useState<CrosswalkResponse | null>(null)
+  const [suppressionModalOpen, setSuppressionModalOpen] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false)
 
   const active = frameworks.find((f) => f.framework_id === activeFwId) ?? frameworks[0]
-  const controls = active?.results ?? []
+  const controls = useMemo(() => active?.results ?? [], [active])
   const sorted = useMemo(() => sortedResults(controls), [controls])
-  const company = results.company_name ?? ''
+  const company = localResults.company_name ?? ''
   const score = active?.score_percent ?? 0
   const scoreColor = score >= 80 ? '#8FBDAD' : score >= 50 ? '#D9C27E' : '#DB8585'
+
+  const totalExceptions = useMemo(
+    () => frameworks.reduce((acc, f) => acc + (f.suppressed_count ?? 0), 0),
+    [frameworks],
+  )
 
   const visible = useMemo(
     () => (filter === 'ALL' ? sorted : sorted.filter((r) => r.status === filter)),
@@ -124,6 +150,72 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
   }, [view, crosswalk, frameworks])
 
   const selected = visible.find((r) => r.control_id === selectedId) ?? null
+
+  const handleSuppress = async (data: SuppressControlBody) => {
+    if (!selected) return
+    const updated = await suppressControl(auditId, selected.control_id, active.framework_id, data)
+    setLocalResults((prev) => {
+      const copy = { ...prev }
+      if (copy.framework_results) {
+        copy.framework_results = copy.framework_results.map((fw) => {
+          if (fw.framework_id !== active.framework_id) return fw
+          const updatedControls = fw.results.map((c) => (c.control_id === selected.control_id ? updated : c))
+          const pass = updatedControls.filter((c) => c.status === 'PASS').length
+          const supp = updatedControls.filter((c) => c.status === 'SUPPRESSED').length
+          const fail = updatedControls.filter((c) => c.status === 'FAIL').length
+          const partial = updatedControls.filter((c) => c.status === 'PARTIAL').length
+          const eff = Math.max(updatedControls.length - supp, 1)
+          const scoreVal = Number(((pass / eff) * 100).toFixed(2))
+          return {
+            ...fw,
+            results: updatedControls,
+            pass_count: pass,
+            suppressed_count: supp,
+            fail_count: fail,
+            partial_count: partial,
+            score_percent: scoreVal,
+          }
+        })
+      }
+      return copy
+    })
+  }
+
+  const handleUnsuppress = async (controlId: string, frameworkId: string) => {
+    setActionLoading(true)
+    try {
+      const updated = await unsuppressControl(auditId, controlId, frameworkId)
+      setLocalResults((prev) => {
+        const copy = { ...prev }
+        if (copy.framework_results) {
+          copy.framework_results = copy.framework_results.map((fw) => {
+            if (fw.framework_id !== frameworkId) return fw
+            const updatedControls = fw.results.map((c) => (c.control_id === controlId ? updated : c))
+            const pass = updatedControls.filter((c) => c.status === 'PASS').length
+            const supp = updatedControls.filter((c) => c.status === 'SUPPRESSED').length
+            const fail = updatedControls.filter((c) => c.status === 'FAIL').length
+            const partial = updatedControls.filter((c) => c.status === 'PARTIAL').length
+            const eff = Math.max(updatedControls.length - supp, 1)
+            const scoreVal = Number(((pass / eff) * 100).toFixed(2))
+            return {
+              ...fw,
+              results: updatedControls,
+              pass_count: pass,
+              suppressed_count: supp,
+              fail_count: fail,
+              partial_count: partial,
+              score_percent: scoreVal,
+            }
+          })
+        }
+        return copy
+      })
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Failed to revoke exception.')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   const runDownload = async (key: string, fn: () => Promise<void>) => {
     setDownloading(key)
@@ -147,10 +239,11 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
   })
 
   const filters: { key: StatusFilter; label: string; count: number; color?: string }[] = [
-    { key: 'ALL',     label: 'All',     count: controls.length },
-    { key: 'FAIL',    label: 'Fail',    count: active?.fail_count ?? 0,    color: STATUS_COLOR.FAIL },
-    { key: 'PARTIAL', label: 'Partial', count: active?.partial_count ?? 0, color: STATUS_COLOR.PARTIAL },
-    { key: 'PASS',    label: 'Pass',    count: active?.pass_count ?? 0,    color: STATUS_COLOR.PASS },
+    { key: 'ALL',        label: 'All',        count: controls.length },
+    { key: 'FAIL',       label: 'Fail',       count: active?.fail_count ?? 0,       color: STATUS_COLOR.FAIL },
+    { key: 'PARTIAL',    label: 'Partial',    count: active?.partial_count ?? 0,    color: STATUS_COLOR.PARTIAL },
+    { key: 'SUPPRESSED', label: 'Exceptions', count: active?.suppressed_count ?? 0, color: STATUS_COLOR.SUPPRESSED },
+    { key: 'PASS',       label: 'Pass',       count: active?.pass_count ?? 0,       color: STATUS_COLOR.PASS },
   ]
 
   return (
@@ -185,9 +278,10 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
       <div className="ops-panel p-5 flex flex-col sm:flex-row sm:items-center gap-5">
         <ScoreGauge score={score} color={scoreColor} />
 
-        <div className="flex-1 grid grid-cols-3 gap-2.5">
+        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
           {[
             { label: 'Pass', count: active?.pass_count ?? 0, color: STATUS_COLOR.PASS },
+            { label: 'Exceptions', count: active?.suppressed_count ?? 0, color: STATUS_COLOR.SUPPRESSED },
             { label: 'Partial', count: active?.partial_count ?? 0, color: STATUS_COLOR.PARTIAL },
             { label: 'Fail', count: active?.fail_count ?? 0, color: STATUS_COLOR.FAIL },
           ].map(({ label, count, color }) => (
@@ -200,7 +294,7 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
             </div>
           ))}
           {active?.score_delta != null && active.score_delta !== 0 && (
-            <div className="col-span-3 flex items-center gap-1.5 text-[11px] font-mono"
+            <div className="col-span-2 sm:col-span-4 flex items-center gap-1.5 text-[11px] font-mono"
               style={{ color: active.score_delta > 0 ? '#8FBDAD' : '#DB8585' }}>
               {active.score_delta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
               {active.score_delta > 0 ? '+' : ''}{active.score_delta.toFixed(1)} pts since last scan
@@ -208,38 +302,50 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:w-48">
-          <button
-            onClick={() => { void handleDownloadPdf() }}
-            disabled={downloading !== null}
-            className="btn-sovereign py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {downloading === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            PDF
-          </button>
-          <button
-            onClick={() => { void handleDownloadCsv() }}
-            disabled={downloading !== null}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            {downloading === 'csv' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-            CSV
-          </button>
-          <button
-            onClick={() => { void handleDownloadZip() }}
-            disabled={downloading !== null}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            {downloading === 'zip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            Evidence ZIP
-          </button>
-          <button
-            onClick={onStartNew}
-            className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-          >
-            <RotateCcw className="w-3.5 h-3.5" /> New audit
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:w-48">
+            <button
+              onClick={() => { void handleDownloadPdf() }}
+              disabled={downloading !== null}
+              className="btn-sovereign py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+            >
+              {downloading === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              PDF
+            </button>
+            <button
+              onClick={() => { void handleDownloadCsv() }}
+              disabled={downloading !== null}
+              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+            >
+              {downloading === 'csv' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
+              CSV
+            </button>
+            <button
+              onClick={() => { void handleDownloadZip() }}
+              disabled={downloading !== null}
+              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+            >
+              {downloading === 'zip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              Evidence ZIP
+            </button>
+            {onShare && (
+              <button
+                onClick={onShare}
+                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+              >
+                <Share2 className="w-3.5 h-3.5" /> Share
+              </button>
+            )}
+            {onStartNew && (
+              <button
+                onClick={onStartNew}
+                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> New audit
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {downloadError && (
@@ -248,11 +354,14 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
         </p>
       )}
 
-      {/* ── View switch ──────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5">
+      {/* ── View switch ────────── */}
+      {!readOnly && (
+      <div className="flex gap-1.5 flex-wrap">
         {([
           { key: 'controls' as ViewMode, label: 'Control browser', icon: ListChecks },
+          { key: 'attack_path' as ViewMode, label: 'Attack Path Graph', icon: Flame },
           { key: 'crosswalk' as ViewMode, label: 'Crosswalk', icon: Network },
+          { key: 'exceptions' as ViewMode, label: `Exceptions (${totalExceptions})`, icon: ShieldAlert },
         ]).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -266,9 +375,24 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
           </button>
         ))}
       </div>
+      )}
 
       {view === 'crosswalk' ? (
         <CrosswalkView data={crosswalk} />
+      ) : view === 'exceptions' ? (
+        <ExceptionsLogView
+          auditId={auditId}
+          readOnly={readOnly}
+          onRevoke={handleUnsuppress}
+        />
+      ) : view === 'attack_path' ? (
+        <AttackPathCanvas
+          auditId={auditId}
+          onRemediateControl={(controlId) => {
+            setSelectedId(controlId)
+            setView('controls')
+          }}
+        />
       ) : (
         /* ── Master-detail control navigator ──────────────────────────────── */
         <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] gap-4 md:h-[calc(100vh-22rem)] min-h-[460px]">
@@ -352,6 +476,56 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                  {/* Authorized Exception Callout (if suppressed) */}
+                  {selected.status === 'SUPPRESSED' && selected.exception && (
+                    <div className="rounded-lg border border-purple-500/30 bg-purple-500/[0.06] p-4 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="font-mono text-[10px] uppercase tracking-wider text-purple-300 flex items-center gap-1.5 font-semibold">
+                          <ShieldAlert className="w-3.5 h-3.5 text-purple-400" /> Authorized Business Exception
+                        </div>
+                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/40 uppercase">
+                          {selected.exception.risk_level ?? 'medium'} Risk
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-mono uppercase text-text-muted">Business Justification</div>
+                        <p className="text-xs text-text-primary mt-0.5 leading-relaxed">{selected.exception.business_justification}</p>
+                      </div>
+                      {selected.exception.compensating_controls && (
+                        <div>
+                          <div className="text-[10px] font-mono uppercase text-text-muted">Compensating Controls</div>
+                          <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{selected.exception.compensating_controls}</p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between pt-1 border-t border-white/[0.08] text-[10px] text-text-muted">
+                        <span>Authorized by: <strong className="text-text-primary">{selected.exception.suppressed_by}</strong></span>
+                        {selected.exception.expires_at && (
+                          <span>Review: {selected.exception.expires_at.split('T')[0]}</span>
+                        )}
+                      </div>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={() => handleUnsuppress(selected.control_id, active.framework_id)}
+                          disabled={actionLoading}
+                          className="w-full mt-2 py-1.5 px-3 rounded-lg border border-purple-500/30 hover:border-purple-500/60 bg-purple-500/10 text-purple-300 hover:text-purple-100 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" /> Revoke Business Exception
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {!readOnly && selected.status !== 'PASS' && selected.status !== 'SUPPRESSED' && (
+                    <button
+                      type="button"
+                      onClick={() => setSuppressionModalOpen(true)}
+                      className="w-full py-2 px-3 rounded-lg border border-purple-500/30 bg-purple-500/[0.04] hover:bg-purple-500/10 text-purple-300 hover:text-purple-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
+                    >
+                      <ShieldAlert className="w-3.5 h-3.5 text-purple-400" /> Suppress / Add Business Exception
+                    </button>
+                  )}
+
                   <div>
                     <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Assessment</div>
                     <p className="text-sm text-text-secondary leading-relaxed">{selected.ai_description}</p>
@@ -381,13 +555,12 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
                     )}
                   </div>
 
-                  {selected.remediation && (
-                    <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/[0.04] p-3">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-indigo-300 mb-1.5 flex items-center gap-1.5">
-                        <Wrench className="w-3 h-3" /> Recommended remediation
-                      </div>
-                      <p className="text-xs text-text-secondary leading-relaxed">{selected.remediation}</p>
-                    </div>
+                  {(selected.remediation_guide || selected.remediation) && (
+                    <RemediationStudio
+                      guide={selected.remediation_guide}
+                      fallbackText={selected.remediation}
+                      controlId={selected.control_id}
+                    />
                   )}
                 </div>
               </>
@@ -396,11 +569,130 @@ export default function AuditResults({ results, auditId, onStartNew }: AuditResu
         </div>
       )}
 
+      {selected && (
+        <SuppressFindingModal
+          isOpen={suppressionModalOpen}
+          onClose={() => setSuppressionModalOpen(false)}
+          controlId={selected.control_id}
+          controlName={selected.control_name}
+          frameworkId={active.framework_id}
+          onConfirm={handleSuppress}
+        />
+      )}
+
       <p className="flex items-center justify-center gap-1.5 text-xs text-center text-text-muted">
         <FileText className="w-3.5 h-3.5 flex-shrink-0" />
         AI-assisted report. Review by a qualified security professional before submission.
       </p>
     </motion.div>
+  )
+}
+
+// ── Exceptions log view: business logic exceptions for auditors ───────────
+function ExceptionsLogView({
+  auditId,
+  readOnly,
+  onRevoke,
+}: {
+  auditId: string
+  readOnly: boolean
+  onRevoke: (controlId: string, frameworkId: string) => Promise<void>
+}) {
+  const [exceptions, setExceptions] = useState<ExceptionResponse[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchExceptions = () => {
+    setLoading(true)
+    listAuditExceptions(auditId)
+      .then(setExceptions)
+      .catch(() => setExceptions([]))
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchExceptions()
+  }, [auditId])
+
+  if (loading) {
+    return (
+      <div className="ops-panel p-10 flex items-center justify-center text-sm text-text-muted">
+        <Loader2 className="w-4 h-4 animate-spin mr-2 text-purple-400" /> Loading exceptions log…
+      </div>
+    )
+  }
+
+  return (
+    <div className="ops-panel overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-white/[0.07] flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-semibold text-text-primary">
+            Auditor Log: Business Exceptions & Compensating Controls
+          </span>
+        </div>
+        <span className="font-mono text-[11px] text-purple-300">
+          {exceptions.length} Active Exception{exceptions.length === 1 ? '' : 's'}
+        </span>
+      </div>
+
+      {exceptions.length === 0 ? (
+        <div className="px-5 py-12 text-center text-sm text-text-muted">
+          No business logic exceptions recorded for this engagement. All controls are evaluated strictly against raw cloud telemetry.
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-white/[0.08] bg-white/[0.02] text-text-muted font-mono text-[10px] uppercase">
+                <th className="px-4 py-3">Control / Framework</th>
+                <th className="px-4 py-3">Business Justification</th>
+                <th className="px-4 py-3">Compensating Controls</th>
+                <th className="px-4 py-3">Risk / Review Date</th>
+                {!readOnly && <th className="px-4 py-3 text-right">Action</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {exceptions.map((exc) => (
+                <tr key={exc.id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3 align-top font-mono">
+                    <span className="text-purple-300 font-semibold">{exc.control_id}</span>
+                    <span className="block text-[10px] text-text-muted uppercase mt-0.5">{exc.framework}</span>
+                  </td>
+                  <td className="px-4 py-3 align-top text-text-primary max-w-xs leading-relaxed">
+                    {exc.business_justification}
+                  </td>
+                  <td className="px-4 py-3 align-top text-text-secondary max-w-xs leading-relaxed">
+                    {exc.compensating_controls || <span className="text-text-muted italic">None documented</span>}
+                  </td>
+                  <td className="px-4 py-3 align-top text-text-muted font-mono text-[11px] whitespace-nowrap">
+                    <span className="inline-block px-1.5 py-0.5 rounded text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase mb-1">
+                      {exc.risk_level}
+                    </span>
+                    <span className="block text-[10px] text-text-muted">
+                      Review: {exc.expires_at ? exc.expires_at.split('T')[0] : 'Perpetual'}
+                    </span>
+                  </td>
+                  {!readOnly && (
+                    <td className="px-4 py-3 align-top text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await onRevoke(exc.control_id, exc.framework)
+                          fetchExceptions()
+                        }}
+                        className="px-2.5 py-1 rounded text-[11px] text-purple-300 hover:text-purple-100 border border-purple-500/30 hover:border-purple-500/60 transition-colors"
+                      >
+                        Revoke
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -454,3 +746,4 @@ function CrosswalkView({ data }: { data: CrosswalkResponse | null }) {
     </div>
   )
 }
+

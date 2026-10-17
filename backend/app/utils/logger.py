@@ -1,8 +1,27 @@
 # LogRaven — Structured Logger
+#
+# LOG_FORMAT=text (default): colored human-readable lines for dev terminals.
+# LOG_FORMAT=json: one JSON object per line for production log aggregation
+# (CloudWatch, Loki, etc.).
 
+import json
 import logging
-import os
 import sys
+
+
+class _JsonFormatter(logging.Formatter):
+    """One JSON object per line — safe for log aggregators."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        entry = {
+            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            entry["exc"] = self.formatException(record.exc_info)
+        return json.dumps(entry, ensure_ascii=False)
 
 
 class _ColorFormatter(logging.Formatter):
@@ -34,12 +53,18 @@ class _ColorFormatter(logging.Formatter):
 
 
 def get_logger(name: str) -> logging.Logger:
+    # Imported lazily so this module stays importable even if config isn't
+    # loadable yet (e.g. tooling that imports utils in isolation).
+    from app.config import settings
+
     logger = logging.getLogger(name)
     if not logger.handlers:
         handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(_ColorFormatter())
+        if str(settings.LOG_FORMAT).lower() == "json":
+            handler.setFormatter(_JsonFormatter())
+        else:
+            handler.setFormatter(_ColorFormatter())
         logger.addHandler(handler)
         logger.propagate = False   # don't double-print via root logger
-    level = logging.DEBUG if os.getenv("DEBUG", "").lower() in ("true", "1") else logging.INFO
-    logger.setLevel(level)
+    logger.setLevel(logging.DEBUG if settings.DEBUG else logging.INFO)
     return logger

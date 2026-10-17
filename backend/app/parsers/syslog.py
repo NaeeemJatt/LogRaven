@@ -72,10 +72,41 @@ class SyslogParser(BaseParser):
             if not line.strip():
                 continue
             event = self._parse_line(line, pattern, current_year)
+            if event is None and pattern is None:
+                event = self._parse_fallback_line(line)
             if event:
                 events.append(event)
 
         return self._detect_patterns(events)
+
+    def _parse_fallback_line(self, line: str) -> NormalizedEvent | None:
+        username = None
+        for rex in (_RE_USERNAME_FROM, _RE_USERNAME_USER, _RE_USERNAME_FOR):
+            mu = rex.search(line)
+            if mu:
+                username = mu.group(1)
+                break
+
+        ms = _RE_SOURCE_IP.search(line)
+        source_ip = ms.group(1) if ms else None
+
+        ts = self._safe_parse_timestamp(line[:35])
+        if ts is None:
+            ts = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        event_type = _classify_event("", line)
+
+        return NormalizedEvent(
+            timestamp=ts,
+            source_type="linux_endpoint",
+            hostname=None,
+            username=normalize_entity(username),
+            source_ip=normalize_entity(source_ip),
+            event_type=event_type,
+            event_id="syslog",
+            raw_message=line[:500],
+            extra_fields={"message": line[:300]},
+        )
 
     def _parse_line(self, line: str, pattern: re.Pattern | None, current_year: int) -> NormalizedEvent | None:
         if pattern is None:

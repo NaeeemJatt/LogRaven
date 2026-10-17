@@ -73,13 +73,11 @@ async def _check_redis() -> str:
 
 def _check_ai() -> str:
     """
-    Return 'ok' if at least one AI API key is configured, 'no_key' otherwise.
+    Return 'ok' if the wired AI provider's key is configured, 'no_key' otherwise.
     Does not make any outbound network call.
     """
-    from app.config import settings
-    if any([settings.GEMINI_API_KEY, settings.ANTHROPIC_API_KEY, settings.OPENAI_API_KEY]):
-        return "ok"
-    return "no_key"
+    from app.ai.cloud.consent import cloud_ai_enabled
+    return "ok" if cloud_ai_enabled() else "no_key"
 
 
 def _is_local_request(request: Request) -> bool:

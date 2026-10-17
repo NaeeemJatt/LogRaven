@@ -15,4 +15,9 @@ def rate_limit_key(request: Request) -> str:
     return get_remote_address(request)
 
 
-limiter = Limiter(key_func=rate_limit_key)
+# Shared Redis storage in production so limits hold across API replicas;
+# in-memory when unset (single-process dev).
+limiter = Limiter(
+    key_func=rate_limit_key,
+    storage_uri=settings.RATE_LIMIT_STORAGE_URL or None,
+)

@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import LegalLinks from '../../components/layout/LegalLinks'
 
 
 // ── Pupil ─────────────────────────────────────────────────────────────────────
@@ -419,11 +420,7 @@ export default function Login() {
         </div>
 
         {/* Footer links */}
-        <div className="relative z-20 flex items-center gap-8 text-xs text-text-ghost font-mono uppercase tracking-widest">
-          <a href="#" className="hover:text-text-muted transition-colors">Privacy</a>
-          <a href="#" className="hover:text-text-muted transition-colors">Terms</a>
-          <a href="#" className="hover:text-text-muted transition-colors">Contact</a>
-        </div>
+        <LegalLinks className="relative z-20 justify-start font-mono uppercase tracking-widest" />
 
         {/* Decorative blobs */}
         <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-[#6366F1]/5 rounded-full blur-3xl pointer-events-none" />
@@ -459,14 +456,15 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-text-muted mb-1">
+              <label htmlFor="login-email" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
                 Email
               </label>
               <input
+                id="login-email"
                 type="email"
                 required
                 value={email}
-                autoComplete="off"
+                autoComplete="email"
                 placeholder="operator@example.com"
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setIsTyping(true)}
@@ -476,20 +474,23 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-xs uppercase tracking-widest text-text-muted mb-1">
+              <label htmlFor="login-password" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
+                  autoComplete="current-password"
                   placeholder="••••••••••••"
                   onChange={e => setPassword(e.target.value)}
                   className={`${inputClass} pr-10`}
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword(v => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-text-ghost hover:text-text-muted transition-colors"
                 >
@@ -498,18 +499,11 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Remember me + forgot */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="w-3.5 h-3.5 bg-surface border-white/[0.12] rounded-none"
-                />
-                <span className="text-text-muted text-xs font-mono">Remember me</span>
-              </label>
-              <a href="#" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
+            {/* Forgot password */}
+            <div className="flex items-center justify-end">
+              <Link to="/forgot-password" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
                 Forgot password?
-              </a>
+              </Link>
             </div>
 
             {error && (
@@ -534,6 +528,7 @@ export default function Login() {
               Register
             </Link>
           </p>
+          <LegalLinks className="lg:hidden mt-8" />
         </div>
       </div>
 

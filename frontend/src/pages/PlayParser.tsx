@@ -24,6 +24,7 @@ import {
   type PlayParserPreviewResponse,
   type PlayParserRunMode,
 } from '../api/playParser'
+import { normalizeApiError } from '../api/errors'
 import { PlayParserAlert } from './playParser/PlayParserAlert'
 import {
   playFocusRing,
@@ -194,6 +195,7 @@ export default function PlayParser() {
   const [runLoading, setRunLoading] = useState(false)
   const [detectLoading, setDetectLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [planLimitError, setPlanLimitError] = useState(false)
   const [results, setResults] = useState<PlayParserEvaluateItem[] | null>(null)
   const [hints, setHints] = useState<PlayParserDetectCandidate[] | null>(null)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
@@ -249,6 +251,7 @@ export default function PlayParser() {
 
   const runPlay = async () => {
     setError(null)
+    setPlanLimitError(false)
     setResults(null)
     setCompareResults(null)
     clearPreview()
@@ -282,7 +285,9 @@ export default function PlayParser() {
         setResults(res.data.parser_results)
       }
     } catch (e: unknown) {
-      setError(apiErrorMessage(e))
+      const normalized = normalizeApiError(e)
+      setPlanLimitError(normalized.isPlanLimit)
+      setError(normalized.isPlanLimit ? normalized.message : apiErrorMessage(e))
       setLastRunMode(null)
     } finally {
       setRunLoading(false)
@@ -305,7 +310,13 @@ export default function PlayParser() {
       })
       setPreviewPayload(res.data)
     } catch (e: unknown) {
-      setPreviewError(apiErrorMessage(e))
+      const normalized = normalizeApiError(e)
+      if (normalized.isPlanLimit) {
+        setPlanLimitError(true)
+        setError(normalized.message)
+      } else {
+        setPreviewError(apiErrorMessage(e))
+      }
       setPreviewActive(null)
     } finally {
       setPreviewLoading(false)
@@ -323,6 +334,7 @@ export default function PlayParser() {
 
   const runDetectorHint = async () => {
     setError(null)
+    setPlanLimitError(false)
     setHints(null)
     if (!file) {
       setError('Choose a log file first.')
@@ -333,7 +345,9 @@ export default function PlayParser() {
       const res = await playParserApi.detect(file)
       setHints(res.data.candidates)
     } catch (e: unknown) {
-      setError(apiErrorMessage(e))
+      const normalized = normalizeApiError(e)
+      setPlanLimitError(normalized.isPlanLimit)
+      setError(normalized.isPlanLimit ? normalized.message : apiErrorMessage(e))
     } finally {
       setDetectLoading(false)
     }
@@ -617,10 +631,21 @@ export default function PlayParser() {
                     <PlayParserAlert
                       variant="danger"
                       title="Something went wrong"
-                      onDismiss={() => setError(null)}
+                      onDismiss={() => {
+                        setError(null)
+                        setPlanLimitError(false)
+                      }}
                       collapsibleDetail={error.length > 200 ? error : undefined}
                     >
                       {error.length > 200 ? `${error.slice(0, 200).trim()}…` : error}
+                      {planLimitError && (
+                        <a
+                          href="mailto:support@lograven.io"
+                          className="ml-2 underline text-play-accent"
+                        >
+                          Contact support
+                        </a>
+                      )}
                     </PlayParserAlert>
                   </div>
                 ) : null}

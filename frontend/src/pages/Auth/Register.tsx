@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Shield } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
+import LegalLinks from '../../components/layout/LegalLinks'
 
 export default function Register() {
   const { register } = useAuth()
@@ -62,10 +63,11 @@ export default function Register() {
           <div className="rounded-2xl border border-white/[0.06] bg-surface/60 backdrop-blur-xl p-6 sm:p-8">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
+                <label htmlFor="register-email" className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Email
                 </label>
                 <input
+                  id="register-email"
                   type="email"
                   required
                   value={email}
@@ -77,10 +79,11 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
+                <label htmlFor="register-password" className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Password
                 </label>
                 <input
+                  id="register-password"
                   type="password"
                   required
                   value={password}
@@ -92,10 +95,11 @@ export default function Register() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
+                <label htmlFor="register-confirm-password" className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-text-muted mb-1.5">
                   Confirm password
                 </label>
                 <input
+                  id="register-confirm-password"
                   type="password"
                   required
                   value={confirm}
@@ -130,6 +134,7 @@ export default function Register() {
           </div>
         </div>
       </div>
+      <LegalLinks className="px-4 pb-6" />
     </div>
   )
 }

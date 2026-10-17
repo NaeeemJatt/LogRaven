@@ -3,10 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Lock, Save, Eye, EyeOff, CheckCircle2, X, LogOut,
   Mail, CalendarClock, BadgeCheck, ShieldCheck,
+  MailWarning, Trash2, AlertTriangle,
 } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import { useAuth } from '../hooks/useAuth'
 import { useProfile } from '../hooks/useProfile'
+import { authApi } from '../api/auth'
+import { formatDateTime } from '../utils/dateTime'
 
 type Tone = 'success' | 'error'
 
@@ -64,6 +67,29 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 // = PROFILE FORM =
 
+// Common IANA zones + whatever the browser reports, so the saved value is a
+// valid tz string the backend stores verbatim.
+const TIMEZONES: string[] = (() => {
+  const fallback = [
+    'UTC',
+    'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+    'America/Sao_Paulo', 'Europe/London', 'Europe/Paris', 'Europe/Berlin',
+    'Europe/Moscow', 'Africa/Cairo', 'Asia/Dubai', 'Asia/Karachi', 'Asia/Kolkata',
+    'Asia/Dhaka', 'Asia/Shanghai', 'Asia/Singapore', 'Asia/Tokyo',
+    'Australia/Sydney', 'Pacific/Auckland',
+  ]
+  try {
+    const supportedValuesOf = (
+      Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
+    ).supportedValuesOf
+    const base = supportedValuesOf ? ['UTC', ...supportedValuesOf('timeZone')] : fallback
+    const local = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (local && !base.includes(local)) base.unshift(local)
+    return base
+  } catch { /* ignore — fall back to the static list */ }
+  return fallback
+})()
+
 function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) {
   const user = useAuthStore((s) => s.user)
   const setUser = useAuthStore((s) => s.setUser)
@@ -71,10 +97,11 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
 
   const defaultName = user?.name ?? user?.email?.split('@')[0] ?? ''
   const [name, setName] = useState(defaultName)
+  const [timezone, setTimezone] = useState(user?.timezone ?? '')
 
   const handleSave = async () => {
     try {
-      const res = await updateProfile({ name })
+      const res = await updateProfile({ name, timezone })
       if (res?.data) setUser(res.data)
       notify('Profile updated successfully', 'success')
     } catch {
@@ -89,14 +116,47 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
           className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm" placeholder="Your name" />
       </Field>
 
+      <Field label="Timezone" hint="Used to display dates and times in your local zone">
+        <select
+          value={timezone}
+          onChange={(e) => setTimezone(e.target.value)}
+          className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm"
+        >
+          <option value="">Not set (use UTC)</option>
+          {TIMEZONES.map((tz) => (
+            <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+          ))}
+        </select>
+      </Field>
+
       <Field label="Email address" hint="Used for login — contact support to change">
         <div className="flex gap-2">
           <input value={user?.email ?? ''} readOnly
             className="sovereign-input flex-1 px-4 py-2.5 rounded-xl text-sm opacity-60 cursor-not-allowed" />
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 font-mono text-[10px] flex-shrink-0">
-            <CheckCircle2 className="w-3 h-3" /> Verified
-          </span>
+          {user?.email_verified ? (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 font-mono text-[10px] flex-shrink-0">
+              <CheckCircle2 className="w-3 h-3" aria-hidden /> Verified
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[10px] flex-shrink-0">
+              <MailWarning className="w-3 h-3" aria-hidden /> Unverified
+            </span>
+          )}
         </div>
+        {!user?.email_verified && (
+          <button
+            type="button"
+            onClick={() => {
+              void authApi
+                .requestVerification()
+                .then(() => notify('Verification email sent — check your inbox.', 'success'))
+                .catch(() => notify('Could not send verification email.', 'error'))
+            }}
+            className="mt-2 text-xs text-indigo-300 hover:text-indigo-200 font-mono transition-colors cursor-pointer"
+          >
+            Resend verification email →
+          </button>
+        )}
       </Field>
 
       <div className="flex justify-end pt-1">
@@ -105,6 +165,28 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
           <Save className="w-4 h-4" /> {isUpdatingProfile ? 'Saving…' : 'Save changes'}
         </button>
       </div>
+    </SettingsCard>
+  )
+}
+
+function PlanBlock() {
+  const tier = useAuthStore((state) => state.user?.tier?.toUpperCase() ?? 'FREE')
+  return (
+    <SettingsCard
+      icon={ShieldCheck}
+      title={`${tier} plan`}
+      description="Plan limits control upload size, analysis quota, and correlation access"
+    >
+      <p className="text-sm text-text-secondary">
+        Plan changes are handled by an administrator.{' '}
+        <a
+          href="mailto:support@lograven.io"
+          className="text-indigo-300 hover:text-indigo-200 underline"
+        >
+          Contact support
+        </a>{' '}
+        for help.
+      </p>
     </SettingsCard>
   )
 }
@@ -196,6 +278,87 @@ function SecurityForm({ notify }: { notify: (msg: string, tone: Tone) => void })
   )
 }
 
+// = DANGER ZONE =
+
+function DangerZone({ notify }: { notify: (msg: string, tone: Tone) => void }) {
+  const { logout } = useAuth()
+  const [confirming, setConfirming] = useState(false)
+  const [password, setPassword] = useState('')
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await authApi.deleteAccount(password)
+      logout()
+    } catch (err: any) {
+      notify(err?.response?.data?.detail ?? 'Failed to delete account.', 'error')
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.03] overflow-hidden">
+      <div className="px-6 py-5 border-b border-rose-500/15 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center flex-shrink-0">
+          <AlertTriangle className="w-4 h-4 text-rose-400" aria-hidden />
+        </div>
+        <div>
+          <div className="font-display font-semibold text-text-primary text-base">Danger zone</div>
+          <p className="text-text-muted text-xs mt-0.5">Irreversible actions</p>
+        </div>
+      </div>
+      <div className="px-6 py-5">
+        <p className="text-sm text-text-secondary mb-1">Delete account</p>
+        <p className="text-xs text-text-muted leading-relaxed mb-4">
+          Permanently removes your account, all investigations, reports, compliance audits,
+          and uploaded files. This cannot be undone.
+        </p>
+
+        {!confirming ? (
+          <button
+            onClick={() => setConfirming(true)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-rose-500/25 text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-4 h-4" aria-hidden /> Delete my account
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <label htmlFor="dz-password" className="block text-xs font-medium text-text-primary">
+              Confirm your password to continue
+            </label>
+            <input
+              id="dz-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm"
+            />
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { void handleDelete() }}
+                disabled={!password || deleting}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" aria-hidden />
+                {deleting ? 'Deleting…' : 'Permanently delete'}
+              </button>
+              <button
+                onClick={() => { setConfirming(false); setPassword('') }}
+                disabled={deleting}
+                className="px-4 py-2.5 rounded-xl text-sm text-text-muted hover:text-text-primary border border-white/[0.08] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // = PAGE =
 
 export default function ProfilePage() {
@@ -207,7 +370,11 @@ export default function ProfilePage() {
   const initials = displayName.slice(0, 2).toUpperCase()
   const tier = user?.tier?.toUpperCase() ?? 'FREE'
   const memberSince = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? formatDateTime(user.created_at, user.timezone, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     : '—'
 
   const notify = (msg: string, tone: Tone) => setToast({ msg, tone })
@@ -268,7 +435,9 @@ export default function ProfilePage() {
             className="space-y-6"
           >
             <ProfileForm notify={notify} />
+            <PlanBlock />
             <SecurityForm notify={notify} />
+            <DangerZone notify={notify} />
           </motion.div>
         </div>
       </div>

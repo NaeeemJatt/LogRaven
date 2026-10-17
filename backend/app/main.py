@@ -26,11 +26,23 @@ logging.getLogger("uvicorn.error").handlers.clear()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.utils.alerting import init_error_alerting
+
     app_log.info("=" * 60)
     app_log.info("LogRaven API starting up")
     app_log.info("  Storage : %s  (%s)", settings.STORAGE_BACKEND, settings.LOCAL_STORAGE_PATH)
     app_log.info("  Debug   : %s", settings.DEBUG)
     app_log.info("=" * 60)
+
+    init_error_alerting("api")
+
+    # Production preflight: surface missing email delivery loudly at boot
+    # instead of silently logging emails that users never receive.
+    if not settings.DEBUG and not settings.SMTP_HOST:
+        app_log.warning(
+            "  SMTP_HOST is not configured — verification/reset emails will be "
+            "logged, NOT sent. Set SMTP_* before serving real users."
+        )
 
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "reports"), exist_ok=True)
     os.makedirs(os.path.join(settings.LOCAL_STORAGE_PATH, "uploads"), exist_ok=True)
@@ -66,9 +78,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="LogRaven API",
+    title=f"{settings.APP_NAME} API",
     description="Watch your logs. Find the threat.",
-    version="1.0.0",
+    version=settings.APP_VERSION,
     lifespan=lifespan,
 )
 app.state.limiter = limiter
@@ -133,6 +145,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["X-Total-Count", "X-Total-Pages", "X-Page", "X-Page-Size"],
 )
 
 # ── Exception handlers ───────────────────────────────────────────────────────
@@ -164,4 +177,4 @@ app.include_router(router)
 @app.get("/")
 def api_root():
     """Avoid bare 404 on /; full API is under /auth, /api/v1/..., /health."""
-    return {"service": "LogRaven API", "docs": "/docs", "health": "/health"}
+    return {"service": f"{settings.APP_NAME} API", "docs": "/docs", "health": "/health"}

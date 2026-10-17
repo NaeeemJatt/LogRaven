@@ -7,7 +7,9 @@ import {
   FileText, ListTree, Layers,
 } from 'lucide-react'
 import { investigationsApi } from '../api/investigations'
+import { useAuthStore } from '../store/authStore'
 import type { Finding, Report } from '../types/report'
+import { formatDateTime } from '../utils/dateTime'
 
 const SEV_ORDER = ['critical', 'high', 'medium', 'low', 'informational']
 
@@ -92,10 +94,23 @@ function FindingReader({ finding }: { finding: Finding }) {
       <div className="flex items-center gap-2 flex-wrap mb-3">
         <span className="font-mono text-[10px] px-2 py-0.5 rounded uppercase tracking-wide"
           style={{ color, background: `${color}1f` }}>{finding.severity}</span>
-        {finding.mitre_technique_id && <span className="font-mono text-[10px] text-text-muted">{finding.mitre_technique_id}</span>}
+        {finding.mitre_technique_id && (
+          <span className="font-mono text-[10px] text-text-muted">
+            {finding.mitre_technique_id}
+            {finding.mitre_technique_name && <span className="text-text-secondary"> · {finding.mitre_technique_name}</span>}
+          </span>
+        )}
         {isCorrelated && (
           <span className="inline-flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5 rounded border text-indigo-300 bg-indigo-500/10 border-indigo-500/25">
             <GitMerge className="w-2.5 h-2.5" /> correlated
+          </span>
+        )}
+        {typeof finding.confidence === 'number' && (
+          <span
+            className="ml-auto font-mono text-[10px] px-1.5 py-0.5 rounded border border-white/[0.08] text-text-muted"
+            title="AI confidence in this finding"
+          >
+            confidence {(finding.confidence * 100).toFixed(0)}%
           </span>
         )}
       </div>
@@ -139,11 +154,13 @@ function FindingReader({ finding }: { finding: Finding }) {
 export default function Report() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const user = useAuthStore((state) => state.user)
+  const timezone = user?.timezone
   const [pdfLoading, setPdfLoading] = useState(false)
   const [selected, setSelected] = useState<string>('overview')
 
   const { data: report, isLoading, error } = useQuery<Report>({
-    queryKey: ['report', id],
+    queryKey: ['report', user?.id, id],
     queryFn: async () => (await investigationsApi.getReport(id!)).data,
     enabled: !!id,
   })
@@ -220,7 +237,13 @@ export default function Report() {
             <div>
               <h1 className="font-display font-bold text-text-primary text-2xl leading-none">Security report</h1>
               <p className="text-text-muted text-xs font-mono mt-1.5">
-                {new Date(report.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                {formatDateTime(report.created_at, timezone, {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
               </p>
             </div>
             <button onClick={handleDownloadPdf} disabled={pdfLoading}

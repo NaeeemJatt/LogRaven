@@ -65,6 +65,7 @@ async def register_user(
         email=email,
         password_hash=security.hash_password(password),
         tier="free",
+        email_verified=False,
     )
     db.add(user)
     await db.flush()  # populate user.id before audit log
@@ -80,6 +81,14 @@ async def register_user(
     db.add(audit)
     await db.commit()
     await db.refresh(user)
+
+    # Send the verification email without blocking registration on SMTP.
+    try:
+        from app.services.account_service import send_verification
+
+        asyncio.get_running_loop().create_task(send_verification(user))
+    except Exception:  # never fail registration because of email
+        pass
 
     refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
     await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))
@@ -133,6 +142,24 @@ async def login_user(
         ))
         await db.commit()
         raise invalid_exc
+
+    # Optional gate: block login until the email is verified. Checked only
+    # AFTER the password succeeds so it can't be used to enumerate accounts.
+    from app.config import settings
+
+    if settings.REQUIRE_VERIFIED_EMAIL_FOR_LOGIN and not user.email_verified:
+        db.add(AuditLog(
+            user_id=user.id,
+            action="failed_login",
+            ip_address=ip_address,
+            user_agent=user_agent,
+            metadata_={"reason": "email_not_verified"},
+        ))
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in. Check your inbox for the verification link.",
+        )
 
     # Success — audit log
     db.add(AuditLog(

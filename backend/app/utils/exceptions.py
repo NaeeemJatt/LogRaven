@@ -7,8 +7,6 @@
 #
 # RESPONSE SHAPE:
 #   {"error": "Human readable message", "code": "MACHINE_CODE", "detail": "optional"}
-#
-# TODO Month 1 Week 1: Implement this file.
 
 from fastapi import HTTPException
 

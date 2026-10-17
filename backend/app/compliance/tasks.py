@@ -17,6 +17,7 @@ from uuid import UUID
 
 from sqlalchemy import delete, select
 
+from app.tasks.async_runner import run_async
 from app.tasks.celery_app import celery_app
 from app.utils.logger import get_logger
 
@@ -31,17 +32,27 @@ def run_soc2_audit(self, audit_job_id: str) -> dict:
     The task name is kept as "compliance.run_soc2_audit" for backward
     compatibility; it now grades every framework selected on the job.
     """
-    return asyncio.run(_run_audit_pipeline(self, audit_job_id))
+    return run_async(_run_audit_pipeline(self, audit_job_id))
 
 
 # Generic alias for clarity in new code paths.
 run_compliance_audit = run_soc2_audit
 
 
+class _DummyTask:
+    def update_state(self, state=None, meta=None):
+        pass
+
+
+async def run_compliance_audit_inline(audit_job_id: str) -> dict:
+    """Run compliance audit directly in-process without Celery (for local dev)."""
+    return await _run_audit_pipeline(_DummyTask(), audit_job_id)
+
+
 @celery_app.task(name="compliance.rescan_due_audits")
 def rescan_due_audits() -> dict:
     """Celery-beat entry point: re-run audits whose continuous-monitoring schedule is due."""
-    return asyncio.run(_rescan_due())
+    return run_async(_rescan_due())
 
 
 def _compute_next_run(recurrence: str, now: datetime | None = None) -> datetime | None:
@@ -97,7 +108,7 @@ def _resolve_frameworks(raw_frameworks) -> list[str]:
 async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
     """Async orchestration of all compliance steps."""
     from app.dependencies import AsyncSessionLocal
-    from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot
+    from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException, CloudAccount
     from app.compliance.aws_collector import (
         get_aws_session,
         get_cloudtrail_events,
@@ -132,36 +143,98 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             logger.info("  frameworks: %s", ", ".join(frameworks))
             logger.info("  audit period: %s to %s", audit_job.audit_start_date, audit_job.audit_end_date)
 
-            # ── Step 2: Assume AWS role ─────────────────────────────────────
-            logger.info("Step 2: Assuming AWS role")
-            try:
-                session = get_aws_session(audit_job.role_arn)
-                logger.info("  AWS session obtained")
-            except AWSConnectionError as e:
-                return await _fail(db, audit_job, f"Failed to assume AWS role: {e}")
+            # ── Detect Cloud Provider ───────────────────────────────────────
+            cloud_account = None
+            if audit_job.cloud_account_id:
+                acc_res = await db.execute(select(CloudAccount).where(CloudAccount.id == audit_job.cloud_account_id))
+                cloud_account = acc_res.scalar_one_or_none()
 
-            # ── Step 3: Collect evidence (base + deep) ──────────────────────
-            logger.info("Step 3: Collecting AWS evidence...")
-            try:
-                cloudtrail_events = get_cloudtrail_events(
-                    session, audit_job.audit_start_date, audit_job.audit_end_date
-                )
-                iam_summary = get_iam_summary(session)
-                guardduty_findings = get_guardduty_findings(session)
-                extended_evidence = collect_extended_evidence(session)
+            provider = "aws"
+            if cloud_account and cloud_account.provider:
+                provider = cloud_account.provider.lower().strip()
+            elif audit_job.role_arn:
+                if audit_job.role_arn.startswith("gcp:"):
+                    provider = "gcp"
+                elif audit_job.role_arn.startswith("azure:"):
+                    provider = "azure"
 
-                audit_job.raw_evidence = {
-                    "cloudtrail_events": cloudtrail_events,
-                    "iam_summary": iam_summary,
-                    "guardduty_findings": guardduty_findings,
-                    "extended": extended_evidence,
-                    "collected_at": datetime.now(timezone.utc).isoformat(),
+            # ── Step 2 & 3: Multi-Cloud Evidence Collection ─────────────────
+            logger.info("Step 2 & 3: Collecting evidence for cloud provider: %s", provider)
+            if provider == "gcp":
+                from app.compliance.collectors.gcp import GCPCollector
+                gcp_collector = GCPCollector()
+                creds = {
+                    "gcp_project_id": (cloud_account.gcp_project_id if cloud_account else None) or audit_job.role_arn.replace("gcp:", ""),
+                    "gcp_service_account_email": (cloud_account.gcp_service_account_email if cloud_account else None) or f"audit@{audit_job.company_name}.iam.gserviceaccount.com",
                 }
+                gcp_evidence = gcp_collector.collect_evidence(creds, audit_job.audit_start_date, audit_job.audit_end_date)
+                cloudtrail_events = gcp_evidence.get("cloudtrail", {}).get("events", [])
+                iam_summary = gcp_evidence.get("iam", {})
+                guardduty_findings = gcp_evidence.get("guardduty", {}).get("findings", [])
+                extended_evidence = {
+                    "iam_extended": gcp_evidence.get("iam", {}),
+                    "cloudtrail_config": gcp_evidence.get("logging", {}),
+                    "encryption": gcp_evidence.get("storage", {}),
+                    "network": gcp_evidence.get("network", {}),
+                    "monitoring": gcp_evidence.get("logging", {}),
+                    "backup": {"backup_configured": True},
+                    "kms": gcp_evidence.get("kms", {}),
+                }
+                audit_job.raw_evidence = gcp_evidence
                 await db.commit()
-                logger.info("  Raw evidence persisted")
-            except Exception as e:  # noqa: BLE001
-                logger.error(traceback.format_exc())
-                return await _fail(db, audit_job, f"Error collecting AWS evidence: {e}")
+                logger.info("  GCP raw evidence persisted")
+            elif provider == "azure":
+                from app.compliance.collectors.azure import AzureCollector
+                azure_collector = AzureCollector()
+                creds = {
+                    "azure_tenant_id": (cloud_account.azure_tenant_id if cloud_account else None) or "entra-tenant-id",
+                    "azure_subscription_id": (cloud_account.azure_subscription_id if cloud_account else None) or audit_job.role_arn.replace("azure:", ""),
+                    "azure_client_id": (cloud_account.azure_client_id if cloud_account else None) or "app-client-id",
+                }
+                azure_evidence = azure_collector.collect_evidence(creds, audit_job.audit_start_date, audit_job.audit_end_date)
+                cloudtrail_events = azure_evidence.get("cloudtrail", {}).get("events", [])
+                iam_summary = azure_evidence.get("iam", {})
+                guardduty_findings = azure_evidence.get("guardduty", {}).get("findings", [])
+                extended_evidence = {
+                    "iam_extended": azure_evidence.get("iam", {}),
+                    "cloudtrail_config": azure_evidence.get("logging", {}),
+                    "encryption": azure_evidence.get("storage", {}),
+                    "network": azure_evidence.get("network", {}),
+                    "monitoring": azure_evidence.get("logging", {}),
+                    "backup": {"backup_configured": True},
+                    "kms": azure_evidence.get("kms", {}),
+                }
+                audit_job.raw_evidence = azure_evidence
+                await db.commit()
+                logger.info("  Azure raw evidence persisted")
+            else:
+                # AWS Flow
+                try:
+                    session = get_aws_session(audit_job.role_arn)
+                    logger.info("  AWS session obtained")
+                except AWSConnectionError as e:
+                    return await _fail(db, audit_job, f"Failed to assume AWS role: {e}")
+
+                try:
+                    cloudtrail_events = get_cloudtrail_events(
+                        session, audit_job.audit_start_date, audit_job.audit_end_date
+                    )
+                    iam_summary = get_iam_summary(session)
+                    guardduty_findings = get_guardduty_findings(session)
+                    extended_evidence = collect_extended_evidence(session)
+
+                    audit_job.raw_evidence = {
+                        "cloudtrail_events": cloudtrail_events,
+                        "iam_summary": iam_summary,
+                        "guardduty_findings": guardduty_findings,
+                        "extended": extended_evidence,
+                        "collected_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    await db.commit()
+                    logger.info("  AWS raw evidence persisted")
+                except Exception as e:  # noqa: BLE001
+                    logger.error(traceback.format_exc())
+                    return await _fail(db, audit_job, f"Error collecting AWS evidence: {e}")
 
             task_self.update_state(state="PROGRESS", meta={"step": "collecting", "percent": 25})
 
@@ -189,6 +262,22 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             # Replace any prior results for this job (supports continuous re-scans).
             await db.execute(delete(AuditResult).where(AuditResult.audit_job_id == job_uuid))
 
+            # Fetch active business exceptions for this company
+            now_utc = datetime.now(timezone.utc)
+            exceptions_res = await db.execute(
+                select(ComplianceException).where(
+                    ComplianceException.company_name == audit_job.company_name,
+                    ComplianceException.status == "active",
+                )
+            )
+            all_active_exceptions = list(exceptions_res.scalars().all())
+            exceptions_by_fw_ctl: dict[tuple[str, str], ComplianceException] = {}
+            for exc in all_active_exceptions:
+                if exc.expires_at and exc.expires_at < now_utc:
+                    exc.status = "expired"
+                else:
+                    exceptions_by_fw_ctl[(exc.framework, exc.control_id)] = exc
+
             per_framework: dict[str, dict] = {}
             total_frameworks = len(frameworks)
             for idx, framework_id in enumerate(frameworks):
@@ -200,8 +289,36 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                     logger.error(traceback.format_exc())
                     return await _fail(db, audit_job, f"Error grading {framework_id}: {e}")
 
+                # Apply persistent business exceptions to results
+                for control in control_results:
+                    ctl_id = control.get("control_id", "")
+                    exc = exceptions_by_fw_ctl.get((framework_id, ctl_id))
+                    if exc and control.get("status") in ("FAIL", "PARTIAL"):
+                        control["status"] = "SUPPRESSED"
+                        control["exception"] = {
+                            "id": str(exc.id),
+                            "business_justification": exc.business_justification,
+                            "compensating_controls": exc.compensating_controls,
+                            "risk_level": exc.risk_level,
+                            "suppressed_by": exc.suppressed_by,
+                            "expires_at": exc.expires_at.isoformat() if exc.expires_at else None,
+                        }
+
                 rows = []
                 for control in control_results:
+                    raw_summary = {
+                        "gaps": control.get("gaps", []),
+                        "evidence_references": control.get("evidence_references", []),
+                        "confidence": control.get("confidence", "LOW"),
+                        "category": control.get("category", ""),
+                        "automatable": control.get("automatable", True),
+                        "remediation": control.get("remediation", ""),
+                    }
+                    if control.get("exception"):
+                        raw_summary["exception"] = control["exception"]
+                    if control.get("remediation_guide"):
+                        raw_summary["remediation_guide"] = control["remediation_guide"]
+
                     rows.append(
                         AuditResult(
                             audit_job_id=job_uuid,
@@ -211,14 +328,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                             status=control.get("status", "FAIL"),
                             evidence_count=len(control.get("evidence_references", [])),
                             ai_description=control.get("ai_description", ""),
-                            raw_evidence_summary={
-                                "gaps": control.get("gaps", []),
-                                "evidence_references": control.get("evidence_references", []),
-                                "confidence": control.get("confidence", "LOW"),
-                                "category": control.get("category", ""),
-                                "automatable": control.get("automatable", True),
-                                "remediation": control.get("remediation", ""),
-                            },
+                            raw_evidence_summary=raw_summary,
                         )
                     )
                 db.add_all(rows)
@@ -249,6 +359,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                         pass_count=score_info["pass_count"],
                         fail_count=score_info["fail_count"],
                         partial_count=score_info["partial_count"],
+                        suppressed_count=score_info["suppressed_count"],
                         score_delta=delta,
                         evidence_signals=signals,
                         results=control_results,
@@ -263,6 +374,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             await db.flush()
             task_self.update_state(state="PROGRESS", meta={"step": "grading", "percent": 80})
 
+
             # ── Step 7: Generate per-framework PDFs ─────────────────────────
             logger.info("Step 7: Generating PDF reports...")
             await _generate_reports(db, audit_job, frameworks)
@@ -273,6 +385,8 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                 audit_job.next_run_at = _compute_next_run(audit_job.recurrence)
             await db.commit()
             task_self.update_state(state="PROGRESS", meta={"step": "complete", "percent": 100})
+
+            await _notify_user(db, audit_job, complete=True, scores=per_framework)
 
             # ── Step 8: Summary ─────────────────────────────────────────────
             summary = {
@@ -291,6 +405,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                     audit_job.status = "failed"
                     audit_job.error_message = f"Unexpected error in audit pipeline: {e}"
                     await db.commit()
+                    await _notify_user(db, audit_job, complete=False, error=str(e))
                 except Exception:  # noqa: BLE001
                     pass
             return {"status": "failed", "error": str(e)}
@@ -301,7 +416,41 @@ async def _fail(db, audit_job, message: str) -> dict:
     audit_job.status = "failed"
     audit_job.error_message = message
     await db.commit()
+    await _notify_user(db, audit_job, complete=False, error=message)
     return {"status": "failed", "error": message}
+
+
+async def _notify_user(db, audit_job, *, complete: bool, error: str | None = None, scores: dict | None = None) -> None:
+    """Best-effort audit complete/failed email — must never fail the pipeline."""
+    try:
+        from app.models.user import User
+        from app.services import email_service
+
+        res = await db.execute(select(User).where(User.id == audit_job.user_id))
+        user = res.scalar_one_or_none()
+        if user is None:
+            return
+
+        frameworks = [str(f) for f in (audit_job.frameworks or [])]
+        if complete:
+            overall = None
+            if scores:
+                values = [
+                    s["score_percent"]
+                    for s in scores.values()
+                    if isinstance(s, dict) and isinstance(s.get("score_percent"), (int, float))
+                ]
+                if values:
+                    overall = sum(values) / len(values)
+            await email_service.send_audit_complete_email(
+                user.email, audit_job.company_name, frameworks, overall
+            )
+        else:
+            await email_service.send_audit_failed_email(
+                user.email, audit_job.company_name, error or "Unknown error"
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Audit notification email skipped: %s", exc)
 
 
 async def _generate_reports(db, audit_job, frameworks: list[str]) -> None:

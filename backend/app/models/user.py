@@ -14,7 +14,7 @@
 import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, DateTime
+from sqlalchemy import Boolean, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
@@ -31,6 +31,7 @@ class User(Base):
     email:         Mapped[str]            = mapped_column(String(255), unique=True, nullable=False, index=True)
     password_hash: Mapped[str]            = mapped_column(String(255), nullable=False)
     tier:          Mapped[str]            = mapped_column(String(20), nullable=False, default="free")
+    email_verified: Mapped[bool]          = mapped_column(Boolean, nullable=False, default=False)
     name:          Mapped[str | None]     = mapped_column(String(120), nullable=True)
     timezone:      Mapped[str | None]     = mapped_column(String(64), nullable=True)
     created_at:    Mapped[datetime]       = mapped_column(DateTime, default=datetime.utcnow)

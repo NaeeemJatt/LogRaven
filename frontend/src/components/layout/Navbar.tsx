@@ -28,6 +28,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const accountButtonRef = useRef<HTMLButtonElement>(null)
 
   // Derive display values from real auth user
   const displayName = user?.name ?? user?.email?.split('@')[0] ?? 'User'
@@ -54,6 +56,19 @@ export default function Navbar() {
     if (profileOpen) document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [profileOpen])
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (menuOpen) requestAnimationFrame(() => menuButtonRef.current?.focus())
+        if (profileOpen) requestAnimationFrame(() => accountButtonRef.current?.focus())
+        setMenuOpen(false)
+        setProfileOpen(false)
+      }
+    }
+    document.addEventListener('keydown', closeOnEscape)
+    return () => document.removeEventListener('keydown', closeOnEscape)
+  }, [menuOpen, profileOpen])
 
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/')
@@ -117,8 +132,11 @@ export default function Navbar() {
           <div className="hidden md:flex items-center ml-auto">
             <div ref={profileRef} className="relative">
               <button
+                ref={accountButtonRef}
                 onClick={() => setProfileOpen(!profileOpen)}
                 aria-label="Account menu"
+                aria-expanded={profileOpen}
+                aria-controls="desktop-account-menu"
                 title={email}
                 className={`relative flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-200 ${
                   profileOpen
@@ -135,6 +153,7 @@ export default function Navbar() {
               <AnimatePresence>
                 {profileOpen && (
                   <motion.div
+                    id="desktop-account-menu"
                     initial={{ opacity: 0, y: 6, scale: 0.97 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.97 }}
@@ -169,8 +188,12 @@ export default function Navbar() {
 
           {/* Mobile menu toggle */}
           <button
-            className="md:hidden ml-auto p-2 rounded-lg border border-white/[0.06] text-text-secondary"
+            ref={menuButtonRef}
+            className="md:hidden ml-auto w-11 h-11 inline-flex items-center justify-center rounded-lg border border-white/[0.06] text-text-secondary"
             onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-navigation"
           >
             {menuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
           </button>
@@ -181,6 +204,7 @@ export default function Navbar() {
       <AnimatePresence>
         {menuOpen && (
           <motion.div
+            id="mobile-navigation"
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
@@ -202,7 +226,7 @@ export default function Navbar() {
                   key={href}
                   to={href}
                   onClick={() => setMenuOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm ${
+                  className={`min-h-11 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm ${
                     isActive(href) ? 'text-text-primary bg-indigo-500/10 border border-indigo-500/15' : 'text-text-secondary'
                   }`}
                 >
@@ -211,11 +235,24 @@ export default function Navbar() {
                 </Link>
               ))}
 
+              <Link
+                to="/profile"
+                onClick={() => setMenuOpen(false)}
+                className={`min-h-11 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm ${
+                  isActive('/profile')
+                    ? 'text-text-primary bg-indigo-500/10 border border-indigo-500/15'
+                    : 'text-text-secondary'
+                }`}
+              >
+                <User className="w-4 h-4" />
+                Profile
+              </Link>
+
               <div className="h-px bg-white/[0.05] my-1" />
 
               <button
                 onClick={() => { setMenuOpen(false); void handleSignOut() }}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-400/80"
+                className="w-full min-h-11 flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-rose-400/80"
               >
                 <LogOut className="w-4 h-4" />
                 Sign out

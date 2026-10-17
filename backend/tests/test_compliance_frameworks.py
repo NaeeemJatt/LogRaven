@@ -5,10 +5,14 @@ output, the SOC 2 golden-file regression guard, the generic grader's parser,
 and the crosswalk helpers.
 """
 
+import asyncio
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from app.compliance import frameworks as fw
-from app.compliance.ai_grader import parse_and_validate, score_results
+from app.compliance.ai_grader import MappingError, grade_framework, parse_and_validate, score_results
 from app.compliance.constants import SOC2_CONTROLS
 from app.compliance.crosswalk import build_crosswalk, reuse_factor
 from app.compliance.sanitizer import validate_no_pii
@@ -100,6 +104,46 @@ def test_grader_parser_fills_all_controls(framework):
     assert len(results) == len(framework.controls)
     assert {r["control_id"] for r in results} == framework.control_ids()
     assert all(r["status"] in ("PASS", "FAIL", "PARTIAL") for r in results)
+
+
+def test_grader_parser_invalid_json_raises_mapping_error():
+    with pytest.raises(MappingError, match="invalid JSON"):
+        parse_and_validate("not-json", [{"control_id": "X.1", "control_name": "X"}])
+
+
+def _soc2_model_response_json() -> str:
+    soc2 = fw.get_framework("soc2")
+    return json.dumps([
+        {
+            "control_id": c.control_id,
+            "control_name": c.name,
+            "status": "PASS",
+            "confidence": "HIGH",
+            "evidence_references": ["MFA enforcement rate above threshold"],
+            "gaps": [],
+            "ai_description": f"{c.name} appears satisfied based on provided evidence.",
+        }
+        for c in soc2.controls
+    ])
+
+
+@pytest.mark.asyncio
+async def test_grade_framework_retries_on_timeout():
+    mock_response = MagicMock()
+    mock_response.text = _soc2_model_response_json()
+
+    mock_client = MagicMock()
+    mock_client.aio.models.generate_content = AsyncMock(
+        side_effect=[asyncio.TimeoutError(), mock_response]
+    )
+
+    soc2 = fw.get_framework("soc2")
+    with patch("app.compliance.ai_grader._get_client", return_value=mock_client):
+        with patch("app.compliance.ai_grader.asyncio.sleep", new=AsyncMock()):
+            results = await grade_framework(soc2, {})
+
+    assert len(results) == len(soc2.controls)
+    assert mock_client.aio.models.generate_content.await_count == 2
 
 
 def test_score_results_uses_total_denominator():

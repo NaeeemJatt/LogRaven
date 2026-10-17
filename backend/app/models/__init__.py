@@ -9,7 +9,7 @@ from app.models.investigation_file import InvestigationFile
 from app.models.report import Report
 from app.models.finding import Finding
 from app.models.audit import AuditLog
-from app.models.soc2_audit import AuditJob, AuditResult
+from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException, CloudAccount, AuditorAccessToken
 
 __all__ = [
     "Base",
@@ -21,4 +21,9 @@ __all__ = [
     "AuditLog",
     "AuditJob",
     "AuditResult",
+    "ComplianceSnapshot",
+    "ComplianceException",
+    "CloudAccount",
+    "AuditorAccessToken",
 ]
+

@@ -8,17 +8,16 @@
 # MAIN FUNCTION:
 #   analyze(investigation_id, events_by_file) -> List[CorrelatedChain]
 #
-#   events_by_file: dict of {filename: List[NormalizedEvent]}
+#   events_by_file: dict of {investigation_file_id: List[NormalizedEvent]}
 #
-#   Keys MUST be unique per uploaded file (filename is the correct choice).
-#   Do NOT key by source_type — multiple files of the same type (e.g. two
-#   .evtx uploads) would collapse into a single bucket, making the 2-source
-#   check always fail and producing zero chains.
+#   Keys MUST be unique per uploaded file. Use the stable investigation-file
+#   ID: filenames and source types are both
+#   allowed to repeat and must not collapse into one bucket.
 #
 #   ALGORITHM:
 #     1. entity_extractor.extract_all(events_by_file)
 #        -> {entity_value: List[EntityOccurrence]}
-#        (EntityOccurrence.source_type == the filename key)
+#        (EntityOccurrence.source_type == the investigation-file ID key)
 #     2. Filter: keep entities appearing in 2+ different file keys
 #     3. For each qualifying entity:
 #        chain_builder.build_chain(entity, occurrences, time_window=300)

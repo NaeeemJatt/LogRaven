@@ -1,5 +1,7 @@
 # LogRaven — Signed file downloads (local storage; no public /files/ mount)
 
+import mimetypes
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 
@@ -27,8 +29,17 @@ async def download_file_with_token(
     if not path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
+    media_type, _ = mimetypes.guess_type(path.name)
+    ext = path.suffix.lower()
+    if ext == ".csv":
+        media_type = "text/csv"
+    elif ext == ".pdf":
+        media_type = "application/pdf"
+    elif not media_type:
+        media_type = "application/octet-stream"
+
     return FileResponse(
         path,
         filename=path.name,
-        media_type="application/pdf",
+        media_type=media_type,
     )

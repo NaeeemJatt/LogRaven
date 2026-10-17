@@ -16,11 +16,12 @@
 - user_id: UUID (FK to users.id, not null, indexed)
 - name: str (not null, e.g. "Acme Corp March 2026 Intrusion")
 - status: str (enum: draft/queued/processing/complete/failed, default "draft")
+- progress_stage: str (nullable — live pipeline stage)
 - correlation_enabled: bool (default True)
-- time_window_start: datetime (nullable — auto-detected from files)
-- time_window_end: datetime (nullable — auto-detected from files)
-- created_at: datetime (default utcnow)
+- queued_at: datetime (nullable — indexed timestamp when entered queued state)
 - completed_at: datetime (nullable — set when status=complete/failed)
+- error_message: str (nullable — error message if status=failed)
+- created_at: datetime (default utcnow)
 - Relationships: files (one-to-many InvestigationFile), report (one-to-one)
 
 ### investigation_files

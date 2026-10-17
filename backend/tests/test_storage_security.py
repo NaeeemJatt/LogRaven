@@ -92,3 +92,41 @@ def test_resolved_file_rejects_parent_escape(tmp_path):
     (tmp_path / "secret.txt").write_text("x", encoding="utf-8")
     with pytest.raises(HTTPException):
         resolved_file_under_storage_base(target, "../secret.txt")
+
+
+@pytest.mark.asyncio
+async def test_download_file_with_token_resolves_media_types(tmp_path):
+    from types import SimpleNamespace
+    from app.api.downloads.routes import download_file_with_token
+    import app.config as cfg
+
+    cfg.settings.STORAGE_BACKEND = "local"
+    cfg.settings.LOCAL_STORAGE_PATH = str(tmp_path)
+    cfg.settings.JWT_SECRET_KEY = "test-secret-key-with-32-characters!"
+    cfg.settings.JWT_ALGORITHM = "HS256"
+    cfg.settings.JWT_ISSUER = "lograven"
+
+    user_id = str(uuid.uuid4())
+    user = SimpleNamespace(id=uuid.UUID(user_id))
+
+    # Test PDF
+    pdf_file = tmp_path / "report.pdf"
+    pdf_file.write_bytes(b"%PDF-1.4 test")
+    tok_pdf = create_file_download_token("report.pdf", user_id)
+    resp_pdf = await download_file_with_token(token=tok_pdf, current_user=user)
+    assert resp_pdf.media_type == "application/pdf"
+
+    # Test CSV
+    csv_file = tmp_path / "data.csv"
+    csv_file.write_text("a,b,c", encoding="utf-8")
+    tok_csv = create_file_download_token("data.csv", user_id)
+    resp_csv = await download_file_with_token(token=tok_csv, current_user=user)
+    assert resp_csv.media_type == "text/csv"
+
+    # Test ZIP
+    zip_file = tmp_path / "pack.zip"
+    zip_file.write_bytes(b"PK\x03\x04")
+    tok_zip = create_file_download_token("pack.zip", user_id)
+    resp_zip = await download_file_with_token(token=tok_zip, current_user=user)
+    assert resp_zip.media_type in ("application/zip", "application/x-zip-compressed")
+
