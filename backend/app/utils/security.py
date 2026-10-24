@@ -8,6 +8,12 @@ import uuid
 import jwt
 from fastapi import HTTPException, status
 from jwt.exceptions import ExpiredSignatureError, InvalidTokenError
+
+# Compatibility bridge: passlib 1.7.4 expects bcrypt.__about__.__version__ which was removed in bcrypt >= 4.0.0
+import bcrypt
+if not hasattr(bcrypt, "__about__"):
+    bcrypt.__about__ = type("_About", (), {"__version__": getattr(bcrypt, "__version__", "")})()
+
 from passlib.context import CryptContext
 
 from app.config import settings

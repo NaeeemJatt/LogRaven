@@ -66,3 +66,6 @@ test-data/
 .playwright-mcp/
 frontend-mockup/
 memory-bank/
+
+# Documentation binaries & manuals
+*.pdf

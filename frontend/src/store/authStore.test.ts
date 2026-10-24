@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { queryClient } from '../queryClient'
-import { useAuthStore } from './authStore'
+import { useAuthStore, isValidUser } from './authStore'
 
 describe('authStore', () => {
   beforeEach(() => useAuthStore.getState().logout())
@@ -28,5 +28,22 @@ describe('authStore', () => {
     useAuthStore.getState().setUser({ id: 'user-2', email: 'b@example.com', tier: 'free' })
 
     expect(queryClient.getQueryData(['findings', 'user-1'])).toBeUndefined()
+  })
+
+  it('rejects HTML string payloads and keeps user unauthenticated', () => {
+    expect(isValidUser('<!doctype html><html><body>Error</body></html>')).toBe(false)
+    useAuthStore.getState().setUser('<!doctype html><html><body>Error</body></html>' as unknown as null)
+
+    expect(useAuthStore.getState()).toMatchObject({ user: null, isAuthenticated: false })
+  })
+
+  it('rejects invalid objects missing required fields', () => {
+    expect(isValidUser({})).toBe(false)
+    expect(isValidUser({ id: '' })).toBe(false)
+    expect(isValidUser({ id: '123' })).toBe(false)
+    expect(isValidUser({ id: '123', email: '' })).toBe(false)
+
+    useAuthStore.getState().setUser({ id: '', email: '' } as unknown as null)
+    expect(useAuthStore.getState()).toMatchObject({ user: null, isAuthenticated: false })
   })
 })

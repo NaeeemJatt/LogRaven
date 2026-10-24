@@ -66,4 +66,15 @@ describe('RequireAuth', () => {
     expect(await screen.findByText('Login page')).toBeInTheDocument()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
   })
+
+  it('redirects to login when /auth/me returns an HTML string instead of a valid user', async () => {
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: '<!doctype html><html><body>Error</body></html>',
+    } as unknown as Awaited<ReturnType<typeof authApi.me>>)
+
+    renderProtectedRoute()
+
+    expect(await screen.findByText('Login page')).toBeInTheDocument()
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+  })
 })

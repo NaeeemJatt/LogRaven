@@ -363,13 +363,13 @@ async def update_cloud_account(
     return _serialize_account(account)
 
 
-@router.delete("/{account_id}", status_code=204)
+@router.delete("/{account_id}", status_code=204, response_model=None)
 async def delete_cloud_account(
     request: Request,
     account_id: str,
     current_user=Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> None:
+):
     """Delete a cloud account (preserves historical audits with cloud_account_id set to null)."""
     try:
         acc_uuid = uuid.UUID(account_id)

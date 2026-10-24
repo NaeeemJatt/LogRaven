@@ -31,7 +31,23 @@ function refreshSession(): Promise<void> {
 }
 
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // If an API request expecting JSON received HTML (e.g. from a misconfigured proxy or SPA fallback)
+    const contentType = String(response.headers?.['content-type'] ?? '')
+    const url = String(response.config?.url ?? '')
+    if (
+      (url.startsWith('/api') || url.startsWith('/auth') || url === '/health') &&
+      typeof response.data === 'string' &&
+      (contentType.includes('text/html') ||
+        response.data.trim().startsWith('<!doctype') ||
+        response.data.trim().startsWith('<html'))
+    ) {
+      return Promise.reject(
+        new Error(`Expected JSON from ${url} but received HTML document (status ${response.status})`),
+      )
+    }
+    return response
+  },
   async (error) => {
     const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined
     if (!originalRequest || error.response?.status !== 401) {

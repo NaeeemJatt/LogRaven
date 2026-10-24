@@ -14,7 +14,7 @@ import { useEffect } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { authApi } from '../../api/auth'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore, isValidUser } from '../../store/authStore'
 import type { AuthUser } from '../../store/authStore'
 
 export default function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -26,6 +26,9 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     queryKey: ['auth-session', currentUserId ?? 'anonymous'],
     queryFn: async () => {
       const res = await authApi.me()
+      if (!isValidUser(res.data)) {
+        throw new Error('Invalid user session')
+      }
       return res.data as AuthUser
     },
     retry: false,
@@ -34,7 +37,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   })
 
   useEffect(() => {
-    if (data) setUser(data)
+    if (isValidUser(data)) setUser(data)
   }, [data, setUser])
 
   useEffect(() => {
@@ -52,7 +55,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
     )
   }
 
-  if (isError || !data) {
+  if (isError || !isValidUser(data)) {
     return <Navigate to="/login" replace />
   }
 

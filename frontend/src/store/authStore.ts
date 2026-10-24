@@ -12,6 +12,17 @@ export interface AuthUser {
   created_at?: string
 }
 
+export function isValidUser(user: unknown): user is AuthUser {
+  return (
+    typeof user === 'object' &&
+    user !== null &&
+    typeof (user as AuthUser).id === 'string' &&
+    typeof (user as AuthUser).email === 'string' &&
+    (user as AuthUser).id.trim().length > 0 &&
+    (user as AuthUser).email.trim().length > 0
+  )
+}
+
 interface AuthState {
   user: AuthUser | null
   isAuthenticated: boolean
@@ -25,11 +36,12 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
   setUser: (user) =>
     set((state) => {
-      if (state.user?.id !== user?.id) {
+      const validUser = isValidUser(user) ? user : null
+      if (state.user?.id !== validUser?.id) {
         void queryClient.cancelQueries()
         queryClient.clear()
       }
-      return { user, isAuthenticated: !!user }
+      return { user: validUser, isAuthenticated: !!validUser }
     }),
 
   logout: () => {

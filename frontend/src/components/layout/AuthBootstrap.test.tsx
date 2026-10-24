@@ -55,4 +55,22 @@ describe('AuthBootstrap', () => {
       isAuthenticated: false,
     })
   })
+
+  it('clears auth state when the session returns an HTML fallback string', async () => {
+    vi.mocked(authApi.me).mockResolvedValue({
+      data: '<!doctype html><html><body>Error</body></html>',
+    } as unknown as Awaited<ReturnType<typeof authApi.me>>)
+
+    render(
+      <AuthBootstrap>
+        <p>Application ready</p>
+      </AuthBootstrap>,
+    )
+
+    expect(await screen.findByText('Application ready')).toBeInTheDocument()
+    expect(useAuthStore.getState()).toMatchObject({
+      user: null,
+      isAuthenticated: false,
+    })
+  })
 })

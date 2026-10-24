@@ -1,7 +1,7 @@
 // LogRaven — Restore session from httpOnly cookies via GET /auth/me
 import { useEffect, useState } from 'react'
 import { authApi } from '../../api/auth'
-import { useAuthStore } from '../../store/authStore'
+import { useAuthStore, isValidUser } from '../../store/authStore'
 
 export default function AuthBootstrap({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false)
@@ -13,7 +13,13 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
     ;(async () => {
       try {
         const me = await authApi.me()
-        if (!cancelled) setUser(me.data)
+        if (!cancelled) {
+          if (isValidUser(me.data)) {
+            setUser(me.data)
+          } else {
+            logout()
+          }
+        }
       } catch {
         if (!cancelled) logout()
       } finally {
