@@ -7,6 +7,18 @@
       "skillPath": "skills/backend-architect/SKILL.md",
       "computedHash": "bf1bf91a14af6a45a97393a358e7e3cd6b78b818bb881a441669a49d86801648"
     },
+    "browser-use": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/browser-use/SKILL.md",
+      "computedHash": "6a1bfb5049a851c4c4dae9fc6b586d9801865c79d87595d8bddbec21c41c8b5d"
+    },
+    "cloud": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/cloud/SKILL.md",
+      "computedHash": "b341b2a42146e6761d252326cd7eb4d79cc62bfbf4fd23b41154d346a41399e8"
+    },
     "frontend-design": {
       "source": "anthropics/claude-code",
       "sourceType": "github",
@@ -25,17 +37,41 @@
       "skillPath": "skills/html-to-pdf/SKILL.md",
       "computedHash": "d99f90d6fe7aa5f624285c93ce920267bc1c2e5b899a1f0436e72fd5517c59a7"
     },
+    "open-source": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/open-source/SKILL.md",
+      "computedHash": "ac6b271e9e0be31157d7d19815ba055494cad6aa074b3b4d7be1b90a84aa42ad"
+    },
     "premium-frontend-ui": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
       "skillPath": "skills/premium-frontend-ui/SKILL.md",
       "computedHash": "e7f3d02a0233beafdd6fe5335427388109b9699ebcdc6a8782a8bada2826d916"
     },
+    "qa": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/qa/SKILL.md",
+      "computedHash": "18c5131086331391bd3986e8607f92bc2ff43c24458dd0c557c45dbde6621d1a"
+    },
+    "remote-browser": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/remote-browser/SKILL.md",
+      "computedHash": "61654ce8c238da96c0db1dda1e7517d1038bf69d0b2f8749d09af32ae110137c"
+    },
     "security-audit": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",
       "skillPath": "skills/security-audit/SKILL.md",
       "computedHash": "75c3d961f04992c2c7adcc453a3ecbf137d4756d914614d0a41a6a6126121991"
+    },
+    "x402": {
+      "source": "browser-use/browser-use",
+      "sourceType": "github",
+      "skillPath": "skills/x402/SKILL.md",
+      "computedHash": "c05a2f2aabb1eed295144ebeeda74f39a0a23ddb2f48b8728137ed7b0b70484c"
     }
   }
 }
