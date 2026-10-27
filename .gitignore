@@ -63,6 +63,11 @@ test-data/
 
 # Agent & AI Tooling Caches
 .agents/
+.cursor/
+.codex/
+.github/skills/
+.github/agents/
+.github/hooks/
 .playwright-mcp/
 frontend-mockup/
 memory-bank/
