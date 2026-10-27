@@ -6,14 +6,15 @@
 // category; monitoring reveals contextual options on demand.
 
 import { useState, useCallback, useMemo, useEffect, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, KeyRound, CalendarRange, ShieldCheck,
   Loader2, Copy, Check, Terminal, Layers, RefreshCw,
-  ChevronDown, X, Sparkles, BellRing,
+  ChevronDown, X, Sparkles, BellRing, Cloud, Info,
 } from 'lucide-react'
-import { listFrameworks } from '../../api/compliance'
-import type { FrameworkInfo } from '../../types/audit'
+import { listFrameworks, listCloudAccounts } from '../../api/compliance'
+import type { FrameworkInfo, CloudAccount } from '../../types/audit'
 
 const LOGRAVEN_ACCOUNT_ID = import.meta.env.VITE_AWS_ACCOUNT_ID ?? 'YOUR_LOGRAVEN_ACCOUNT_ID'
 
@@ -185,6 +186,7 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
   const [showPolicy, setShowPolicy] = useState(false)
   const [frameworks, setFrameworks] = useState<FrameworkInfo[]>([])
   const [frameworkError, setFrameworkError] = useState(false)
+  const [accounts, setAccounts] = useState<CloudAccount[]>([])
   const [fwCategory, setFwCategory] = useState<string>('recommended')
   const [open, setOpen] = useState<Record<SectionId, boolean>>({
     org: true, aws: true, window: true, frameworks: true, monitoring: false,
@@ -201,6 +203,9 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
       .catch(() => {
         if (active) setFrameworkError(true)
       })
+    listCloudAccounts()
+      .then((accs) => { if (active) setAccounts(accs) })
+      .catch(() => { /* silent */ })
     return () => { active = false }
   }, [])
 
@@ -469,9 +474,81 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           complete={!!formData.roleArn.trim() && !errors.roleArn}
           open={open.aws} onToggle={() => toggleSection('aws')}
         >
-          <label htmlFor="roleArn" className="block text-[10px] font-mono uppercase tracking-wider text-text-muted mb-1.5">
-            IAM role ARN
-          </label>
+          {accounts.length > 0 ? (
+            <div className="mb-4">
+              <div className="text-[10px] font-mono text-text-muted uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>Select from connected accounts ({accounts.length})</span>
+                <span className="text-[10px] text-indigo-400">Click to autofill</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {accounts.map((acc) => {
+                  const isSelected = formData.roleArn === acc.role_arn
+                  return (
+                    <button
+                      key={acc.id}
+                      type="button"
+                      onClick={() => {
+                        if (acc.role_arn) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            roleArn: acc.role_arn ?? prev.roleArn,
+                            companyName: prev.companyName || acc.name || `AWS Account ${acc.account_id}`,
+                          }))
+                          setDirty((prev) => ({ ...prev, roleArn: true, companyName: true }))
+                          setErrors((prev) => ({ ...prev, roleArn: undefined }))
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        isSelected
+                          ? 'bg-indigo-500/20 border-indigo-500/50 text-white shadow-sm'
+                          : 'bg-white/[0.03] border-white/[0.08] text-text-secondary hover:border-white/[0.2] hover:text-white'
+                      }`}
+                    >
+                      <Cloud className={`w-3.5 h-3.5 ${isSelected ? 'text-indigo-400' : 'text-text-muted'}`} />
+                      <span>{acc.name || acc.account_id}</span>
+                      {acc.account_id && (
+                        <span className="font-mono text-[9px] text-text-muted">
+                          ({acc.account_id})
+                        </span>
+                      )}
+                      {isSelected && <Check className="w-3.5 h-3.5 text-indigo-400 ml-1" />}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="mb-3 p-3 rounded-lg border border-amber-500/20 bg-amber-500/[0.04] flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Cloud className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                <span className="text-xs text-text-secondary">No cloud accounts saved yet. You can paste an ARN below or connect an account.</span>
+              </div>
+              <Link
+                to="/compliance?tab=accounts"
+                className="text-xs font-semibold text-amber-300 hover:text-amber-200 underline whitespace-nowrap"
+              >
+                Connect account
+              </Link>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between mb-1.5">
+            <label htmlFor="roleArn" className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
+              IAM role ARN
+            </label>
+            <div className="relative group inline-block">
+              <button
+                type="button"
+                className="text-text-muted hover:text-indigo-300 p-0.5 rounded transition-colors"
+                aria-label="IAM Role ARN Info"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+              <div className="absolute right-0 bottom-full mb-1.5 hidden group-hover:block group-focus-within:block w-72 p-2.5 rounded-xl bg-void-dark border border-white/[0.12] text-xs text-text-secondary shadow-xl z-30 pointer-events-none">
+                LogRaven needs a cross-account IAM role with SecurityAudit policy attached. We assume this role read-only to audit your AWS environment against SOC 2, ISO 27001, and CIS benchmarks.
+              </div>
+            </div>
+          </div>
           <input
             id="roleArn"
             type="text"

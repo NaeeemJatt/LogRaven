@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import AuthBootstrap from './components/layout/AuthBootstrap'
 import ErrorBoundary from './components/layout/ErrorBoundary'
 import RequireAuth from './components/layout/RequireAuth'
-import Navbar from './components/layout/Navbar'
+import AppShell from './components/layout/AppShell'
 
 // Public entry pages stay eager for the fastest first paint.
 import Login           from './pages/Auth/Login'
@@ -16,19 +16,22 @@ import Landing         from './pages/Landing'
 import NotFound        from './pages/NotFound'
 
 // Authenticated/heavy pages are route-split so the entry chunk stays small.
-const Dashboard        = lazy(() => import('./pages/Dashboard'))
-const NewInvestigation = lazy(() => import('./pages/NewInvestigation'))
-const Investigation    = lazy(() => import('./pages/Investigation'))
-const JobStatus        = lazy(() => import('./pages/JobStatus'))
-const Report           = lazy(() => import('./pages/Report'))
-const PlayParser       = lazy(() => import('./pages/PlayParser'))
-const AuditPage        = lazy(() => import('./pages/AuditPage'))
-const ProfilePage      = lazy(() => import('./pages/Profile'))
-const AlertFeed        = lazy(() => import('./pages/AlertFeed'))
-const SharedAudit      = lazy(() => import('./pages/SharedAudit'))
-const AuditorPortalPage = lazy(() => import('./pages/AuditorPortalPage'))
-const PrivacyPage      = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
-const TermsPage        = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
+const ComplianceDashboard   = lazy(() => import('./pages/ComplianceDashboard'))
+const FrameworkDirectoryPage = lazy(() => import('./pages/FrameworkDirectoryPage'))
+const FrameworkDetailPage   = lazy(() => import('./pages/FrameworkDetailPage'))
+const Dashboard             = lazy(() => import('./pages/Dashboard'))
+const NewInvestigation      = lazy(() => import('./pages/NewInvestigation'))
+const Investigation         = lazy(() => import('./pages/Investigation'))
+const JobStatus             = lazy(() => import('./pages/JobStatus'))
+const Report                = lazy(() => import('./pages/Report'))
+const PlayParser            = lazy(() => import('./pages/PlayParser'))
+const AuditPage             = lazy(() => import('./pages/AuditPage'))
+const ProfilePage           = lazy(() => import('./pages/Profile'))
+const AlertFeed             = lazy(() => import('./pages/AlertFeed'))
+const SharedAudit           = lazy(() => import('./pages/SharedAudit'))
+const AuditorPortalPage     = lazy(() => import('./pages/AuditorPortalPage'))
+const PrivacyPage           = lazy(() => import('./pages/Legal').then((m) => ({ default: m.PrivacyPage })))
+const TermsPage             = lazy(() => import('./pages/Legal').then((m) => ({ default: m.TermsPage })))
 
 function RouteFallback() {
   return (
@@ -57,28 +60,32 @@ export default function App() {
               <Route path="/privacy"         element={<PrivacyPage />} />
               <Route path="/terms"           element={<TermsPage />} />
 
-              {/* Protected — shell wraps all authenticated pages */}
+              {/* Protected — AppShell wraps all authenticated pages with modern cybernetic sidebar & header */}
               <Route
                 path="/*"
                 element={
                   <RequireAuth>
-                    <div className="min-h-screen bg-void">
-                      <Navbar />
+                    <AppShell>
                       <Suspense fallback={<RouteFallback />}>
                         <Routes>
-                          <Route path="/dashboard"                      element={<Dashboard />} />
+                          {/* Compliance is now the premier landing dashboard */}
+                          <Route path="/"                               element={<ComplianceDashboard />} />
+                          <Route path="/dashboard"                      element={<ComplianceDashboard />} />
+                          <Route path="/compliance"                     element={<AuditPage />} />
+                          <Route path="/compliance/frameworks"          element={<FrameworkDirectoryPage />} />
+                          <Route path="/compliance/frameworks/:frameworkId" element={<FrameworkDetailPage />} />
+                          <Route path="/investigations"                 element={<Dashboard />} />
                           <Route path="/investigations/new"             element={<NewInvestigation />} />
                           <Route path="/investigations/:id"             element={<Investigation />} />
                           <Route path="/investigations/:id/status"      element={<JobStatus />} />
                           <Route path="/investigations/:id/report"      element={<Report />} />
                           <Route path="/play-parser"                    element={<PlayParser />} />
-                          <Route path="/compliance"                     element={<AuditPage />} />
                           <Route path="/alerts"                         element={<AlertFeed />} />
                           <Route path="/profile"                        element={<ProfilePage />} />
                           <Route path="*"                               element={<NotFound />} />
                         </Routes>
                       </Suspense>
-                    </div>
+                    </AppShell>
                   </RequireAuth>
                 }
               />

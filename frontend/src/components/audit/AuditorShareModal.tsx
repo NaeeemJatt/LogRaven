@@ -5,6 +5,7 @@
 // and download the cryptographic Evidence Vault ZIP.
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ShieldCheck, X, Copy, Check, Loader2,
   Key, Trash2,
@@ -112,9 +113,9 @@ export default function AuditorShareModal({
     }
   }
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto"
       role="presentation"
     >
       <div
@@ -384,4 +385,8 @@ export default function AuditorShareModal({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined'
+    ? createPortal(modalNode, document.body)
+    : modalNode
 }
