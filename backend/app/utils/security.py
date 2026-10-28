@@ -33,7 +33,7 @@ EMAIL_VERIFY_TOKEN_AUDIENCE = "lograven-email-verify"
 EMAIL_VERIFY_TOKEN_EXPIRE_HOURS = 24
 
 PASSWORD_RESET_TOKEN_AUDIENCE = "lograven-password-reset"
-PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 15
 
 
 def hash_password(plain: str) -> str:
@@ -185,9 +185,11 @@ def _password_fingerprint(password_hash: str) -> str:
 def create_password_reset_token(user_id: str, password_hash: str) -> str:
     """Signed reset token. Invalidates itself once the password changes."""
     expire = datetime.now(timezone.utc) + timedelta(minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES)
+    jti = str(uuid.uuid4())
     payload = {
         "typ": "pwd_reset",
         "sub": user_id,
+        "jti": jti,
         "pwf": _password_fingerprint(password_hash),
         "iss": settings.JWT_ISSUER,
         "aud": PASSWORD_RESET_TOKEN_AUDIENCE,
@@ -196,8 +198,8 @@ def create_password_reset_token(user_id: str, password_hash: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 
-def decode_password_reset_token(token: str, current_password_hash: str) -> str:
-    """Return user_id. Raises HTTP 400 if invalid, expired, or already used."""
+def decode_password_reset_token_full(token: str, current_password_hash: str) -> dict:
+    """Return decoded payload. Raises HTTP 400 if invalid, expired, or already used."""
     try:
         payload = jwt.decode(
             token,
@@ -215,6 +217,12 @@ def decode_password_reset_token(token: str, current_password_hash: str) -> str:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
     if payload.get("pwf") != _password_fingerprint(current_password_hash):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Reset link has already been used")
+    return payload
+
+
+def decode_password_reset_token(token: str, current_password_hash: str) -> str:
+    """Return user_id. Raises HTTP 400 if invalid, expired, or already used."""
+    payload = decode_password_reset_token_full(token, current_password_hash)
     return payload["sub"]
 
 

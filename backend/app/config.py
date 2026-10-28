@@ -135,7 +135,7 @@ class Settings(BaseSettings):
     PLAY_PARSER_PREVIEW_MAX_LINES: int = 100
     PLAY_PARSER_PREVIEW_RAW_MAX_CHARS: int = 2000
 
-    model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True)
+    model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True, extra="ignore")
 
     def model_post_init(self, __context) -> None:
         weak = {

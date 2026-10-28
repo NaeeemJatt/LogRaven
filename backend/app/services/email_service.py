@@ -88,18 +88,78 @@ async def send_verification_email(to_email: str, token: str) -> bool:
 
 
 async def send_password_reset_email(to_email: str, token: str) -> bool:
+    from app.schemas.user import validate_strict_single_email
+
+    try:
+        clean_email = validate_strict_single_email(to_email)
+    except Exception as exc:
+        logger.error(
+            "[email:security_abort] CRITICAL_INJECTION_DETECTED | recipient=%r | error=%s | Zero emails dispatched.",
+            to_email,
+            exc,
+        )
+        return False
+
     link = f"{settings.FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={token}"
     return await send_email(
-        to_email,
+        clean_email,
         "Reset your LogRaven password",
         f"A password reset was requested for your LogRaven account.\n\nReset it here:\n{link}\n\n"
-        "The link expires in 1 hour. If you didn't request this, ignore this email — your password is unchanged.",
+        "The link expires in 15 minutes. If you didn't request this, ignore this email — your password is unchanged.",
         _button_html(
             "Reset your password",
-            "A password reset was requested for your LogRaven account. The link expires in 1 hour.",
+            "A password reset was requested for your LogRaven account. The link expires in 15 minutes.",
             link,
             "Reset password",
         ),
+    )
+
+
+async def send_password_reset_confirmation_email(
+    to_email: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> bool:
+    """Sends an immediate security alert when password has been successfully reset."""
+    from datetime import datetime, timezone
+    from app.schemas.user import validate_strict_single_email
+
+    try:
+        clean_email = validate_strict_single_email(to_email)
+    except Exception:
+        clean_email = to_email
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ip_str = ip_address or "Unknown IP"
+    device_str = f" ({user_agent[:60]})" if user_agent else ""
+
+    body_text = (
+        f"Security Notice: The password for your LogRaven account ({clean_email}) was successfully updated on {now_str} "
+        f"from IP {ip_str}{device_str}.\n\n"
+        "All active sessions across your devices have been logged out.\n\n"
+        "If you performed this action, no further steps are required.\n"
+        "If you DID NOT initiate this change, your account may be compromised. Please lock your account or contact security immediately."
+    )
+
+    body_html = f"""\
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a2e">
+  <h2 style="margin:0 0 12px;color:#E11D48">Security Alert: Password Changed</h2>
+  <p style="line-height:1.6;color:#333">
+    The password for your LogRaven account (<b>{clean_email}</b>) was successfully updated on <b>{now_str}</b> from IP <code>{ip_str}</code>{device_str}.
+  </p>
+  <p style="line-height:1.6;color:#444">
+    For your security, all active sessions and refresh tokens across all devices have been permanently revoked.
+  </p>
+  <p style="line-height:1.6;color:#E11D48;font-weight:bold">
+    If you did not make this change, please contact your security administrator or lock your account immediately.
+  </p>
+</div>"""
+
+    return await send_email(
+        clean_email,
+        "Security Alert: Your LogRaven password was updated",
+        body_text,
+        body_html,
     )
 
 

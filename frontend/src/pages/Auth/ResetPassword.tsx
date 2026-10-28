@@ -1,12 +1,21 @@
 // LogRaven — Reset Password
 //
 // Sets a new password from the token in the emailed reset link
-// (/reset-password?token=...). Tokens are single-use and expire in 1 hour.
+// (/reset-password?token=...).
+//
+// SECURITY:
+//   - Idempotent pre-flight token check confirms validity before user types.
+//   - URL scrubbing removes token from address bar immediately to prevent Referer leakage.
+//   - NIST SP 800-63B live password strength meter enforces enterprise complexity.
+//   - Web Crypto hybrid encryption ensures zero plaintext password over the wire (Burp Suite proof).
+//   - Revokes all active sessions upon password reset.
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight } from 'lucide-react'
 import { authApi } from '../../api/auth'
+import { encryptPayload } from '../../utils/crypto'
+import PasswordStrengthMeter, { evaluatePasswordStrength } from '../../components/auth/PasswordStrengthMeter'
 import LegalLinks from '../../components/layout/LegalLinks'
 
 const inputClass =
@@ -15,7 +24,14 @@ const inputClass =
 export default function ResetPassword() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const token = params.get('token') ?? ''
+
+  // Capture token from query param on initial render once via ref
+  const initialTokenRef = useRef<string | null>(params.get('token'))
+  const [token, setToken] = useState<string>(() => initialTokenRef.current ?? '')
+  const [maskedEmail, setMaskedEmail] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(true)
+  const [tokenInvalid, setTokenInvalid] = useState(false)
+  const [tokenErrorMsg, setTokenErrorMsg] = useState<string | null>(null)
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -24,19 +40,87 @@ export default function ResetPassword() {
   const [done, setDone] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // 1. Pre-flight token validation & URL scrubbing (runs once on mount)
+  useEffect(() => {
+    const rawToken = initialTokenRef.current
+    if (!rawToken) {
+      setVerifying(false)
+      setTokenInvalid(true)
+      setTokenErrorMsg('This reset link is missing its authentication token.')
+      return
+    }
+
+    // Save token in memory state
+    setToken(rawToken)
+
+    // Scrub token from URL immediately to prevent Referer header leakage or browser history leaks
+    try {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } catch {
+      // Ignored in non-browser test environments
+    }
+
+    // Call pre-flight endpoint
+    let isMounted = true
+    authApi
+      .verifyResetToken(rawToken)
+      .then((res) => {
+        if (!isMounted) return
+        if (res.data.valid) {
+          setMaskedEmail(res.data.email_masked ?? null)
+          setTokenInvalid(false)
+        } else {
+          setTokenInvalid(true)
+          setTokenErrorMsg(res.data.message ?? 'This reset link has expired or has already been used.')
+        }
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return
+        setTokenInvalid(true)
+        const detailMsg = (err as { response?: { data?: { detail?: { message?: string } | string } } })?.response?.data?.detail
+        const message = typeof detailMsg === 'object' ? detailMsg?.message : detailMsg
+        setTokenErrorMsg(message ?? 'This reset link is invalid, expired, or has already been used.')
+      })
+      .finally(() => {
+        if (isMounted) setVerifying(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    if (password.length < 8) { setError('Password must be at least 8 characters.'); return }
-    if (password !== confirm) { setError('Passwords do not match.'); return }
+
+    // Evaluate NIST complexity criteria
+    const { isCompliant } = evaluatePasswordStrength(password)
+    if (!isCompliant) {
+      setError('Please satisfy all password complexity requirements shown below.')
+      return
+    }
+
+    if (password !== confirm) {
+      setError('Passwords do not match.')
+      return
+    }
+
     setLoading(true)
     try {
-      await authApi.resetPassword(token, password)
+      // 2. Client-side Web Crypto hybrid encryption (Burp Suite inspection proof)
+      const envelope = await encryptPayload({
+        token,
+        new_password: password,
+      })
+
+      // 3. Transmit encrypted ciphertext envelope
+      await authApi.resetPassword({ envelope })
       setDone(true)
       setTimeout(() => navigate('/login'), 2500)
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(detail ?? 'Reset failed. The link may be invalid or expired.')
+      setError(typeof detail === 'string' ? detail : 'Password reset failed. The link may have expired.')
     } finally {
       setLoading(false)
     }
@@ -50,36 +134,63 @@ export default function ResetPassword() {
           <p className="text-text-muted text-xs tracking-widest uppercase mt-1">Watch your logs. Find the threat.</p>
         </div>
 
-        {done ? (
-          <div className="text-center">
+        {verifying ? (
+          <div className="text-center py-12" data-testid="reset-password-verifying">
+            <div className="w-8 h-8 mx-auto mb-4 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+            <p className="text-text-muted text-xs font-mono uppercase tracking-widest">
+              Verifying cryptographic reset token…
+            </p>
+          </div>
+        ) : done ? (
+          <div className="text-center" data-testid="reset-password-success">
             <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-teal-500/10 border border-teal-500/25 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-teal-400" aria-hidden />
             </div>
             <h1 className="text-text-primary text-xl font-semibold mb-2">Password updated</h1>
-            <p className="text-text-muted text-sm mb-8">Redirecting you to sign in…</p>
-            <Link to="/login" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
-              Go to sign in
+            <p className="text-text-muted text-sm leading-relaxed mb-6">
+              Your password has been securely updated. All existing sessions across your devices have been logged out.
+            </p>
+            <p className="text-text-ghost text-xs font-mono mb-8">Redirecting you to sign in…</p>
+            <Link
+              to="/login"
+              className="btn-login w-full text-xs font-medium tracking-wide py-2.5 rounded transition-colors uppercase inline-flex items-center justify-center gap-2"
+            >
+              Go to sign in <ArrowRight className="w-3.5 h-3.5" aria-hidden />
             </Link>
           </div>
-        ) : !token ? (
-          <div className="text-center">
-            <h1 className="text-text-primary text-xl font-semibold mb-2">Invalid link</h1>
-            <p className="text-text-muted text-sm mb-8">
-              This reset link is missing its token. Request a new one.
+        ) : tokenInvalid ? (
+          <div className="text-center" data-testid="reset-password-invalid">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-rose-500/10 border border-rose-500/25 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-rose-400" aria-hidden />
+            </div>
+            <h1 className="text-text-primary text-xl font-semibold mb-2">Link Expired or Invalid</h1>
+            <p className="text-text-muted text-sm leading-relaxed mb-8">
+              {tokenErrorMsg ?? 'This password reset link is invalid, has expired, or has already been used.'}
             </p>
-            <Link to="/forgot-password" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
-              Request new link
+            <Link
+              to="/forgot-password"
+              className="btn-login w-full text-xs font-medium tracking-wide py-2.5 rounded transition-colors uppercase inline-flex items-center justify-center gap-2"
+            >
+              Request a new reset link
             </Link>
           </div>
         ) : (
           <>
             <div className="mb-8">
-              <h1 className="text-text-primary text-2xl font-semibold tracking-tight mb-1">Choose a new password</h1>
-              <p className="text-text-muted text-xs font-mono uppercase tracking-widest">Minimum 8 characters</p>
+              <h1 className="text-text-primary text-2xl font-semibold tracking-tight mb-1">Set a new password</h1>
+              {maskedEmail ? (
+                <p className="text-text-muted text-xs font-mono">
+                  Resetting credentials for <span className="text-[#818CF8]">{maskedEmail}</span>
+                </p>
+              ) : (
+                <p className="text-text-muted text-xs font-mono uppercase tracking-widest">
+                  NIST SP 800-63B Compliant
+                </p>
+              )}
               <div className="mt-4 border-t border-white/[0.06]" />
             </div>
 
-            <form onSubmit={(e) => { void handleSubmit(e) }} className="space-y-4">
+            <form noValidate onSubmit={(e) => { void handleSubmit(e) }} className="space-y-4">
               <div>
                 <label htmlFor="rp-password" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
                   New password
@@ -89,9 +200,16 @@ export default function ResetPassword() {
                     id="rp-password"
                     type={show ? 'text' : 'password'}
                     required
+                    autoComplete="new-password"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
                     value={password}
                     placeholder="••••••••••••"
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value)
+                      if (error) setError(null)
+                    }}
                     className={`${inputClass} pr-10`}
                   />
                   <button
@@ -103,19 +221,29 @@ export default function ResetPassword() {
                     {show ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
                   </button>
                 </div>
+
+                {/* Live Password Strength Meter */}
+                <PasswordStrengthMeter password={password} />
               </div>
 
               <div>
                 <label htmlFor="rp-confirm" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
-                  Confirm password
+                  Confirm new password
                 </label>
                 <input
                   id="rp-confirm"
                   type={show ? 'text' : 'password'}
                   required
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
                   value={confirm}
                   placeholder="Repeat new password"
-                  onChange={(e) => setConfirm(e.target.value)}
+                  onChange={(e) => {
+                    setConfirm(e.target.value)
+                    if (error) setError(null)
+                  }}
                   className={inputClass}
                 />
               </div>
@@ -132,9 +260,14 @@ export default function ResetPassword() {
                 className="btn-login w-full text-sm font-medium tracking-wide py-3 rounded transition-colors uppercase mt-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
               >
                 <Lock className="w-4 h-4" aria-hidden />
-                {loading ? 'Updating…' : 'Update password'}
+                {loading ? 'Encrypting & updating…' : 'Update password'}
               </button>
             </form>
+
+            <div className="flex items-center justify-center gap-1.5 text-[10px] text-text-ghost font-mono mt-4">
+              <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" aria-hidden />
+              <span>Zero-plaintext payload encryption & session termination</span>
+            </div>
           </>
         )}
         <LegalLinks className="mt-10" />

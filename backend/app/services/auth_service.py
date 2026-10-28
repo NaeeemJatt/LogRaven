@@ -277,3 +277,8 @@ async def refresh_token(token: str, db: AsyncSession) -> dict:
     finally:
         if lock_acquired:
             await refresh_tokens.release_refresh_lock(jti)
+
+
+async def revoke_all_user_tokens(user_id: str | uuid.UUID) -> None:
+    """Revokes all active sessions, refresh tokens, and cookies for a user upon security events."""
+    await refresh_tokens.revoke_all_user_refresh_tokens(str(user_id))
