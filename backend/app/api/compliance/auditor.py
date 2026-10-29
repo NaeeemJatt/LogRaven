@@ -7,7 +7,7 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 from app.compliance.vault import build_evidence_vault_zip
 from app.dependencies import get_current_user, get_db
 from app.models.soc2_audit import AuditJob, AuditorAccessToken, ComplianceException
+from app.limiter import limiter
 from app.utils.audit import add_audit
 from app.utils.logger import get_logger
 
@@ -88,11 +89,29 @@ class AuditorPortalOverview(BaseModel):
 
 async def _get_valid_token(
     db: AsyncSession,
-    raw_token: str,
+    raw_token: str | None = None,
     passcode: str | None = None,
+    authorization: str | None = None,
+    x_auditor_token: str | None = None,
     track_access: bool = False,
 ) -> AuditorAccessToken:
-    token_hash = _hash_string(raw_token)
+    effective_token = None
+    if isinstance(x_auditor_token, str) and x_auditor_token.strip():
+        effective_token = x_auditor_token.strip()
+    elif isinstance(authorization, str) and authorization.strip().startswith("Bearer "):
+        bearer_val = authorization.strip()[7:].strip()
+        if bearer_val:
+            effective_token = bearer_val
+    elif isinstance(raw_token, str) and raw_token.strip():
+        effective_token = raw_token.strip()
+
+    if not effective_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Auditor access token required via Authorization header, X-Auditor-Token, or path parameter.",
+        )
+
+    token_hash = _hash_string(effective_token)
     stmt = select(AuditorAccessToken).where(AuditorAccessToken.token_hash == token_hash)
     res = await db.execute(stmt)
     token_record = res.scalar_one_or_none()
@@ -117,7 +136,7 @@ async def _get_valid_token(
         )
 
     if token_record.passcode_hash:
-        if not passcode or _hash_string(passcode) != token_record.passcode_hash:
+        if not passcode or not secrets.compare_digest(_hash_string(passcode), token_record.passcode_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Valid passcode required to access this auditor vault.",
@@ -260,7 +279,9 @@ async def revoke_auditor_token(
 # ── Public / Auditor Portal Endpoints (Token Authenticated) ───────────────────
 
 @router.post("/portal/verify")
+@limiter.limit("5/minute")
 async def verify_auditor_token(
+    request: Request,
     body: VerifyTokenRequest,
     db: AsyncSession = Depends(get_db),
 ):
@@ -276,20 +297,31 @@ async def verify_auditor_token(
     }
 
 
+@router.get("/portal/overview", response_model=AuditorPortalOverview)
 @router.get("/portal/{token}/overview", response_model=AuditorPortalOverview)
 async def get_auditor_portal_overview(
-    token: str,
+    token: str | None = None,
     passcode: str | None = None,
+    authorization: str | None = Header(None),
+    x_auditor_token: str | None = Header(None, alias="X-Auditor-Token"),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve compliance overview and audit timeline for external auditors."""
-    token_record = await _get_valid_token(db, token, passcode=passcode, track_access=False)
+    token_record = await _get_valid_token(
+        db,
+        raw_token=token,
+        passcode=passcode,
+        authorization=authorization,
+        x_auditor_token=x_auditor_token,
+        track_access=False,
+    )
 
-    # Fetch audit jobs for this company
+    # Fetch audit jobs for this company and tenant
     stmt = (
         select(AuditJob)
         .options(selectinload(AuditJob.results), selectinload(AuditJob.snapshots))
         .where(
+            AuditJob.user_id == token_record.user_id,
             AuditJob.company_name == token_record.company_name,
             AuditJob.status == "complete",
         )
@@ -310,6 +342,7 @@ async def get_auditor_portal_overview(
 
     # Active business exceptions
     exc_stmt = select(ComplianceException).where(
+        ComplianceException.user_id == token_record.user_id,
         ComplianceException.company_name == token_record.company_name,
         func.lower(ComplianceException.status) == "active",
     )
@@ -361,18 +394,29 @@ async def get_auditor_portal_overview(
     )
 
 
+@router.get("/portal/exceptions")
 @router.get("/portal/{token}/exceptions")
 async def get_auditor_portal_exceptions(
-    token: str,
+    token: str | None = None,
     passcode: str | None = None,
+    authorization: str | None = Header(None),
+    x_auditor_token: str | None = Header(None, alias="X-Auditor-Token"),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve full business logic exception ledger for auditor review."""
-    token_record = await _get_valid_token(db, token, passcode=passcode, track_access=False)
+    token_record = await _get_valid_token(
+        db,
+        raw_token=token,
+        passcode=passcode,
+        authorization=authorization,
+        x_auditor_token=x_auditor_token,
+        track_access=False,
+    )
 
     stmt = (
         select(ComplianceException)
         .where(
+            ComplianceException.user_id == token_record.user_id,
             ComplianceException.company_name == token_record.company_name,
             func.lower(ComplianceException.status) == "active",
         )
@@ -397,14 +441,24 @@ async def get_auditor_portal_exceptions(
     ]
 
 
+@router.get("/portal/evidence-vault")
 @router.get("/portal/{token}/evidence-vault")
 async def download_auditor_evidence_vault(
-    token: str,
+    token: str | None = None,
     passcode: str | None = None,
+    authorization: str | None = Header(None),
+    x_auditor_token: str | None = Header(None, alias="X-Auditor-Token"),
     db: AsyncSession = Depends(get_db),
 ):
     """Download cryptographically hashed Evidence Vault ZIP archive."""
-    token_record = await _get_valid_token(db, token, passcode=passcode, track_access=True)
+    token_record = await _get_valid_token(
+        db,
+        raw_token=token,
+        passcode=passcode,
+        authorization=authorization,
+        x_auditor_token=x_auditor_token,
+        track_access=True,
+    )
 
     if not token_record.can_download_raw_evidence:
         raise HTTPException(
@@ -417,6 +471,7 @@ async def download_auditor_evidence_vault(
         select(AuditJob)
         .options(selectinload(AuditJob.results), selectinload(AuditJob.snapshots))
         .where(
+            AuditJob.user_id == token_record.user_id,
             AuditJob.company_name == token_record.company_name,
             AuditJob.status == "complete",
         )
@@ -428,6 +483,7 @@ async def download_auditor_evidence_vault(
 
     # Fetch exceptions
     exc_stmt = select(ComplianceException).where(
+        ComplianceException.user_id == token_record.user_id,
         ComplianceException.company_name == token_record.company_name,
         func.lower(ComplianceException.status) == "active",
     )

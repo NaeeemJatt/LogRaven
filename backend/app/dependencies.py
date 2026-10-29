@@ -90,6 +90,36 @@ async def get_current_user(
     if user_id is None or token_type != "access":
         raise credentials_exc
 
+    if settings.REDIS_URL:
+        try:
+            import redis.asyncio as aioredis
+            from app.utils.logger import get_logger
+
+            redis_client = aioredis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=0.5,
+                socket_timeout=0.5,
+            )
+            try:
+                revoked_at_str = await redis_client.get(f"lograven:user_revoked_at:{user_id}")
+                if revoked_at_str:
+                    revoked_at_ts = int(revoked_at_str)
+                    token_iat = int(payload.get("iat", 0))
+                    if token_iat < revoked_at_ts:
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Session has been revoked due to password change or security event.",
+                            headers={"WWW-Authenticate": "Bearer"},
+                        )
+            finally:
+                await redis_client.aclose()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            from app.utils.logger import get_logger
+            get_logger(__name__).warning("Redis token revocation check bypassed: %s", exc)
+
     from app.models.user import User  # local import avoids circular dependency
 
     try:

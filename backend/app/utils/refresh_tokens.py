@@ -71,6 +71,24 @@ async def revoke_refresh_token(jti: str) -> None:
         await client.aclose()
 
 
+async def revoke_all_user_refresh_tokens(user_id: str) -> None:
+    """Revokes all active refresh tokens for the given user, immediately killing all sessions across all devices."""
+    import time
+    client = _client()
+    try:
+        # Scan and purge all tokens matching this user_id
+        async for key in client.scan_iter(f"{_PREFIX}*"):
+            val = await client.get(key)
+            if val == str(user_id):
+                await client.delete(key)
+        # Store user-level revocation timestamp
+        await client.set(f"lograven:user_revoked_at:{user_id}", str(int(time.time())), ex=_ttl_seconds())
+    except Exception:
+        pass
+    finally:
+        await client.aclose()
+
+
 async def acquire_refresh_lock(jti: str) -> bool:
     client = _client()
     try:

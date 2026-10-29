@@ -991,6 +991,7 @@ async def suppress_control(
 
     exc_q = await db.execute(
         select(ComplianceException).where(
+            ComplianceException.user_id == current_user.id,
             ComplianceException.company_name == audit_job.company_name,
             ComplianceException.framework == framework,
             ComplianceException.control_id == control_id,
@@ -1111,6 +1112,7 @@ async def unsuppress_control(
 
     exc_q = await db.execute(
         select(ComplianceException).where(
+            ComplianceException.user_id == current_user.id,
             ComplianceException.company_name == audit_job.company_name,
             ComplianceException.framework == framework,
             ComplianceException.control_id == control_id,
@@ -1188,7 +1190,10 @@ async def list_audit_exceptions(
     audit_job = await _load_owned_job(db, audit_id, current_user)
     res = await db.execute(
         select(ComplianceException)
-        .where(ComplianceException.company_name == audit_job.company_name)
+        .where(
+            ComplianceException.user_id == current_user.id,
+            ComplianceException.company_name == audit_job.company_name,
+        )
         .order_by(ComplianceException.created_at.desc())
     )
     exceptions = list(res.scalars().all())

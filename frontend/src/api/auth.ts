@@ -1,12 +1,20 @@
 // LogRaven — Auth API Functions
 import client from './client'
 import type { AuthUser } from '../store/authStore'
+import type { EncryptedEnvelope } from '../utils/crypto'
 
 export interface AuthSessionResponse {
   token_type: string
   access_token?: string
   refresh_token?: string
   user?: AuthUser
+}
+
+export interface ResetVerifyResponse {
+  valid: boolean
+  email_masked?: string
+  code?: string
+  message?: string
 }
 
 export const authApi = {
@@ -21,13 +29,24 @@ export const authApi = {
 
   logout: () => client.post('/auth/logout'),
 
-  /** Send a password-reset email (always 202 — no user enumeration). */
-  forgotPassword: (email: string) =>
-    client.post('/auth/password/forgot', { email }),
+  /** Pre-flight check validating reset token without consuming it */
+  verifyResetToken: (token: string) =>
+    client.get<ResetVerifyResponse>('/auth/password/reset/verify', { params: { token } }),
 
-  /** Set a new password using the token from the reset email. */
-  resetPassword: (token: string, new_password: string) =>
-    client.post('/auth/password/reset', { token, new_password }),
+  /** Send a password-reset email (supports plain email or encrypted envelope). */
+  forgotPassword: (data: string | { envelope: EncryptedEnvelope }) => {
+    if (typeof data === 'string') {
+      return client.post('/auth/password/forgot', { email: data })
+    }
+    return client.post('/auth/password/forgot', data)
+  },
+
+  /** Set a new password using token and new password (or encrypted envelope). */
+  resetPassword: (
+    data:
+      | { token: string; new_password: string }
+      | { envelope: EncryptedEnvelope }
+  ) => client.post('/auth/password/reset', data),
 
   /** Confirm email ownership using the token from the verification email. */
   verifyEmail: (token: string) =>

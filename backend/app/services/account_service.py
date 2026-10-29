@@ -48,33 +48,140 @@ async def confirm_verification(token: str, db: AsyncSession) -> None:
 
 # ── Password reset ───────────────────────────────────────────────────────────
 
+def _mask_email(email: str) -> str:
+    """Mask email for pre-flight display: e.g. u***@domain.com."""
+    if "@" not in email:
+        return "u***@domain.com"
+    local, domain = email.split("@", 1)
+    if len(local) <= 1:
+        masked_local = f"{local}***"
+    else:
+        masked_local = f"{local[0]}***{local[-1]}"
+    return f"{masked_local}@{domain}"
+
+
 async def request_password_reset(email: str, db: AsyncSession, ip_address: str | None = None) -> None:
-    """Always succeeds from the caller's perspective (no user enumeration)."""
-    result = await db.execute(select(User).where(User.email == email))
+    """Always succeeds from the caller's perspective (zero-knowledge anti-enumeration)."""
+    import asyncio
+    import hashlib
+    import redis.asyncio as aioredis
+    from app.config import settings
+
+    clean_email = email.lower().strip()
+    email_hash = hashlib.sha256(clean_email.encode("utf-8")).hexdigest()
+    cooldown_key = f"lograven:pwd_reset_cooldown:{email_hash}"
+
+    # Check / set per-email cooldown lock (60 seconds) in Redis
+    cooldown_active = False
+    try:
+        client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+        # Attempt to acquire 60-second cooldown lock
+        acquired = await client.set(cooldown_key, "1", ex=60, nx=True)
+        await client.aclose()
+        if not acquired:
+            cooldown_active = True
+    except Exception:
+        pass
+
+    result = await db.execute(select(User).where(User.email == clean_email))
     user = result.scalar_one_or_none()
+
     if user is None:
-        logger.info("[password-reset] requested for unknown email")
+        # Equalize execution timing side-channel
+        security.verify_password("dummy-timing-sync", security.DUMMY_PASSWORD_HASH)
+        await asyncio.sleep(0.18)  # simulate SMTP dispatch latency
+        logger.info("[password-reset] requested for unknown email (timing equalized)")
         return
+
+    if cooldown_active:
+        logger.info("[password-reset] cooldown active for user=%s; duplicate email suppressed", user.id)
+        return
+
     token = security.create_password_reset_token(str(user.id), user.password_hash)
     await email_service.send_password_reset_email(user.email, token)
     db.add(AuditLog(
         user_id=user.id,
         action="password_reset_requested",
         ip_address=ip_address,
-        metadata_={},
+        metadata_={"method": "email"},
     ))
     await db.commit()
 
 
-async def reset_password(token: str, new_password: str, db: AsyncSession, ip_address: str | None = None) -> None:
-    if len(new_password) < 8:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password must be at least 8 characters")
-
-    # Peek at the (unverified) subject to locate the user, then validate the
-    # token fully — signature, expiry, audience, and single-use fingerprint —
-    # against that user's current password hash.
+async def verify_reset_token(token: str, db: AsyncSession) -> dict:
+    """
+    Idempotent pre-flight token verification.
+    Validates signature, expiry, audience, and single-use fingerprint without consuming the token.
+    Returns masked email or raises HTTPException(400).
+    """
     import jwt as _jwt
 
+    if not token or not isinstance(token, str):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TOKEN_INVALID", "message": "Reset token is required"},
+        )
+
+    try:
+        unverified = _jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TOKEN_INVALID", "message": "Invalid or malformed reset link"},
+        )
+
+    sub = unverified.get("sub")
+    if not sub:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TOKEN_INVALID", "message": "Invalid reset link claims"},
+        )
+    try:
+        user_uuid = uuid.UUID(sub)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TOKEN_INVALID", "message": "Invalid reset link claims"},
+        )
+
+    result = await db.execute(select(User).where(User.id == user_uuid))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": "TOKEN_INVALID", "message": "Invalid reset link"},
+        )
+
+    # Full verification: signature, expiry, audience, single-use pwf
+    try:
+        security.decode_password_reset_token_full(token, user.password_hash)
+    except HTTPException as exc:
+        code = "TOKEN_EXPIRED" if "expired" in str(exc.detail).lower() else "TOKEN_ALREADY_USED"
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"code": code, "message": str(exc.detail)},
+        ) from exc
+
+    return {
+        "valid": True,
+        "email_masked": _mask_email(user.email),
+    }
+
+
+async def reset_password(
+    token: str,
+    new_password: str,
+    db: AsyncSession,
+    ip_address: str | None = None,
+    user_agent: str | None = None,
+) -> None:
+    from app.services import auth_service
+    from app.utils.password_policy import validate_password_complexity
+    import redis.asyncio as aioredis
+    from app.config import settings
+    import jwt as _jwt
+
+    # 1. Parse unverified claims to locate user
     try:
         unverified = _jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256"])
     except Exception:
@@ -88,18 +195,57 @@ async def reset_password(token: str, new_password: str, db: AsyncSession, ip_add
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
 
-    result = await db.execute(select(User).where(User.id == user_uuid))
+    # 2. Acquire atomic database row lock inside transaction
+    result = await db.execute(select(User).where(User.id == user_uuid).with_for_update())
     user = result.scalar_one_or_none()
     if user is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset link")
 
-    # Full validation: signature, expiry, audience, single-use fingerprint.
-    security.decode_password_reset_token(token, user.password_hash)
+    # 3. Enforce enterprise password policy (NIST SP 800-63B)
+    validate_password_complexity(new_password, user.email)
 
+    # 4. Full token validation (signature, expiry, audience, single-use fingerprint)
+    payload = security.decode_password_reset_token_full(token, user.password_hash)
+    jti = payload.get("jti")
+
+    # 5. Atomic Redis concurrency lock on JTI
+    if jti:
+        try:
+            client = aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+            lock_acquired = await client.set(f"lograven:lock:reset_token:{jti}", "1", ex=30, nx=True)
+            await client.aclose()
+            if not lock_acquired:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Password reset is already processing for this token",
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    # 6. Update user password hash
     user.password_hash = security.hash_password(new_password)
     user.updated_at = datetime.utcnow()
-    db.add(AuditLog(user_id=user.id, action="password_reset", ip_address=ip_address, metadata_={}))
+
+    # 7. Global session revocation across all devices
+    await auth_service.revoke_all_user_tokens(user.id)
+
+    # 8. Record audit trail
+    db.add(AuditLog(
+        user_id=user.id,
+        action="password_reset_success",
+        ip_address=ip_address,
+        user_agent=user_agent,
+        metadata_={"method": "token_reset"},
+    ))
     await db.commit()
+
+    # 9. Send immediate security alert email
+    try:
+        await email_service.send_password_reset_confirmation_email(user.email, ip_address, user_agent)
+    except Exception as exc:
+        logger.warning("[password-reset] Confirmation email failed: %s", exc)
 
 
 # ── Account deletion ─────────────────────────────────────────────────────────

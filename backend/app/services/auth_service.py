@@ -34,12 +34,9 @@ async def register_user(
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> TokenResponse:
-    # Check email length and format
-    if len(password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters",
-        )
+    # Validate password complexity per NIST SP 800-63B
+    from app.utils.password_policy import validate_password_complexity
+    validate_password_complexity(password, email)
 
     generic_register_exc = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
@@ -277,3 +274,8 @@ async def refresh_token(token: str, db: AsyncSession) -> dict:
     finally:
         if lock_acquired:
             await refresh_tokens.release_refresh_lock(jti)
+
+
+async def revoke_all_user_tokens(user_id: str | uuid.UUID) -> None:
+    """Revokes all active sessions, refresh tokens, and cookies for a user upon security events."""
+    await refresh_tokens.revoke_all_user_refresh_tokens(str(user_id))

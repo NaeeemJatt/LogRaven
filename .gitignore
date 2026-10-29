@@ -1,19 +1,34 @@
 # LogRaven .gitignore
 
-# Local storage — never commit uploads or reports
+# Local storage & scratch — never commit uploads or reports
 local/uploads/
 local/reports/
 local/temp/
 local/
 temp/
+tmp/
+scratch/
+.scratch/
 
 # Environment files & secrets
-.env
-*.env
-.env.local
-.env.*.local
+.env*
+!.env.example
+!.env.production.example
 *.pem
 *.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Databases, Celery & Local Caches
+*.sqlite
+*.sqlite3
+*.db
+dump.rdb
+celerybeat-schedule*
+celerybeat.pid
+*.pid
 
 # Python
 __pycache__/
@@ -24,13 +39,20 @@ __pycache__/
 venv/
 .venv/
 env/
+ENV/
 *.egg-info/
 dist/
 build/
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.pytype/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
+*.cover
+.hypothesis/
 
 # Node & Frontend
 node_modules/
@@ -40,21 +62,37 @@ dist/
 .nuxt/
 coverage/
 playwright-report/
+blob-report/
+playwright/.cache/
 test-results/
 *.tsbuildinfo
+.eslintcache
+.stylelintcache
+.turbo/
 
 # IDE & Editors
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # OS & Environment shims
 .DS_Store
 Thumbs.db
 desktop.ini
+[Dd]esktop.ini
+ehthumbs.db
+ehthumbs_vista.db
+$RECYCLE.BIN/
 powershell.bat
 **/powershell.bat
+*.tmp
+*.bak
+*.orig
+*.rej
+*~
 
 # Logs & Test Data
 *.log
@@ -63,8 +101,14 @@ test-data/
 
 # Agent & AI Tooling Caches
 .agents/
+.planning/
+planning/
 .cursor/
 .codex/
+.claude/
+.gemini/
+.impeccable/
+.dmux/
 .github/skills/
 .github/agents/
 .github/hooks/
@@ -73,4 +117,5 @@ frontend-mockup/
 memory-bank/
 
 # Documentation binaries & manuals
-*.pdf
+*.pdf
+*.pdf
