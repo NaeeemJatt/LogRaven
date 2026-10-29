@@ -13,7 +13,7 @@ git add -A
 
 # 3. Commit changes
 Write-Host "[3/4] Committing changes..." -ForegroundColor Yellow
-git commit -m "chore(git): ignore .planning directory"
+git commit -m "chore(git): harden .gitignore with database, secret, and agent cache rules"
 
 # 4. Push branch to GitHub
 Write-Host "[4/4] Pushing 'improvement' branch to GitHub..." -ForegroundColor Yellow
