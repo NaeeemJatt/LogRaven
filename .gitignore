@@ -63,6 +63,8 @@ test-data/
 
 # Agent & AI Tooling Caches
 .agents/
+.planning/
+planning/
 .cursor/
 .codex/
 .github/skills/
