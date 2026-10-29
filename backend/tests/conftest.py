@@ -27,6 +27,7 @@ _mock_settings.APP_VERSION         = "1.0.0"
 _mock_settings.AWS_ACCESS_KEY_ID   = ""
 _mock_settings.AWS_SECRET_ACCESS_KEY = ""
 _mock_settings.AWS_REGION          = "eu-west-1"
+_mock_settings.AWS_ASSUME_ROLE_EXTERNAL_ID = ""
 _mock_settings.S3_BUCKET_NAME      = "test-bucket"
 _mock_settings.S3_DOWNLOAD_URL_EXPIRE_SECONDS = 900
 _mock_settings.AI_CEILING_FREE     = 2000

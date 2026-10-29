@@ -87,7 +87,7 @@ def _resolve_region(session: boto3.Session, region: str | None = None) -> str:
     return region or session.region_name or DEFAULT_REGION
 
 
-def get_aws_session(role_arn: str) -> boto3.Session:
+def get_aws_session(role_arn: str, external_id: str | None = None) -> boto3.Session:
     """
     Assume the customer read-only role and return a boto3 Session with temporary credentials.
 
@@ -100,11 +100,15 @@ def get_aws_session(role_arn: str) -> boto3.Session:
             "RoleSessionName": SESSION_NAME,
             "DurationSeconds": SESSION_DURATION_SECONDS,
         }
-        # Pass ExternalId only when configured. AWS ignores it unless the
-        # customer's trust policy requires it, so this is backward compatible.
-        external_id = (settings.AWS_ASSUME_ROLE_EXTERNAL_ID or "").strip()
-        if external_id:
-            assume_kwargs["ExternalId"] = external_id
+        eff_external_id = (external_id or settings.AWS_ASSUME_ROLE_EXTERNAL_ID or "").strip()
+        if eff_external_id:
+            assume_kwargs["ExternalId"] = eff_external_id
+        else:
+            logger.warning(
+                "SECURITY ADVISORY: AWS STS AssumeRole invoked for %s without an ExternalId. "
+                "Cross-account roles should enforce an ExternalId condition to mitigate Confused Deputy attacks.",
+                role_arn,
+            )
         response = sts.assume_role(**assume_kwargs)
         creds = response["Credentials"]
         return boto3.Session(

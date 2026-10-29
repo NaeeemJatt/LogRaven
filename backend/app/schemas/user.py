@@ -59,14 +59,14 @@ StrictSingleEmail = Annotated[str, Field(..., description="Single valid email re
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=128)
 
     model_config = ConfigDict(extra="forbid")
 
 
 class UserLogin(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=128)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -91,8 +91,8 @@ class UpdateProfileRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., max_length=128)
 
     model_config = ConfigDict(extra="forbid")
 

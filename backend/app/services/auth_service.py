@@ -34,12 +34,9 @@ async def register_user(
     ip_address: str | None = None,
     user_agent: str | None = None,
 ) -> TokenResponse:
-    # Check email length and format
-    if len(password) < 8:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password must be at least 8 characters",
-        )
+    # Validate password complexity per NIST SP 800-63B
+    from app.utils.password_policy import validate_password_complexity
+    validate_password_complexity(password, email)
 
     generic_register_exc = HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

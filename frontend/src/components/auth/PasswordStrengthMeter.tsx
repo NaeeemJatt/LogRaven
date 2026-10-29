@@ -88,14 +88,14 @@ export default function PasswordStrengthMeter({ password }: PasswordStrengthMete
   }
 
   return (
-    <div className="mt-3 p-3 rounded bg-white/[0.02] border border-white/[0.06] space-y-2.5" data-testid="password-strength-meter">
+    <div className="mt-3 p-3.5 rounded-lg bg-surface/80 border border-white/[0.06] space-y-2.5" data-testid="password-strength-meter">
       <div className="flex items-center justify-between text-xs">
         <span className="text-text-muted font-mono uppercase tracking-wider text-[10px]">Password Strength</span>
         <span className={`font-mono font-medium text-[11px] ${labelColor}`}>{labelText}</span>
       </div>
 
       {/* Strength Bar */}
-      <div className="h-1.5 w-full bg-white/[0.06] rounded-full overflow-hidden">
+      <div className="h-1.5 w-full bg-void/80 border border-white/[0.04] rounded-full overflow-hidden">
         <div
           className={`h-full transition-all duration-300 ease-out rounded-full ${barColor}`}
           style={{ width: `${score}%` }}
@@ -107,7 +107,7 @@ export default function PasswordStrengthMeter({ password }: PasswordStrengthMete
       </div>
 
       {/* Criteria Checklist */}
-      <ul className="grid grid-cols-1 gap-1 pt-1 text-[11px] font-mono">
+      <ul className="grid grid-cols-1 gap-1.5 pt-1 text-[11px] font-mono">
         {criteria.map((c) => (
           <li
             key={c.id}

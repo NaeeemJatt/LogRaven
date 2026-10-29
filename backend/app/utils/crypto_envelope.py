@@ -235,18 +235,46 @@ class CryptoEnvelopeManager:
             )
 
         now = time.time()
-        # Clean expired nonces
-        expired = [n for n, exp in _SEEN_NONCES.items() if exp < now]
-        for n in expired:
-            _SEEN_NONCES.pop(n, None)
+        redis_ok = False
+        try:
+            from app.config import settings
+            import redis
 
-        if nonce in _SEEN_NONCES:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Replay attack detected: cryptographic nonce has already been consumed.",
-            )
+            if getattr(settings, "REDIS_URL", None):
+                r_client = redis.Redis.from_url(
+                    settings.REDIS_URL,
+                    decode_responses=True,
+                    socket_connect_timeout=0.5,
+                    socket_timeout=0.5,
+                )
+                try:
+                    was_set = r_client.set(f"lograven:nonce:{nonce}", "1", ex=120, nx=True)
+                    if not was_set:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Replay attack detected: cryptographic nonce has already been consumed.",
+                        )
+                    redis_ok = True
+                finally:
+                    r_client.close()
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.warning("[crypto-envelope] Redis nonce check failed, falling back to memory: %s", exc)
 
-        _SEEN_NONCES[nonce] = now + 120.0  # 2 minute retention
+        if not redis_ok:
+            # Clean expired nonces
+            expired = [n for n, exp in _SEEN_NONCES.items() if exp < now]
+            for n in expired:
+                _SEEN_NONCES.pop(n, None)
+
+            if nonce in _SEEN_NONCES:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Replay attack detected: cryptographic nonce has already been consumed.",
+                )
+
+            _SEEN_NONCES[nonce] = now + 120.0  # 2 minute retention
 
         return payload
 

@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     # httpOnly cookies: set True behind HTTPS in production
-    COOKIE_SECURE: bool = False
+    COOKIE_SECURE: bool | None = None
     # Comma-separated emails allowed to call admin endpoints (tier changes).
     # Empty = admin endpoints disabled entirely.
     ADMIN_EMAILS: str = ""
@@ -138,6 +138,8 @@ class Settings(BaseSettings):
     model_config = ConfigDict(env_file=str(_ENV_FILE), case_sensitive=True, extra="ignore")
 
     def model_post_init(self, __context) -> None:
+        if self.COOKIE_SECURE is None:
+            self.COOKIE_SECURE = not self.DEBUG
         weak = {
             "",
             "change-this-to-a-random-secret-in-production",

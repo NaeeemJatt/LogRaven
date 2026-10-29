@@ -150,6 +150,7 @@ async def update_profile(
 
 
 @router.post("/password/change", status_code=204)
+@limiter.limit("5/minute")
 async def change_password(
     request: Request,
     body: ChangePasswordRequest,
@@ -158,17 +159,19 @@ async def change_password(
 ) -> None:
     """Change password after verifying the current one."""
     from datetime import datetime
+    from app.services import auth_service
     from app.utils.audit import add_audit
+    from app.utils.password_policy import validate_password_complexity
     from app.utils.security import verify_password, hash_password
 
     if not verify_password(body.current_password, current_user.password_hash):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
 
-    if len(body.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    validate_password_complexity(body.new_password, current_user.email)
 
     current_user.password_hash = hash_password(body.new_password)
     current_user.updated_at = datetime.utcnow()
+    await auth_service.revoke_all_user_tokens(current_user.id)
     add_audit(db, user_id=current_user.id, action="password_changed", request=request, metadata={})
     await db.commit()
 
