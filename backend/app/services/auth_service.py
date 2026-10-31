@@ -89,6 +89,7 @@ async def register_user(
 
     refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
     await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))
+    await refresh_tokens.clear_user_revocation(str(user.id))
     return TokenResponse(
         access_token=security.create_access_token(str(user.id), user.tier),
         refresh_token=refresh_token,
@@ -170,6 +171,7 @@ async def login_user(
 
     refresh_token, refresh_jti = security.create_refresh_token(str(user.id))
     await refresh_tokens.store_refresh_token(refresh_jti, str(user.id))
+    await refresh_tokens.clear_user_revocation(str(user.id))
     return TokenResponse(
         access_token=security.create_access_token(str(user.id), user.tier),
         refresh_token=refresh_token,

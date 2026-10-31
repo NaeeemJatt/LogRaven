@@ -89,6 +89,17 @@ async def revoke_all_user_refresh_tokens(user_id: str) -> None:
         await client.aclose()
 
 
+async def clear_user_revocation(user_id: str) -> None:
+    """Clears the user-level revocation marker in Redis upon successful login."""
+    client = _client()
+    try:
+        await client.delete(f"lograven:user_revoked_at:{user_id}")
+    except Exception:
+        pass
+    finally:
+        await client.aclose()
+
+
 async def acquire_refresh_lock(jti: str) -> bool:
     client = _client()
     try:

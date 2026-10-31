@@ -1,26 +1,40 @@
 @echo off
+setlocal enabledelayedexpansion
+
 echo ==================================================
-echo   Syncing ^& Pushing LogRaven (improvement)
+echo   Staging, Committing ^& Pushing LogRaven Changes
 echo ==================================================
+
+for /f "tokens=*" %%i in ('git branch --show-current') do set BRANCH=%%i
+if "%BRANCH%"=="" (
+    echo Error: Could not determine current git branch.
+    pause
+    exit /b 1
+)
 
 echo.
-echo [1/4] Ensuring .planning is untracked...
-git rm -r --cached .planning >nul 2>&1
+echo Current branch: %BRANCH%
 
-echo [2/4] Staging all files...
+echo.
+echo [1/3] Staging all changes...
 git add -A
 
-echo [3/4] Committing changes...
-git commit -m "chore(git): harden .gitignore with database, secret, and agent cache rules"
+echo.
+echo [2/3] Committing changes...
+git commit -m "fix(auth): auto-detect http scheme to prevent cookie drop and clear revocation on login"
 
-echo [4/4] Pushing 'improvement' branch to GitHub...
-git push origin improvement
+echo.
+echo [3/3] Pushing to origin/%BRANCH%...
+git push origin %BRANCH%
 
 echo.
 echo ==================================================
-echo All commits pushed to origin/improvement!
-echo.
-echo Open this URL to create/view your Pull Request:
-echo https://github.com/NaeeemJatt/LogRaven/compare/main...improvement?expand=1
+echo All changes pushed to origin/%BRANCH%!
+if not "%BRANCH%"=="main" (
+    echo.
+    echo Open this URL to create/view your Pull Request:
+    echo https://github.com/NaeeemJatt/LogRaven/compare/main...%BRANCH%?expand=1
+)
 echo ==================================================
 pause
+
