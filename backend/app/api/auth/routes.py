@@ -63,7 +63,7 @@ async def register(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    set_auth_cookies(response, tokens.access_token, tokens.refresh_token)
+    set_auth_cookies(response, tokens.access_token, tokens.refresh_token, request=request)
     return _session_payload(tokens.access_token, tokens.refresh_token, tokens.user)
 
 
@@ -82,7 +82,7 @@ async def login(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    set_auth_cookies(response, tokens.access_token, tokens.refresh_token)
+    set_auth_cookies(response, tokens.access_token, tokens.refresh_token, request=request)
     return _session_payload(tokens.access_token, tokens.refresh_token, tokens.user)
 
 
@@ -102,7 +102,7 @@ async def refresh(
             headers={"WWW-Authenticate": "Bearer"},
         )
     result = await auth_service.refresh_token(token=raw, db=db)
-    set_auth_cookies(response, result["access_token"], result["refresh_token"])
+    set_auth_cookies(response, result["access_token"], result["refresh_token"], request=request)
     return _session_payload(result["access_token"], result["refresh_token"], result.get("user"))
 
 
@@ -116,7 +116,7 @@ async def logout(request: Request, response: Response) -> dict:
                 await revoke_refresh_token(payload["jti"])
         except HTTPException:
             pass
-    clear_auth_cookies(response)
+    clear_auth_cookies(response, request=request)
     return {"ok": True}
 
 
@@ -317,7 +317,7 @@ async def reset_password(
         ip_address=request.client.host if request.client else None,
         user_agent=request.headers.get("user-agent"),
     )
-    clear_auth_cookies(response)
+    clear_auth_cookies(response, request=request)
 
 
 # ── Account deletion ──────────────────────────────────────────────────────────
@@ -335,4 +335,4 @@ async def delete_account(
         current_user, body.password, db,
         ip_address=request.client.host if request.client else None,
     )
-    clear_auth_cookies(response)
+    clear_auth_cookies(response, request=request)
