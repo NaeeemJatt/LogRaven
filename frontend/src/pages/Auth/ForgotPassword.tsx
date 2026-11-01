@@ -8,7 +8,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { MailCheck, KeyRound, ArrowLeft, ShieldCheck, Shield } from 'lucide-react'
 import { authApi } from '../../api/auth'
-import { encryptPayload } from '../../utils/crypto'
+import { encryptPayload, isWebCryptoAvailable } from '../../utils/crypto'
 import LegalLinks from '../../components/layout/LegalLinks'
 
 export default function ForgotPassword() {
@@ -52,16 +52,32 @@ export default function ForgotPassword() {
 
     setLoading(true)
     try {
-      // 1. Client-side Web Crypto hybrid encryption (Burp Suite inspection proof)
       const cleanEmail = email.trim().toLowerCase()
-      const envelope = await encryptPayload({ email: cleanEmail })
 
-      // 2. Transmit encrypted ciphertext envelope
-      await authApi.forgotPassword({ envelope })
+      // 1. Client-side Web Crypto hybrid encryption if in secure context (HTTPS/localhost);
+      // fallback gracefully to standard transport payload if Web Crypto is unavailable or fails.
+      if (isWebCryptoAvailable()) {
+        try {
+          const envelope = await encryptPayload({ email: cleanEmail })
+          await authApi.forgotPassword({ envelope })
+        } catch (cryptoErr) {
+          console.warn('[auth] Web Crypto envelope encryption failed, using transport payload:', cryptoErr)
+          await authApi.forgotPassword(cleanEmail)
+        }
+      } else {
+        await authApi.forgotPassword(cleanEmail)
+      }
+
       setSent(true)
       setCooldown(60)
-    } catch {
-      setError('Something went wrong. Please check your connection and try again.')
+    } catch (err: unknown) {
+      const respData = (err as { response?: { data?: { detail?: string; error?: string } } })?.response?.data
+      const errorMsg = typeof respData?.detail === 'string'
+        ? respData.detail
+        : typeof respData?.error === 'string'
+        ? respData.error
+        : 'Something went wrong. Please check your connection and try again.'
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }

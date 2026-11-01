@@ -14,7 +14,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight, Shield } from 'lucide-react'
 import { authApi } from '../../api/auth'
-import { encryptPayload } from '../../utils/crypto'
+import { encryptPayload, isWebCryptoAvailable } from '../../utils/crypto'
 import PasswordStrengthMeter, { evaluatePasswordStrength } from '../../components/auth/PasswordStrengthMeter'
 import LegalLinks from '../../components/layout/LegalLinks'
 
@@ -105,19 +105,30 @@ export default function ResetPassword() {
 
     setLoading(true)
     try {
-      // 2. Client-side Web Crypto hybrid encryption (Burp Suite inspection proof)
-      const envelope = await encryptPayload({
-        token,
-        new_password: password,
-      })
-
-      // 3. Transmit encrypted ciphertext envelope
-      await authApi.resetPassword({ envelope })
+      if (isWebCryptoAvailable()) {
+        try {
+          const envelope = await encryptPayload({
+            token,
+            new_password: password,
+          })
+          await authApi.resetPassword({ envelope })
+        } catch (cryptoErr) {
+          console.warn('[auth] Web Crypto envelope encryption failed, using transport payload:', cryptoErr)
+          await authApi.resetPassword({ token, new_password: password })
+        }
+      } else {
+        await authApi.resetPassword({ token, new_password: password })
+      }
       setDone(true)
       setTimeout(() => navigate('/login'), 2500)
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Password reset failed. The link may have expired.')
+      const respData = (err as { response?: { data?: { detail?: string; error?: string } } })?.response?.data
+      const errorMsg = typeof respData?.detail === 'string'
+        ? respData.detail
+        : typeof respData?.error === 'string'
+        ? respData.error
+        : 'Password reset failed. The link may have expired.'
+      setError(errorMsg)
     } finally {
       setLoading(false)
     }

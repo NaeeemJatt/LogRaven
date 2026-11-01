@@ -29,6 +29,11 @@ interface ServerPublicKeyResponse {
 
 let cachedPublicKey: { key_id: string; key: CryptoKey } | null = null
 
+/** Check if native Web Crypto API (SubtleCrypto) is available in current browser context (HTTPS or localhost) */
+export function isWebCryptoAvailable(): boolean {
+  return typeof window !== 'undefined' && Boolean(window.crypto && window.crypto.subtle)
+}
+
 /** Convert base64 string to Uint8Array */
 function base64ToUint8Array(base64: string): Uint8Array {
   const binaryString = window.atob(base64)
@@ -78,6 +83,10 @@ export async function getOrFetchPublicKey(): Promise<{ key_id: string; key: Cryp
     return cachedPublicKey
   }
 
+  if (!isWebCryptoAvailable()) {
+    throw new Error('Web Crypto API (SubtleCrypto) is unavailable in this browser context (requires HTTPS or localhost).')
+  }
+
   // Fetch from /auth/crypto/public-key (supported through Vite proxy / client)
   const response = await axios.get<ServerPublicKeyResponse>('/auth/crypto/public-key')
   const { key_id, public_key } = response.data
@@ -92,6 +101,9 @@ export async function getOrFetchPublicKey(): Promise<{ key_id: string; key: Cryp
  * In Burp Suite / network tabs, the entire payload is opaque ciphertext.
  */
 export async function encryptPayload(data: Record<string, unknown>): Promise<EncryptedEnvelope> {
+  if (!isWebCryptoAvailable()) {
+    throw new Error('Web Crypto API (SubtleCrypto) is unavailable in this browser context (requires HTTPS or localhost).')
+  }
   const { key_id, key: rsaPublicKey } = await getOrFetchPublicKey()
 
   // 1. Generate ephemeral 256-bit AES-GCM symmetric key

@@ -15,6 +15,7 @@ vi.mock('../../api/auth', () => ({
 
 vi.mock('../../utils/crypto', () => ({
   encryptPayload: vi.fn(),
+  isWebCryptoAvailable: vi.fn(() => true),
 }))
 
 function renderResetPassword(initialUrl = '/reset-password?token=valid-token-123') {

@@ -1,5 +1,5 @@
 param(
-    [string]$CommitMessage = "fix(auth): auto-detect http scheme to prevent cookie drop and clear revocation on login"
+    [string]$CommitMessage = "fix(auth): fallback to transport payload when Web Crypto subtle is unavailable on HTTP"
 )
 
 Write-Host "==================================================" -ForegroundColor Cyan
@@ -43,4 +43,3 @@ if ($LASTEXITCODE -eq 0) {
 } else {
     Write-Host "`nPush encountered an issue. Check git output above." -ForegroundColor Red
 }
-

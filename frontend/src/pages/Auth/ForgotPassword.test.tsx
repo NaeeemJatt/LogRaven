@@ -14,6 +14,7 @@ vi.mock('../../api/auth', () => ({
 
 vi.mock('../../utils/crypto', () => ({
   encryptPayload: vi.fn(),
+  isWebCryptoAvailable: vi.fn(() => true),
 }))
 
 describe('ForgotPassword', () => {
