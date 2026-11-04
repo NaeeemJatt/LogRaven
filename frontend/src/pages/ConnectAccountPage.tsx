@@ -325,12 +325,7 @@ export default function ConnectAccountPage() {
       "Principal": {
         "AWS": "arn:aws:iam::${logravenAccountId}:root"
       },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "sts:ExternalId": "${form.externalId}"
-        }
-      }
+      "Action": "sts:AssumeRole"
     }
   ]
 }`

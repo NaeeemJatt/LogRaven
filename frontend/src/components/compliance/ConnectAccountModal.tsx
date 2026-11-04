@@ -245,12 +245,7 @@ export default function ConnectAccountModal({
       "Principal": {
         "AWS": "arn:aws:iam::${logravenAccountId}:root"
       },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "sts:ExternalId": "${externalId}"
-        }
-      }
+      "Action": "sts:AssumeRole"
     }
   ]
 }`
