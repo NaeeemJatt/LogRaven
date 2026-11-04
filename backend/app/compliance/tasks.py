@@ -57,6 +57,8 @@ def rescan_due_audits() -> dict:
 
 def _compute_next_run(recurrence: str, now: datetime | None = None) -> datetime | None:
     now = now or datetime.now(timezone.utc)
+    if now.tzinfo is not None:
+        now = now.replace(tzinfo=None)
     if recurrence == "daily":
         return now + timedelta(days=1)
     if recurrence == "weekly":
