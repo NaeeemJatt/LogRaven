@@ -9,7 +9,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  ShieldCheck, Cloud,
+  Cloud,
   PlusCircle, History, Gauge,
 } from 'lucide-react'
 import AuditForm from '../components/audit/AuditForm'
@@ -147,80 +147,58 @@ export default function AuditPage() {
   }
 
   return (
-    <div className="pt-4 sm:pt-6 pb-12 min-h-screen grid-bg relative">
+    <div className="pb-10 min-h-screen grid-bg relative">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-72"
         aria-hidden
         style={{ background: 'radial-gradient(ellipse 70% 100% at 20% 0%, rgba(227,181,126,0.05), transparent 70%)' }}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
+      <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 max-w-[1400px] mx-auto">
         <main className="min-w-0">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-              <div className="flex items-center gap-2 font-mono text-[10px] text-indigo-400 tracking-[0.2em] uppercase">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-                Continuous Compliance
-              </div>
-              <h1 className="font-display text-2xl font-bold text-text-primary mt-1">
-                Compliance Control Room
-              </h1>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setIsAuditorModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/20 transition-colors shadow-sm self-start sm:self-auto"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Invite Auditor
-            </button>
-          </div>
-
           {/* Page tabs: new audit flow / history / posture */}
-          <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
-            <div role="tablist" aria-label="Compliance views" className="ops-panel p-1.5 inline-flex flex-wrap gap-1">
-                {PAGE_TABS.map(({ key, label, icon: Icon }) => {
-                  const isActive = tab === key
-                  return (
-                    <button
-                      key={key}
-                      id={`compliance-tab-${key}`}
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-controls="compliance-tabpanel"
-                      tabIndex={isActive ? 0 : -1}
-                      onClick={() => setTab(key)}
-                      onKeyDown={(event) => {
-                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-                        event.preventDefault()
-                        const current = PAGE_TABS.findIndex((item) => item.key === key)
-                        const nextIndex =
-                          event.key === 'Home'
-                            ? 0
-                            : event.key === 'End'
-                              ? PAGE_TABS.length - 1
-                              : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
-                                PAGE_TABS.length
-                        const next = PAGE_TABS[nextIndex].key
-                        setTab(next)
-                        requestAnimationFrame(() =>
-                          document.getElementById(`compliance-tab-${next}`)?.focus(),
-                        )
-                      }}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-medium transition-colors ${
-                        isActive
-                          ? 'bg-indigo-500/12 text-indigo-300 border border-indigo-500/40'
-                          : 'text-text-muted hover:text-text-secondary border border-transparent'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" /> {label}
-                    </button>
-                  )
-                })}
-              </div>
-
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div role="tablist" aria-label="Compliance views" className="ops-panel p-1 inline-flex flex-wrap gap-1">
+              {PAGE_TABS.map(({ key, label, icon: Icon }) => {
+                const isActive = tab === key
+                return (
+                  <button
+                    key={key}
+                    id={`compliance-tab-${key}`}
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="compliance-tabpanel"
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => setTab(key)}
+                    onKeyDown={(event) => {
+                      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                      event.preventDefault()
+                      const current = PAGE_TABS.findIndex((item) => item.key === key)
+                      const nextIndex =
+                        event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? PAGE_TABS.length - 1
+                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
+                              PAGE_TABS.length
+                      const next = PAGE_TABS[nextIndex].key
+                      setTab(next)
+                      requestAnimationFrame(() =>
+                        document.getElementById(`compliance-tab-${next}`)?.focus(),
+                      )
+                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
+                      isActive
+                        ? 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
+                        : 'text-text-muted hover:text-text-secondary border border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" /> {label}
+                  </button>
+                )
+              })}
             </div>
+          </div>
 
             {errorMessage && (
               <motion.div

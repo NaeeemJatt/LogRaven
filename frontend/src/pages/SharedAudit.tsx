@@ -37,13 +37,14 @@ export default function SharedAudit() {
       <header className="border-b border-white/[0.06] bg-deep/40 backdrop-blur">
         <div className="px-4 sm:px-6 lg:px-8 py-4 max-w-[1200px] mx-auto flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-indigo-300" />
+            <span className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400">
+              <ShieldCheck className="w-4 h-4" />
             </span>
             <span className="font-display font-bold text-text-primary">LogRaven</span>
           </Link>
-          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-text-muted">
-            <Lock className="w-3 h-3" /> Read-only shared report
+          <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+            <Lock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Read-only shared report</span>
           </span>
         </div>
       </header>

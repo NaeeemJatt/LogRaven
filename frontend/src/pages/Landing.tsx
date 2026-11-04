@@ -1,7 +1,17 @@
-import { useRef, useState, useEffect } from 'react'
+// LogRaven — Security Operations Center & Compliance Intelligence Platform
+// Hallmark · v2.0.0 | shape: stage | theme: watchtower | genre: modern-minimal
+
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { motion, useScroll, useTransform, useInView } from 'framer-motion'
-import { Shield, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react'
+import {
+  Shield,
+  ArrowRight,
+  Terminal,
+  FileCode2,
+  Server,
+  Cloud,
+  ChevronRight,
+} from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
 import client from '../api/client'
 import LegalLinks from '../components/layout/LegalLinks'
@@ -12,16 +22,21 @@ interface PlatformStats {
   mitre_techniques: number
 }
 
-/** Real platform numbers from the public stats endpoint; conservative fallbacks while loading. */
 function usePlatformStats() {
   const [stats, setStats] = useState<PlatformStats | null>(null)
   useEffect(() => {
     let cancelled = false
     client
       .get<PlatformStats>('/api/v1/meta/stats')
-      .then((res) => { if (!cancelled) setStats(res.data) })
-      .catch(() => { /* keep fallbacks — landing must render without the API */ })
-    return () => { cancelled = true }
+      .then((res) => {
+        if (!cancelled && res.data) setStats(res.data)
+      })
+      .catch(() => {
+        // Fallback gracefully when backend API is offline
+      })
+    return () => {
+      cancelled = true
+    }
   }, [])
   return {
     rules: stats ? stats.detection_rules.toLocaleString() : '2,000+',
@@ -30,258 +45,79 @@ function usePlatformStats() {
   }
 }
 
-function SectionReveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-80px' })
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 32 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
-      transition={{ duration: 0.7, delay, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      {children}
-    </motion.div>
-  )
-}
-
-type Feature = { title: string; description: string; tag: string }
-
-function FeatureCard({ feature, index, cardRef }: { feature: Feature; index: number; cardRef?: (el: HTMLDivElement | null) => void }) {
-  return (
-    <div
-      ref={cardRef}
-      className="flex-shrink-0 w-[300px] sm:w-[340px] min-h-[320px] p-7 rounded-2xl border border-white/[0.06] bg-surface/50 hover:border-indigo-500/20 hover:bg-elevated/60 transition-all duration-200 flex flex-col select-none"
-    >
-      <div className="font-mono text-[10px] text-indigo-400/70 tracking-widest">{String(index + 1).padStart(2, '0')}</div>
-      <h3 className="font-display font-semibold text-text-primary text-lg mt-5 mb-3">{feature.title}</h3>
-      <p className="text-text-secondary text-sm leading-relaxed">{feature.description}</p>
-      <div className="mt-auto pt-6 flex items-center gap-3">
-        <div className="h-px flex-1 bg-white/[0.07]" />
-        <span className="font-mono text-[10px] text-text-muted tracking-[0.18em] uppercase">{feature.tag}</span>
-      </div>
-    </div>
-  )
-}
-
-function FeatureCarousel({ features }: { features: Feature[] }) {
-  const len = features.length
-  const COPIES = 5
-  const START = len * 2
-  const cards = Array.from({ length: COPIES }, () => features).flat()
-
-  const [index, setIndex] = useState(START)
-  const [withTransition, setWithTransition] = useState(true)
-  const [step, setStep] = useState(356)
-  const firstCard = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const measure = () => {
-      if (firstCard.current) setStep(firstCard.current.offsetWidth + 16)
-    }
-    measure()
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [])
-
-  const paginate = (dir: number) => {
-    setWithTransition(true)
-    setIndex((i) => i + dir)
-  }
-
-  const normalize = () => {
-    if (index >= len * (COPIES - 1)) { setWithTransition(false); setIndex((i) => i - len) }
-    else if (index < len) { setWithTransition(false); setIndex((i) => i + len) }
-  }
-
-  return (
-    <>
-      <div className="max-w-6xl mx-auto px-6 mb-10 flex items-end justify-between gap-6">
-        <SectionReveal>
-          <div className="font-mono text-[10px] text-indigo-400 tracking-[0.22em] uppercase mb-3">Capabilities</div>
-          <h2 className="font-display font-bold text-text-primary mb-3" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)' }}>
-            Everything you need to investigate
-          </h2>
-          <p className="text-text-secondary text-sm leading-relaxed max-w-xl">
-            From raw log ingestion to actionable threat reports — every step of the SOC workflow in one platform.
-          </p>
-        </SectionReveal>
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={() => paginate(-1)} aria-label="Previous"
-            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary hover:border-indigo-500/30 hover:bg-elevated/60 transition-all flex items-center justify-center"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => paginate(1)} aria-label="Next"
-            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary hover:border-indigo-500/30 hover:bg-elevated/60 transition-all flex items-center justify-center"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      <div className="relative">
-        <div className="absolute left-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-r from-void to-transparent pointer-events-none" />
-        <div className="absolute right-0 top-0 bottom-0 w-16 sm:w-32 z-10 bg-gradient-to-l from-void to-transparent pointer-events-none" />
-
-        <div className="overflow-hidden">
-          <motion.div
-            className="flex gap-4 w-max px-6"
-            initial={false}
-            animate={{ x: -index * step }}
-            transition={withTransition ? { duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] } : { duration: 0 }}
-            onAnimationComplete={normalize}
-          >
-            {cards.map((f, i) => (
-              <FeatureCard
-                key={i}
-                feature={f}
-                index={i % len}
-                cardRef={i === 0 ? (el) => { firstCard.current = el } : undefined}
-              />
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Mobile arrows */}
-        <div className="flex sm:hidden items-center justify-center gap-3 mt-8">
-          <button
-            onClick={() => paginate(-1)} aria-label="Previous"
-            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => paginate(1)} aria-label="Next"
-            className="w-11 h-11 rounded-xl border border-white/[0.08] bg-surface/50 text-text-secondary hover:text-text-primary transition-all flex items-center justify-center"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-    </>
-  )
-}
-
-function Step({ num, title, description, index }: { num: string; title: string; description: string; index: number }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
-  return (
-    <motion.div
-      ref={ref}
-      initial={{ opacity: 0, x: -16 }}
-      animate={inView ? { opacity: 1, x: 0 } : {}}
-      transition={{ duration: 0.5, delay: index * 0.1 }}
-      className="flex gap-5"
-    >
-      <div className="flex flex-col items-center">
-        <div className="w-8 h-8 flex items-center justify-center flex-shrink-0">
-          <span className="font-mono text-sm font-bold text-indigo-500">{num}</span>
-        </div>
-        {index < 3 && <div className="w-px flex-1 bg-white/[0.06] mt-2" />}
-      </div>
-      <div className="pb-10">
-        <h3 className="font-display font-semibold text-text-primary mb-1">{title}</h3>
-        <p className="text-text-secondary text-sm leading-relaxed">{description}</p>
-      </div>
-    </motion.div>
-  )
-}
-
-function TerminalPreview({ ruleCount }: { ruleCount: string }) {
-  const lines = [
-    { text: '$ lograven analyze --files Security.evtx Sysmon.evtx', color: '#E3B57E' },
-    { text: '→ Parsed 284,712 events across 2 files', color: '#8FBDAD', delay: 0.3 },
-    { text: `→ Running ${ruleCount} detection rules...`, color: '#94A3B8', delay: 0.6 },
-    { text: '⚠ T1003.001  CRITICAL  Credential Dumping via LSASS', color: '#DB8585', delay: 0.9 },
-    { text: '⚠ T1059.001  CRITICAL  Encoded PowerShell Execution', color: '#DB8585', delay: 1.1 },
-    { text: '→ Correlating across 2 sources...', color: '#94A3B8', delay: 1.4 },
-    { text: '→ Optional AI analysis complete (consented)', color: '#8FBDAD', delay: 1.7 },
-    { text: '✓ Report ready: 12 findings, 3 critical', color: '#E3B57E', delay: 2.0 },
-  ]
-  return (
-    <div className="rounded-2xl overflow-hidden border border-white/[0.06]" style={{ background: '#060810' }}>
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-rose-500/60" />
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
-        </div>
-        <span className="ml-2 font-mono text-xs text-text-muted">lograven — analysis pipeline</span>
-        <span className="ml-auto font-mono text-[9px] text-text-ghost tracking-widest uppercase">Example output</span>
-      </div>
-      <div className="p-5 font-mono text-xs leading-7 space-y-0.5">
-        {lines.map((line, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: line.delay || 0, duration: 0.4 }}
-            style={{ color: line.color }}
-          >
-            {line.text}
-          </motion.div>
-        ))}
-        <motion.div
-          animate={{ opacity: [1, 0, 1] }}
-          transition={{ repeat: Infinity, duration: 1 }}
-          className="inline-block w-2 h-4 bg-indigo-400 ml-1"
-        />
-      </div>
-    </div>
-  )
-}
+type WorkbenchTab = 'stream' | 'rule' | 'chain'
 
 export default function Landing() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const stats = usePlatformStats()
-  const { scrollY } = useScroll()
-  const heroY = useTransform(scrollY, [0, 600], [0, -80])
-  const heroOpacity = useTransform(scrollY, [0, 400], [1, 0])
-
-  const features: Feature[] = [
-    { tag: 'Ingestion', title: 'Supported Log Ingestion', description: 'Upload EVTX, syslog, CloudTrail JSON, Nginx/IIS, and supported text logs. Native parsers extract structured events for recognized formats.' },
-    { tag: 'Detection', title: 'Multi-Engine Detection', description: `${stats.rules} YAML detection rules run over parsed events. Choose native parsers, decoder-manager where configured, or compare both.` },
-    { tag: 'AI Layer', title: 'Consent-Based AI Analysis', description: 'With explicit consent for each run, the optional AI layer contextualizes findings and generates executive summaries.' },
-    { tag: 'Mapping', title: 'MITRE ATT&CK Mapping', description: 'Detected techniques are mapped to MITRE ATT&CK tactics and techniques for investigation context.' },
-    { tag: 'Correlation', title: 'Cross-Source Correlation', description: 'Correlate findings across multiple log files to surface multi-stage attack patterns invisible in any single source.' },
-    { tag: 'Reporting', title: 'PDF Evidence Packages', description: 'Generate PDF reports with findings, IOCs, and optional AI commentary for security reviews or incident response.' },
-  ]
-
-  const steps = [
-    { title: 'Upload supported log files', description: 'Add EVTX, syslog, CloudTrail JSON, Nginx/IIS, or supported text logs. LogRaven detects a parser for recognized content.', num: '01' },
-    { title: 'Configure & run analysis', description: 'Choose correlation, explicitly consent to optional cloud AI, and start the pipeline. Progress refreshes every 2 seconds.', num: '02' },
-    { title: 'Review findings', description: 'Explore prioritized findings, correlated attack chains, IOCs, and MITRE mappings in a rich interactive dashboard.', num: '03' },
-    { title: 'Export & respond', description: 'Download a PDF report to share with authorized reviewers. Validate findings before taking action.', num: '04' },
-  ]
+  const [activeTab, setActiveTab] = useState<WorkbenchTab>('stream')
 
   return (
-    <div className="bg-void min-h-screen overflow-hidden">
-      {/* Landing-specific minimal header */}
-      <header className="fixed top-0 left-0 right-0 z-50">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-indigo-400" />
+    <div className="bg-void text-text-primary min-h-dvh flex flex-col overflow-x-clip selection:bg-amber-400/20 selection:text-amber-200">
+      {/* ── Header ───────────────────────────────────────────── */}
+      <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-void/90 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link
+            to="/"
+            className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+            aria-label="LogRaven Home"
+          >
+            <div className="w-8 h-8 rounded-lg bg-surface border border-white/[0.08] flex items-center justify-center">
+              <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
             </div>
-            <span className="font-display font-bold text-lg text-text-primary tracking-tight">
-              Log<span className="text-indigo-400">Raven</span>
+            <span className="font-display font-bold text-lg tracking-tight text-text-primary">
+              Log<span className="text-amber-400">Raven</span>
             </span>
           </Link>
+
+          <nav aria-label="Primary" className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
+            <a
+              href="#workbench"
+              className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
+            >
+              Live workbench
+            </a>
+            <a
+              href="#parsers"
+              className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
+            >
+              Parsers
+            </a>
+            <a
+              href="#pipeline"
+              className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
+            >
+              Investigation pipeline
+            </a>
+            <a
+              href="#compliance"
+              className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
+            >
+              Compliance
+            </a>
+          </nav>
+
           <div className="flex items-center gap-3">
             {isAuthenticated ? (
-              <Link to="/dashboard" className="btn-sovereign px-4 py-2 rounded-lg text-sm font-semibold text-white">
+              <Link
+                to="/dashboard"
+                className="btn-sovereign text-xs font-semibold px-4 py-2 rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 Open dashboard
               </Link>
             ) : (
               <>
-                <Link to="/login" className="btn-ghost px-4 py-2 rounded-lg text-sm font-medium text-text-secondary">
+                <Link
+                  to="/login"
+                  className="text-xs font-medium text-text-secondary hover:text-text-primary px-3 py-2 rounded-lg transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   Sign in
                 </Link>
-                <Link to="/register" className="btn-sovereign px-4 py-2 rounded-lg text-sm font-semibold text-white">
-                  Get started
+                <Link
+                  to="/register"
+                  className="btn-sovereign text-xs font-semibold px-4 py-2 rounded-lg motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Start investigation
                 </Link>
               </>
             )}
@@ -289,169 +125,510 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero — asymmetric split: copy left, live console right */}
-      <section className="relative min-h-screen flex items-center px-6 pt-28 pb-16">
-        <div className="absolute inset-0 bg-hero-mesh" />
-        <div className="absolute top-0 left-0 right-0 h-[600px] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse 70% 50% at 30% -10%, rgba(227,181,126,0.06) 0%, transparent 70%)' }} />
+      {/* ── Hero: Stage Posture (Asymmetric Split) ─────────────── */}
+      <section className="relative pt-12 pb-20 md:pt-16 md:pb-28 border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-[1fr_1.15fr] gap-12 lg:gap-16 items-center">
+          {/* Left: Concise Copy & Action */}
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-surface border border-white/[0.08] mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-xs text-text-muted">Security intelligence and SOC audit</span>
+            </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto w-full grid md:grid-cols-[1.05fr_1fr] gap-12 md:gap-16 items-center">
-          {/* Left — copy */}
-          <motion.div style={{ y: heroY, opacity: heroOpacity }}>
-            <motion.div
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/[0.08] mb-7"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              <span className="font-mono text-[11px] text-text-muted tracking-wider uppercase">
-                Log analysis &amp; threat intelligence
-              </span>
-            </motion.div>
+            <h1 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl tracking-tight text-text-primary leading-[1.08] mb-4">
+              Security log analysis and threat detection
+            </h1>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25, duration: 0.7 }}
-              className="font-display font-extrabold leading-[0.95] tracking-tight mb-6"
-              style={{ fontSize: 'clamp(2.75rem, 6vw, 5rem)' }}
-            >
-              <span className="text-text-primary">Watch your logs.</span><br />
-              <span className="text-indigo-400">Find the threat.</span>
-            </motion.h1>
+            <p className="text-text-secondary text-base sm:text-lg leading-relaxed mb-8 max-w-xl">
+              Detect attacks across Windows, Linux, and cloud logs in seconds.
+            </p>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
-              className="text-text-secondary text-lg max-w-xl mb-9 leading-relaxed"
-            >
-              Upload supported security logs. Run {stats.rules} detection rules. Correlate across sources.
-              Map findings to MITRE ATT&CK — with optional AI enrichment.
-            </motion.p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 }}
-              className="flex flex-col sm:flex-row items-start gap-3"
-            >
+            <div className="flex flex-wrap items-center gap-3">
               {isAuthenticated ? (
-                <Link to="/dashboard" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold">
-                  Open dashboard <ArrowRight className="w-4 h-4" />
+                <Link
+                  to="/dashboard"
+                  className="btn-sovereign inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Open dashboard</span>
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
-                <Link to="/register" className="btn-sovereign flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold">
-                  Start investigating <ArrowRight className="w-4 h-4" />
+                <Link
+                  to="/register"
+                  className="btn-sovereign inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Start investigation</span>
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
               )}
-              <Link to={isAuthenticated ? '/profile' : '/login'} className="btn-ghost flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-medium text-text-secondary">
-                {isAuthenticated ? 'Account settings' : 'Sign in'}
+
+              <a
+                href="#workbench"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary border border-white/[0.08] hover:border-white/[0.18] transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+              >
+                <span>Explore live workbench</span>
                 <ChevronRight className="w-4 h-4" />
-              </Link>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
-              className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-12 pt-8 border-t border-white/[0.06]"
-            >
-              {[
-                { label: 'Detection Rules', value: stats.rules },
-                { label: 'Parser Formats', value: stats.formats },
-                { label: 'MITRE Techniques', value: stats.mitre },
-                { label: 'Compliance Frameworks', value: '12' },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div className="font-display font-bold text-2xl text-text-primary">{value}</div>
-                  <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase mt-0.5">{label}</div>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
-
-          {/* Right — live console */}
-          <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ delay: 0.45, duration: 0.7, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="relative"
-          >
-            <div className="absolute -inset-4 bg-hero-mesh opacity-40 blur-2xl rounded-3xl pointer-events-none" />
-            <div className="relative">
-              <TerminalPreview ruleCount={stats.rules} />
+              </a>
             </div>
-          </motion.div>
-        </div>
-      </section>
 
-      {/* Features — manual infinite carousel */}
-      <section className="py-24 border-t border-white/[0.04] overflow-hidden">
-        <FeatureCarousel features={features} />
-      </section>
-
-      {/* How it works */}
-      <section className="px-6 py-24">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-16 items-start">
-            <div>
-              <SectionReveal>
-                <h2 className="font-display font-bold text-text-primary mb-8" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.5rem)' }}>
-                  From logs to insight<br />in minutes
-                </h2>
-              </SectionReveal>
-              <div className="space-y-0">
-                {steps.map((s, i) => <Step key={s.num} num={s.num} title={s.title} description={s.description} index={i} />)}
+            {/* Quick Metrics Bar */}
+            <div className="grid grid-cols-3 gap-6 pt-10 mt-10 border-t border-white/[0.06]">
+              <div>
+                <div className="font-display font-bold text-2xl text-text-primary tabular-nums">{stats.rules}</div>
+                <div className="text-xs text-text-muted mt-1">Detection rules</div>
+              </div>
+              <div>
+                <div className="font-display font-bold text-2xl text-text-primary tabular-nums">{stats.formats}</div>
+                <div className="text-xs text-text-muted mt-1">Native log parsers</div>
+              </div>
+              <div>
+                <div className="font-display font-bold text-2xl text-text-primary tabular-nums">{stats.mitre}</div>
+                <div className="text-xs text-text-muted mt-1">MITRE techniques</div>
               </div>
             </div>
-            <SectionReveal delay={0.3}>
-              <div className="sticky top-24">
-                <div className="p-6 rounded-2xl border border-white/[0.06] bg-surface/60 backdrop-blur-xl mb-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Shield className="w-4 h-4 text-indigo-400" />
-                    <span className="font-mono text-xs text-indigo-400 tracking-widest uppercase">Compliance Automation</span>
+          </div>
+
+          {/* Right: The Signature Workbench Stage */}
+          <div id="workbench" className="rounded-xl border border-white/[0.08] bg-surface overflow-hidden">
+            {/* Workbench Top Bar */}
+            <div className="px-4 py-3 bg-deep border-b border-white/[0.06] flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-amber-400" />
+                <span className="text-xs text-text-secondary font-medium">lograven.soc.telemetry</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 p-1 rounded-lg bg-surface border border-white/[0.06]">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('stream')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                    activeTab === 'stream'
+                      ? 'bg-elevated text-amber-300 font-semibold'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  Event stream
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('rule')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                    activeTab === 'rule'
+                      ? 'bg-elevated text-amber-300 font-semibold'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  Sigma rule
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('chain')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                    activeTab === 'chain'
+                      ? 'bg-elevated text-amber-300 font-semibold'
+                      : 'text-text-muted hover:text-text-secondary'
+                  }`}
+                >
+                  Attack chain
+                </button>
+              </div>
+            </div>
+
+            {/* Workbench Body */}
+            <div className="p-5 text-xs min-h-[300px]">
+              {activeTab === 'stream' && (
+                <div className="space-y-3 font-mono">
+                  <div className="flex items-center justify-between text-[11px] text-text-muted pb-2 border-b border-white/[0.06]">
+                    <span>Timestamp &amp; host</span>
+                    <span>Event &amp; technique</span>
+                    <span>Severity</span>
                   </div>
-                  <h3 className="font-display font-semibold text-text-primary text-lg mb-2">
-                    Automated AWS Compliance Audits
-                  </h3>
-                  <p className="text-text-secondary text-sm mb-4 leading-relaxed">
-                    Provide an IAM role ARN and let LogRaven collect CloudTrail, IAM, and GuardDuty evidence.
-                    Get scored reports across 12 frameworks, including SOC 2, ISO 27001, and CIS AWS.
-                  </p>
-                  <Link
-                    to={isAuthenticated ? '/compliance' : '/register'}
-                    className="flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
-                  >
-                    {isAuthenticated ? 'View compliance module' : 'Create an account to start'} <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                <div className="p-5 rounded-2xl border border-rose-500/15 bg-rose-500/5">
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between gap-2 mb-1">
-                      <span className="font-mono text-[10px] text-rose-400/70 tracking-widest uppercase">Threat indicator</span>
-                      <span className="font-mono text-[9px] text-text-ghost tracking-widest uppercase">Illustrative</span>
+
+                  <div className="p-3 rounded-lg bg-elevated/70 border border-threat-critical/20 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-text-primary font-medium">18:42:01.402 · WIN-SRV01</div>
+                      <div className="text-text-muted text-[11px] mt-0.5">Sysmon Event 10: ProcessAccess → lsass.exe</div>
                     </div>
-                    <div className="font-display font-bold text-3xl text-text-primary">12</div>
-                    <div className="text-text-secondary text-xs mt-0.5">findings in a sample investigation</div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-threat-critical/15 text-threat-critical border border-threat-critical/30">
+                      T1003.001
+                    </span>
                   </div>
-                  <div className="flex gap-2">
-                    {[['3', 'critical', '#DB8585'], ['4', 'high', '#E0A86F'], ['5', 'med', '#D9C27E']].map(([n, label, color]) => (
-                      <div key={label} className="flex-1 px-2 py-1.5 rounded-lg text-center"
-                        style={{ background: `${color}10`, border: `1px solid ${color}25` }}>
-                        <div className="font-mono font-bold text-sm" style={{ color }}>{n}</div>
-                        <div className="font-mono text-[9px] mt-0.5" style={{ color, opacity: 0.6 }}>{label}</div>
-                      </div>
-                    ))}
+
+                  <div className="p-3 rounded-lg bg-elevated/70 border border-threat-high/20 flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-text-primary font-medium">18:42:00.819 · WIN-SRV01</div>
+                      <div className="text-text-muted text-[11px] mt-0.5">Security 4688: powershell.exe -enc JABz…</div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-threat-high/15 text-threat-high border border-threat-high/30">
+                      T1059.001
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-elevated/70 border border-white/[0.06] flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-text-primary font-medium">18:41:55.104 · aws-cloudtrail</div>
+                      <div className="text-text-muted text-[11px] mt-0.5">sts:AssumeRole with AdministratorAccess from anomalous ASN</div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-threat-medium/15 text-threat-medium border border-threat-medium/30">
+                      T1078.004
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-elevated/40 border border-white/[0.04] flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-text-secondary font-medium">18:41:40.012 · bastion-deb12</div>
+                      <div className="text-text-muted text-[11px] mt-0.5">pam_unix(sshd:auth): 4 failed attempts for user root</div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-threat-low/15 text-threat-low border border-threat-low/30">
+                      T1110.001
+                    </span>
                   </div>
                 </div>
+              )}
+
+              {activeTab === 'rule' && (
+                <div className="space-y-2 text-text-secondary">
+                  <div className="text-text-muted pb-1 border-b border-white/[0.06] flex items-center justify-between text-xs">
+                    <span>rules/windows/sysmon_lsass_dump.yml</span>
+                    <span className="text-amber-400 font-medium">Sigma engine v2</span>
+                  </div>
+                  <pre className="p-3 rounded-lg bg-deep border border-white/[0.06] overflow-x-auto text-[11px] leading-relaxed text-text-primary font-mono">
+{`title: LSASS Process Access via Procdump or OpenProcess
+id: 5aa38556-5346-4287-9753-fb82947b3559
+status: production
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection:
+    TargetImage|endswith: '\\lsass.exe'
+    GrantedAccess|contains:
+      - '0x0010' # PROCESS_VM_READ
+      - '0x1F0FFF' # PROCESS_ALL_ACCESS
+  condition: selection
+level: critical
+tags:
+  - attack.credential_access
+  - attack.t1003.001`}
+                  </pre>
+                </div>
+              )}
+
+              {activeTab === 'chain' && (
+                <div className="space-y-3">
+                  <div className="text-text-muted pb-1 border-b border-white/[0.06] text-xs">
+                    Correlated multi-stage attack timeline (confidence score: 96%)
+                  </div>
+
+                  <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/[0.08]">
+                    <div className="relative">
+                      <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-threat-medium ring-4 ring-surface" />
+                      <div className="text-text-primary font-medium">Initial access via credential stuffing</div>
+                      <div className="text-text-muted text-[11px]">SSH brute-force succeeds on public bastion host</div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-threat-high ring-4 ring-surface" />
+                      <div className="text-text-primary font-medium">Privilege escalation &amp; encoded payload</div>
+                      <div className="text-text-muted text-[11px]">PowerShell process spawns with base64 memory injector</div>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-threat-critical ring-4 ring-surface" />
+                      <div className="text-text-primary font-medium">Credential dumping from LSASS</div>
+                      <div className="text-text-muted text-[11px]">Memory read handle acquired on domain controller</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Workbench Status Bar */}
+            <div className="px-4 py-2.5 bg-deep border-t border-white/[0.06] flex items-center justify-between text-[11px] text-text-muted">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span>Pipeline active</span>
+                </span>
+                <span className="text-text-ghost">|</span>
+                <span>Throughput: <strong className="text-text-secondary font-mono tabular-nums">28,410 eps</strong></span>
               </div>
-            </SectionReveal>
+              <div>
+                <span>Mean latency: <strong className="text-text-secondary font-mono tabular-nums">8.2ms</strong></span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.04] px-6 py-10">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-indigo-400" />
-            <span className="font-display font-bold text-text-secondary text-sm">
-              Log<span className="text-indigo-400">Raven</span>
-            </span>
+      {/* ── Section 2: Ingestion & Parser Matrix ───────────────── */}
+      <section id="parsers" className="py-20 border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-2xl mb-12">
+            <h2 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-text-primary mb-3">
+              Native parsers for hybrid infrastructure
+            </h2>
+            <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+              Parse and normalize raw event streams directly without custom regular expressions.
+            </p>
           </div>
-          <span className="font-mono text-xs text-text-muted">© 2026 LogRaven — Watch your logs. Find the threat.</span>
-          <LegalLinks />
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col">
+              <div className="w-10 h-10 rounded-lg bg-elevated border border-white/[0.06] flex items-center justify-center mb-5">
+                <Server className="w-5 h-5 text-amber-400" />
+              </div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Windows EVTX &amp; Sysmon</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-6 flex-1">
+                Zero-dependency binary parser for Security, System, and Sysmon channels with sub-millisecond event decoding.
+              </p>
+              <div className="pt-4 border-t border-white/[0.06] text-[11px] text-text-muted">
+                Event IDs 4624, 4688, 4720, 7045
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col">
+              <div className="w-10 h-10 rounded-lg bg-elevated border border-white/[0.06] flex items-center justify-center mb-5">
+                <Cloud className="w-5 h-5 text-amber-400" />
+              </div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">AWS CloudTrail &amp; GuardDuty</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-6 flex-1">
+                Multi-region JSON event normalization, cross-account IAM role assumption tracking, and anomaly attribution.
+              </p>
+              <div className="pt-4 border-t border-white/[0.06] text-[11px] text-text-muted">
+                AssumeRole, S3, KMS, IAM events
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col">
+              <div className="w-10 h-10 rounded-lg bg-elevated border border-white/[0.06] flex items-center justify-center mb-5">
+                <Terminal className="w-5 h-5 text-amber-400" />
+              </div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Linux Audit &amp; Syslog</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-6 flex-1">
+                Native streaming parser for auditd, auth.log, and journald with PAM authentication clustering and privilege checks.
+              </p>
+              <div className="pt-4 border-t border-white/[0.06] text-[11px] text-text-muted">
+                EXECVE, USER_AUTH, SUDO telemetry
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col">
+              <div className="w-10 h-10 rounded-lg bg-elevated border border-white/[0.06] flex items-center justify-center mb-5">
+                <FileCode2 className="w-5 h-5 text-amber-400" />
+              </div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Web Server Telemetry</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-6 flex-1">
+                Structured parser for Nginx, Apache, and IIS access logs identifying path traversal, SQL injection, and probe bursts.
+              </p>
+              <div className="pt-4 border-t border-white/[0.06] text-[11px] text-text-muted">
+                Combined &amp; Common log formats
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 3: Investigation Pipeline ──────────────────── */}
+      <section id="pipeline" className="py-20 border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-2xl mb-12">
+            <h2 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-text-primary mb-3">
+              From raw telemetry to corroborated evidence
+            </h2>
+            <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+              Four automated stages transform high-volume logs into structured incident reports.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface">
+              <div className="text-xs text-amber-400 font-semibold mb-3">Stage 01</div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Ingestion &amp; parsing</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed">
+                Upload files or stream logs via API. Binary EVTX and text lines are converted to typed memory records.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface">
+              <div className="text-xs text-amber-400 font-semibold mb-3">Stage 02</div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Multi-engine rules</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed">
+                Evaluate over {stats.rules} Sigma and Wazuh detection rules in memory to flag adversarial tactics.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface">
+              <div className="text-xs text-amber-400 font-semibold mb-3">Stage 03</div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Cross-source correlation</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed">
+                Correlate events across different hosts and cloud accounts by timestamp, IP address, and identity.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface">
+              <div className="text-xs text-amber-400 font-semibold mb-3">Stage 04</div>
+              <h3 className="font-display font-semibold text-lg text-text-primary mb-2">Evidence packages</h3>
+              <p className="text-text-secondary text-xs sm:text-sm leading-relaxed">
+                Export verifiable PDF reports with findings, MITRE ATT&amp;CK mappings, and indicators of compromise.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 4: Cloud Compliance Automation ─────────────── */}
+      <section id="compliance" className="py-20 border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="max-w-2xl mb-12">
+            <h2 className="font-display font-bold text-2xl sm:text-3xl tracking-tight text-text-primary mb-3">
+              Automated audit readiness across 12 frameworks
+            </h2>
+            <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
+              Verify security controls and generate audit-ready evidence for AWS and hybrid environments.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-semibold text-lg text-text-primary">SOC 2 Type II</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Automated
+                  </span>
+                </div>
+                <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-4">
+                  Continuous validation of CC6.1 logical access controls, CC6.6 perimeter defense, and CC7.2 anomaly detection.
+                </p>
+              </div>
+              <div className="text-[11px] text-text-muted pt-3 border-t border-white/[0.06]">
+                Trust Services Criteria CC6, CC7
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-semibold text-lg text-text-primary">ISO/IEC 27001:2022</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Automated
+                  </span>
+                </div>
+                <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-4">
+                  Evidence verification for Annex A.8.15 logging, A.8.16 security monitoring, and A.8.20 network management.
+                </p>
+              </div>
+              <div className="text-[11px] text-text-muted pt-3 border-t border-white/[0.06]">
+                Annex A.8 Technical Controls
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-semibold text-lg text-text-primary">CIS AWS Benchmark</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Automated
+                  </span>
+                </div>
+                <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-4">
+                  Automated checks for IAM root keys, S3 public access block, CloudTrail multi-region logs, and KMS encryption.
+                </p>
+              </div>
+              <div className="text-[11px] text-text-muted pt-3 border-t border-white/[0.06]">
+                CIS AWS Foundations v3.0
+              </div>
+            </div>
+
+            <div className="p-6 rounded-xl border border-white/[0.08] bg-surface flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="font-display font-semibold text-lg text-text-primary">HIPAA Security Rule</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Automated
+                  </span>
+                </div>
+                <p className="text-text-secondary text-xs sm:text-sm leading-relaxed mb-4">
+                  Verification of audit controls under section 164.312(b) and ePHI data transmission safeguards under 164.312(e).
+                </p>
+              </div>
+              <div className="text-[11px] text-text-muted pt-3 border-t border-white/[0.06]">
+                45 CFR Part 164 Subpart C
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Section 5: Engine Specifications ───────────────────── */}
+      <section className="py-20 border-b border-white/[0.06]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="p-8 rounded-xl border border-white/[0.08] bg-surface">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div>
+                <div className="text-xs text-text-muted mb-1">Parser throughput</div>
+                <div className="font-display font-bold text-2xl text-text-primary tabular-nums">140,000 eps</div>
+                <div className="text-xs text-text-muted mt-1">Multi-core binary decoder</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-text-muted mb-1">Correlation latency</div>
+                <div className="font-display font-bold text-2xl text-text-primary tabular-nums">&lt; 15ms</div>
+                <div className="text-xs text-text-muted mt-1">In-memory sliding window</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-text-muted mb-1">Threat framework</div>
+                <div className="font-display font-bold text-2xl text-text-primary">MITRE v14</div>
+                <div className="text-xs text-text-muted mt-1">Enterprise attack matrix</div>
+              </div>
+
+              <div>
+                <div className="text-xs text-text-muted mb-1">Execution model</div>
+                <div className="font-display font-bold text-2xl text-text-primary">Sovereign</div>
+                <div className="text-xs text-text-muted mt-1">Air-gap &amp; cloud deployment</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ───────────────────────────────────────────── */}
+      <footer className="py-12 bg-deep mt-auto">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-white/[0.06]">
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-surface border border-white/[0.08] flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <span className="font-display font-bold text-sm tracking-tight text-text-primary">
+                Log<span className="text-amber-400">Raven</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>Platform operational: Sub-15ms parser latency</span>
+            </div>
+
+            <div className="flex items-center gap-6 text-xs text-text-muted">
+              <Link to="/compliance" className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
+                Compliance directory
+              </Link>
+              <Link to="/login" className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
+                Console sign in
+              </Link>
+              <Link to="/register" className="hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
+                Create account
+              </Link>
+            </div>
+          </div>
+
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+            <div>&copy; 2026 LogRaven Inc. All rights reserved.</div>
+            <LegalLinks />
+          </div>
         </div>
       </footer>
     </div>

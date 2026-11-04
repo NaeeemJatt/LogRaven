@@ -302,10 +302,10 @@ export default function FrameworkDirectoryPage() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/[0.08] pb-8">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 mb-3">
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-            <span className="font-mono text-[10px] text-indigo-300 uppercase tracking-widest font-semibold">
-              Supported Compliance Catalog · 14 Frameworks · 176 Cloud Controls · 94% Automated
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-400/25 bg-amber-400/10 mb-3">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none" />
+            <span className="text-xs text-amber-300 font-medium">
+              Supported Compliance Catalog (14 Standards, 176 Cloud Controls, 94% Automated)
             </span>
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary">
@@ -318,9 +318,9 @@ export default function FrameworkDirectoryPage() {
 
         <Link
           to="/compliance?tab=audit"
-          className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-[0_0_20px_rgba(99,102,241,0.35)] transition-all self-start md:self-auto flex-shrink-0"
+          className="btn-sovereign inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none self-start md:self-auto flex-shrink-0"
         >
-          <Play className="w-4 h-4 fill-white" />
+          <Play className="w-3.5 h-3.5 fill-current" />
           <span>Launch Multi-Framework Audit</span>
         </Link>
       </div>
@@ -335,7 +335,7 @@ export default function FrameworkDirectoryPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search frameworks by title, standard, or governing body..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-surface/70 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-indigo-500/50"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-surface/70 text-xs text-text-primary placeholder:text-text-muted/60 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
             />
           </div>
         </div>
@@ -346,10 +346,10 @@ export default function FrameworkDirectoryPage() {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all border ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 border ${
                 selectedCategory === cat.id
-                  ? 'border-indigo-500/40 bg-indigo-500/20 text-indigo-200 shadow-[0_0_12px_rgba(99,102,241,0.2)]'
-                  : 'border-white/[0.06] bg-white/[0.02] text-text-muted hover:text-text-secondary hover:bg-white/[0.04]'
+                  ? 'border-amber-400/40 bg-amber-400/15 text-amber-300'
+                  : 'border-white/[0.06] bg-surface text-text-muted hover:text-text-secondary hover:bg-elevated'
               }`}
             >
               {cat.label}
@@ -365,13 +365,13 @@ export default function FrameworkDirectoryPage() {
             key={fw.id}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-2xl border border-white/[0.08] bg-surface/60 hover:border-indigo-500/30 hover:bg-surface/90 transition-all duration-200 p-6 flex flex-col justify-between group shadow-lg"
+            className="rounded-2xl border border-white/[0.08] bg-surface/60 hover:border-amber-400/30 hover:bg-surface/90 transition-colors duration-150 p-6 flex flex-col justify-between group"
           >
             <div>
               {/* Header row */}
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="min-w-0 pr-2">
-                  <h2 className="font-display font-bold text-base text-text-primary group-hover:text-indigo-200 transition-colors leading-snug">
+                  <h2 className="font-display font-bold text-base text-text-primary group-hover:text-amber-300 transition-colors leading-snug">
                     {fw.name}
                   </h2>
                   <div className="font-mono text-[10px] text-text-muted mt-1">
@@ -397,8 +397,8 @@ export default function FrameworkDirectoryPage() {
 
               {/* Key Domains Tags */}
               <div className="space-y-1.5 mb-5">
-                <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted font-medium">
-                  Audited Control Domains:
+                <div className="text-xs font-semibold text-text-muted mb-1">
+                  Audited Control Domains
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {fw.keyDomains.map((domain) => (
@@ -415,22 +415,22 @@ export default function FrameworkDirectoryPage() {
 
             {/* Bottom Card Actions */}
             <div className="pt-4 border-t border-white/[0.06] flex items-center justify-between gap-3">
-              <span className="font-mono text-xs text-text-muted">
+              <span className="text-xs text-text-muted tabular-nums">
                 <strong className="text-text-primary">{fw.totalControls}</strong> Controls Tested
               </span>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate(`/compliance/frameworks/${fw.id}`)}
-                  className="px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-indigo-500/30 bg-white/[0.02] hover:bg-indigo-500/10 text-text-secondary hover:text-indigo-200 text-xs font-medium transition-colors"
+                  className="px-3.5 py-1.5 rounded-xl border border-white/[0.08] hover:border-amber-400/30 bg-surface hover:bg-elevated text-text-secondary hover:text-text-primary text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
                 >
                   View Details
                 </button>
                 <button
                   onClick={() => handleLaunchScan(fw.id)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-xs font-semibold transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-amber-400/15 hover:bg-amber-400/25 border border-amber-400/30 text-amber-300 text-xs font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
                 >
-                  <Play className="w-3 h-3 fill-indigo-300 text-indigo-300" />
+                  <Play className="w-3 h-3 fill-amber-300 text-amber-300" />
                   <span>Scan Framework</span>
                 </button>
               </div>

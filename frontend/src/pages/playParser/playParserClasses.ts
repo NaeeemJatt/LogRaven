@@ -8,13 +8,13 @@ export const playPanelInner = 'divide-y divide-play-border/60'
 export const playSection = 'p-6 sm:p-8'
 
 export const playSectionTitle =
-  'flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-300/80 mb-2 before:block before:h-3 before:w-1 before:rounded-full before:bg-indigo-400/70'
+  'flex items-center gap-2 text-xs font-semibold text-amber-300 mb-2 before:block before:h-3 before:w-1 before:rounded-full before:bg-amber-400/70'
 
 export const playSubsectionTitle =
-  'flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-play-muted mb-1.5 before:block before:h-2.5 before:w-0.5 before:rounded-full before:bg-indigo-400/60'
+  'flex items-center gap-2 text-xs font-semibold text-play-muted mb-1.5 before:block before:h-2.5 before:w-0.5 before:rounded-full before:bg-amber-400/60'
 
 export const playFocusRing =
-  'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950'
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950'
 
 export const playPageBg =
   'min-h-screen bg-void text-play-fg font-play bg-[radial-gradient(ellipse_120%_80%_at_50%_-20%,rgba(227,181,126,0.05),transparent_50%),linear-gradient(180deg,#0B0B0D_0%,#101015_45%,#0B0B0D_100%)]'

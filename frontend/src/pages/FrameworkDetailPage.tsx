@@ -102,13 +102,13 @@ export default function FrameworkDetailPage() {
       <div className="flex items-center justify-between gap-4">
         <Link
           to="/compliance/frameworks"
-          className="inline-flex items-center gap-2 text-xs font-mono text-text-muted hover:text-indigo-300 transition-colors py-1.5 px-3 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]"
+          className="inline-flex items-center gap-2 text-xs text-text-muted hover:text-text-primary transition-colors duration-150 py-1.5 px-3 rounded-lg border border-white/[0.06] bg-surface hover:bg-elevated focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           <span>Back to Frameworks Catalog</span>
         </Link>
 
-        <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
+        <div className="flex items-center gap-2 text-xs text-text-muted">
           <span>Catalog</span>
           <span>/</span>
           <span className="text-text-secondary">{framework.code}</span>
@@ -116,11 +116,7 @@ export default function FrameworkDetailPage() {
       </div>
 
       {/* Hero Header */}
-      <div className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-[#0F172A] to-[#0A0D18] p-6 sm:p-8 shadow-2xl relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute -right-20 -top-20 w-96 h-96 rounded-full opacity-25"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.4) 0%, transparent 70%)' }}
-        />
+      <div className="rounded-3xl border border-white/[0.08] bg-surface p-6 sm:p-8 relative overflow-hidden">
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-start justify-between gap-6">
           <div className="space-y-3 max-w-3xl">
@@ -128,7 +124,7 @@ export default function FrameworkDetailPage() {
               <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
                 {framework.complianceBadge}
               </span>
-              <span className="px-2.5 py-1 rounded-md text-[10px] font-mono text-text-muted border border-white/[0.08] bg-white/[0.02]">
+              <span className="px-2.5 py-1 rounded-md text-[10px] text-text-muted border border-white/[0.08] bg-white/[0.02]">
                 {framework.version}
               </span>
               <span className="px-2.5 py-1 rounded-md text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/25">
@@ -140,7 +136,7 @@ export default function FrameworkDetailPage() {
               {framework.name}
             </h1>
 
-            <div className="font-mono text-xs text-text-muted">
+            <div className="text-xs text-text-muted">
               Governing Body: <strong className="text-text-secondary">{framework.governingBody}</strong>
             </div>
 
@@ -161,55 +157,55 @@ export default function FrameworkDetailPage() {
           <div className="flex flex-col sm:flex-row lg:flex-col gap-3 flex-shrink-0 self-start">
             <button
               onClick={handleLaunchScan}
-              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-semibold text-xs sm:text-sm shadow-[0_0_25px_rgba(99,102,241,0.35)] transition-all"
+              className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-void font-semibold text-xs sm:text-sm transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
             >
-              <Play className="w-4 h-4 fill-white" />
+              <Play className="w-4 h-4 fill-void text-void" />
               <span>Launch {framework.code} Scan</span>
             </button>
-            <div className="text-[11px] font-mono text-text-muted text-center">
-              Evaluates AWS · Azure · GCP signals
+            <div className="text-xs text-text-muted text-center">
+              Evaluates AWS, Azure, and GCP telemetry
             </div>
           </div>
         </div>
 
         {/* Bento Stats Row */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8 pt-6 border-t border-white/[0.08]">
-          <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">Total Controls</div>
-            <div className="font-display font-bold text-2xl sm:text-3xl text-text-primary mt-1">
+          <div className="p-4 rounded-2xl bg-surface border border-white/[0.06]">
+            <div className="text-xs text-text-muted">Total Controls</div>
+            <div className="font-display font-bold text-2xl sm:text-3xl text-text-primary mt-1 tabular-nums">
               {framework.totalControls}
             </div>
-            <div className="text-[10px] text-text-muted mt-0.5">Full Standard Scope</div>
+            <div className="text-xs text-text-muted mt-0.5">Full Standard Scope</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-emerald-500/[0.04] border border-emerald-500/20">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="text-xs text-emerald-400 flex items-center gap-1.5 font-medium">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none" />
               Automated Telemetry
             </div>
-            <div className="font-display font-bold text-2xl sm:text-3xl text-emerald-300 mt-1">
+            <div className="font-display font-bold text-2xl sm:text-3xl text-emerald-300 mt-1 tabular-nums">
               {framework.automatedCount}
             </div>
-            <div className="text-[10px] text-emerald-400/80 mt-0.5">Continuous Cloud Scanning</div>
+            <div className="text-xs text-emerald-400/80 mt-0.5">Continuous Cloud Scanning</div>
           </div>
 
           <div className="p-4 rounded-2xl bg-amber-500/[0.04] border border-amber-500/20">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-              <AlertTriangle className="w-3 h-3" />
+            <div className="text-xs text-amber-400 flex items-center gap-1.5 font-medium">
+              <AlertTriangle className="w-3.5 h-3.5" />
               Manual &amp; Policy
             </div>
-            <div className="font-display font-bold text-2xl sm:text-3xl text-amber-300 mt-1">
+            <div className="font-display font-bold text-2xl sm:text-3xl text-amber-300 mt-1 tabular-nums">
               {framework.manualCount}
             </div>
-            <div className="text-[10px] text-amber-400/80 mt-0.5">Policy &amp; HR Evidence</div>
+            <div className="text-xs text-amber-400/80 mt-0.5">Policy &amp; HR Evidence</div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-indigo-500/[0.04] border border-indigo-500/20">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-indigo-300">Automation Rate</div>
-            <div className="font-display font-bold text-2xl sm:text-3xl text-indigo-300 mt-1">
+          <div className="p-4 rounded-2xl bg-surface border border-white/[0.06]">
+            <div className="text-xs text-text-muted">Automation Rate</div>
+            <div className="font-display font-bold text-2xl sm:text-3xl text-amber-400 mt-1 tabular-nums">
               {framework.automatedRate.split(' ')[0]}
             </div>
-            <div className="text-[10px] text-indigo-400/80 mt-0.5">Cloud Signal Coverage</div>
+            <div className="text-xs text-text-muted mt-0.5">Cloud Signal Coverage</div>
           </div>
         </div>
       </div>
@@ -230,13 +226,13 @@ export default function FrameworkDetailPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={expandAll}
-              className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.15] bg-white/[0.02] hover:bg-white/[0.05] text-text-muted hover:text-text-primary text-xs font-mono transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.15] bg-surface hover:bg-elevated text-text-muted hover:text-text-primary text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
             >
               Expand All
             </button>
             <button
               onClick={collapseAll}
-              className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.15] bg-white/[0.02] hover:bg-white/[0.05] text-text-muted hover:text-text-primary text-xs font-mono transition-colors"
+              className="px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.15] bg-surface hover:bg-elevated text-text-muted hover:text-text-primary text-xs transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
             >
               Collapse All
             </button>
@@ -253,7 +249,7 @@ export default function FrameworkDetailPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search controls by ID (e.g. CC6.1, A.5.1), title, or keywords..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-surface/70 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-indigo-500/50"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/[0.08] bg-surface/70 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
             />
           </div>
 
@@ -261,9 +257,9 @@ export default function FrameworkDetailPage() {
           <div className="ops-panel p-1 inline-flex gap-1 flex-shrink-0">
             <button
               onClick={() => setFilterType('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
                 filterType === 'all'
-                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                  ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
@@ -271,23 +267,23 @@ export default function FrameworkDetailPage() {
             </button>
             <button
               onClick={() => setFilterType('automated')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
                 filterType === 'automated'
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
-              ⚡ Automated ({framework.automatedCount})
+              Automated ({framework.automatedCount})
             </button>
             <button
               onClick={() => setFilterType('manual')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`whitespace-nowrap px-3 py-1.5 rounded-lg text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
                 filterType === 'manual'
-                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                  ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
                   : 'text-text-muted hover:text-text-secondary'
               }`}
             >
-              📋 Manual &amp; Policy ({framework.manualCount})
+              <span className="whitespace-nowrap">Manual &amp; Policy ({framework.manualCount})</span>
             </button>
           </div>
         </div>
@@ -322,7 +318,7 @@ export default function FrameworkDetailPage() {
                   setFilterType('all')
                   setSelectedCategory('all')
                 }}
-                className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 underline font-mono"
+                className="mt-3 text-xs text-amber-400 hover:text-amber-300 underline"
               >
                 Clear all filters
               </button>
@@ -335,7 +331,7 @@ export default function FrameworkDetailPage() {
               return (
                 <div
                   key={ctrl.control_id}
-                  className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                  className={`rounded-2xl border transition-colors duration-150 overflow-hidden ${
                     isExpanded
                       ? 'border-indigo-500/30 bg-surface/90 shadow-xl'
                       : 'border-white/[0.06] bg-surface/50 hover:border-white/[0.12] hover:bg-surface/70'
@@ -357,7 +353,7 @@ export default function FrameworkDetailPage() {
                             {ctrl.name}
                           </h3>
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap text-[11px] font-mono text-text-muted">
+                        <div className="flex items-center gap-2 flex-wrap text-[11px] text-text-muted">
                           <span>{ctrl.category}</span>
                         </div>
                       </div>
@@ -365,13 +361,13 @@ export default function FrameworkDetailPage() {
 
                     <div className="flex items-center gap-3 flex-shrink-0">
                       {ctrl.automatable ? (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none" />
                           Automated Telemetry
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-mono font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
-                          <FileText className="w-3 h-3 text-amber-400" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                          <FileText className="w-3.5 h-3.5 text-amber-400" />
                           Manual / Policy Required
                         </span>
                       )}
@@ -398,8 +394,8 @@ export default function FrameworkDetailPage() {
                       >
                         {/* Requirement description */}
                         <div>
-                          <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted font-medium mb-1">
-                            Regulatory Requirement Description
+                          <div className="text-xs text-text-muted font-medium mb-1">
+                            Regulatory requirement description
                           </div>
                           <p className="text-xs sm:text-sm text-text-secondary leading-relaxed">
                             {ctrl.description}
@@ -412,9 +408,9 @@ export default function FrameworkDetailPage() {
                             {/* Monitored Signals */}
                             {ctrl.signals && ctrl.signals.length > 0 && (
                               <div>
-                                <div className="font-mono text-[10px] uppercase tracking-wider text-indigo-300 font-semibold mb-2 flex items-center gap-1.5">
-                                  <Cpu className="w-3.5 h-3.5" />
-                                  <span>Continuous Cloud Signals Collected by LogRaven</span>
+                                <div className="text-xs text-text-secondary font-medium mb-2 flex items-center gap-1.5">
+                                  <Cpu className="w-3.5 h-3.5 text-amber-400" />
+                                  <span>Continuous cloud signals collected by LogRaven</span>
                                 </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {ctrl.signals.map((sig) => (
@@ -440,11 +436,11 @@ export default function FrameworkDetailPage() {
 
                             {/* Technical Remediation Studio */}
                             {ctrl.remediation && (
-                              <div className="rounded-2xl border border-white/[0.08] bg-[#0B0F19] overflow-hidden">
+                              <div className="rounded-2xl border border-white/[0.08] bg-deep overflow-hidden">
                                 <div className="p-3 bg-white/[0.02] border-b border-white/[0.06] flex items-center justify-between flex-wrap gap-2">
                                   <div className="flex items-center gap-2">
-                                    <Terminal className="w-4 h-4 text-indigo-400" />
-                                    <span className="font-mono text-xs font-semibold text-text-primary">
+                                    <Terminal className="w-4 h-4 text-amber-400" />
+                                    <span className="text-xs font-semibold text-text-primary">
                                       Technical Remediation Guide
                                     </span>
                                   </div>
@@ -458,9 +454,9 @@ export default function FrameworkDetailPage() {
                                           [ctrl.control_id]: 'console',
                                         }))
                                       }
-                                      className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium transition-colors ${
+                                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                                         currentTab === 'console'
-                                          ? 'bg-indigo-500/20 text-indigo-300'
+                                          ? 'bg-amber-400/20 text-amber-300'
                                           : 'text-text-muted hover:text-text-secondary'
                                       }`}
                                     >
@@ -473,9 +469,9 @@ export default function FrameworkDetailPage() {
                                           [ctrl.control_id]: 'cli',
                                         }))
                                       }
-                                      className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium transition-colors ${
+                                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                                         currentTab === 'cli'
-                                          ? 'bg-indigo-500/20 text-indigo-300'
+                                          ? 'bg-amber-400/20 text-amber-300'
                                           : 'text-text-muted hover:text-text-secondary'
                                       }`}
                                     >
@@ -488,9 +484,9 @@ export default function FrameworkDetailPage() {
                                           [ctrl.control_id]: 'terraform',
                                         }))
                                       }
-                                      className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium transition-colors ${
+                                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                                         currentTab === 'terraform'
-                                          ? 'bg-indigo-500/20 text-indigo-300'
+                                          ? 'bg-amber-400/20 text-amber-300'
                                           : 'text-text-muted hover:text-text-secondary'
                                       }`}
                                     >
@@ -503,9 +499,9 @@ export default function FrameworkDetailPage() {
                                           [ctrl.control_id]: 'verify',
                                         }))
                                       }
-                                      className={`px-2.5 py-1 rounded text-[11px] font-mono font-medium transition-colors ${
+                                      className={`px-2.5 py-1 rounded text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                                         currentTab === 'verify'
-                                          ? 'bg-indigo-500/20 text-indigo-300'
+                                          ? 'bg-amber-400/20 text-amber-300'
                                           : 'text-text-muted hover:text-text-secondary'
                                       }`}
                                     >
@@ -594,8 +590,8 @@ export default function FrameworkDetailPage() {
                             <div className="p-4 rounded-2xl bg-amber-500/[0.07] border border-amber-500/25 flex items-start gap-3">
                               <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                               <div className="space-y-1">
-                                <h4 className="font-display font-bold text-xs uppercase tracking-wider text-amber-300">
-                                  Why This Control Requires Manual Governance
+                                <h4 className="font-display font-semibold text-xs text-amber-300">
+                                  Why this control requires manual governance
                                 </h4>
                                 <p className="text-xs text-text-secondary leading-relaxed">
                                   {ctrl.manualGuide.whyManual}
@@ -606,26 +602,26 @@ export default function FrameworkDetailPage() {
                             {/* Required Policy */}
                             <div className="p-3.5 rounded-xl bg-black/30 border border-white/[0.06] flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2.5">
-                                <FileText className="w-4 h-4 text-indigo-400" />
+                                <FileText className="w-4 h-4 text-amber-400" />
                                 <div>
-                                  <div className="text-[10px] font-mono uppercase tracking-wider text-text-muted">
-                                    Mandatory Written Policy
+                                  <div className="text-xs text-text-muted">
+                                    Mandatory written policy
                                   </div>
                                   <div className="text-xs font-semibold text-text-primary">
                                     {ctrl.manualGuide.requiredPolicy}
                                   </div>
                                 </div>
                               </div>
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                                Executive Sign-off Required
+                              <span className="px-2 py-0.5 rounded text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                Executive sign-off required
                               </span>
                             </div>
 
                             {/* Step-by-Step Implementation Instructions */}
                             <div className="space-y-2">
-                              <div className="font-mono text-xs uppercase tracking-wider text-text-muted font-semibold flex items-center gap-2">
-                                <BookOpen className="w-4 h-4 text-indigo-400" />
-                                <span>Step-by-Step Implementation Instructions</span>
+                              <div className="text-xs text-text-muted font-semibold flex items-center gap-2">
+                                <BookOpen className="w-4 h-4 text-amber-400" />
+                                <span>Step-by-step implementation instructions</span>
                               </div>
                               <div className="space-y-2.5">
                                 {ctrl.manualGuide.operationalSteps.map((step, idx) => (
@@ -646,9 +642,9 @@ export default function FrameworkDetailPage() {
 
                             {/* Auditor Evidence Package Checklist */}
                             <div className="p-4 rounded-2xl bg-black/40 border border-white/[0.08] space-y-3">
-                              <div className="font-mono text-xs uppercase tracking-wider text-emerald-400 font-semibold flex items-center gap-2">
+                              <div className="text-xs text-emerald-400 font-semibold flex items-center gap-2">
                                 <Shield className="w-4 h-4" />
-                                <span>Auditor Evidence Package Checklist</span>
+                                <span>Auditor evidence package checklist</span>
                               </div>
                               <p className="text-[11px] text-text-muted">
                                 External CPAs and compliance assessors will ask for the following specific artifacts during your audit observation period:

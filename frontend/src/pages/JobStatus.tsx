@@ -56,7 +56,7 @@ function ParserMetadata({ file }: { file: ReturnType<typeof useJobStatus>['files
 
   return (
     <div className="mt-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2.5 py-2">
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[10px] text-text-muted">
+      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
         {file.parser_detection_confidence != null && (
           <span>{Math.round(file.parser_detection_confidence * 100)}% confidence</span>
         )}
@@ -113,7 +113,7 @@ export default function JobStatus() {
   if (isLoading) {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+        <Loader2 className="w-6 h-6 text-amber-400 motion-safe:animate-spin motion-reduce:animate-none" />
       </div>
     )
   }
@@ -210,7 +210,7 @@ export default function JobStatus() {
           className="mb-6"
         >
           <div className="flex items-center justify-between mb-2">
-            <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+            <span className="text-xs text-text-muted">
               {completedCount} of {STEPS.length} stages complete
             </span>
             <span className="font-mono text-sm font-bold text-indigo-400">{Math.round(progress)}%</span>
@@ -250,7 +250,7 @@ export default function JobStatus() {
                     {/* Timeline column */}
                     <div className="flex flex-col items-center flex-shrink-0">
                       <div
-                        className={`relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${
+                        className={`relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-500 ${
                           stepDone ? 'border-teal-500/60 bg-teal-500/15'
                           : stepActive ? 'border-indigo-500/60 bg-indigo-500/15'
                           : stepFailedHere ? 'border-rose-500/60 bg-rose-500/15'
@@ -293,14 +293,14 @@ export default function JobStatus() {
                           }`}>
                             {step.label}
                             {stepFailedHere && (
-                              <span className="ml-2 font-mono text-[10px] text-rose-400 uppercase tracking-wider">failed</span>
+                              <span className="ml-2 text-xs text-rose-400 font-medium">failed</span>
                             )}
                           </span>
                           {stepActive && (
                             <motion.span
                               animate={{ opacity: [1, 0.4, 1] }}
                               transition={{ repeat: Infinity, duration: 1.2 }}
-                              className="font-mono text-[10px] text-indigo-400"
+                              className="text-xs text-amber-400 font-medium"
                             >
                               running
                             </motion.span>
@@ -328,7 +328,7 @@ export default function JobStatus() {
               ].map(({ label, value }) => (
                 <div key={label} className="p-4 rounded-xl border border-white/[0.06] bg-surface/40">
                   <div className="font-display font-bold text-xl text-text-primary">{value}</div>
-                  <div className="font-mono text-[10px] text-text-muted tracking-wide mt-0.5">{label}</div>
+                  <div className="text-xs text-text-muted mt-0.5">{label}</div>
                 </div>
               ))}
             </div>
@@ -366,14 +366,14 @@ export default function JobStatus() {
             {files.length > 0 && (
               <div className="rounded-2xl border border-white/[0.06] bg-surface/40 overflow-hidden">
                 <div className="px-4 py-3 border-b border-white/[0.06]">
-                  <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Files</div>
+                  <div className="text-xs font-semibold text-text-muted">Files</div>
                 </div>
                 <div className="divide-y divide-white/[0.04]">
                   {files.map((f) => (
                     <div key={f.id} className="px-4 py-3">
                       <div className="flex items-center justify-between gap-2 mb-1">
                         <span className="font-mono text-xs text-text-secondary truncate">{f.filename}</span>
-                        <span className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase tracking-wider flex-shrink-0 ${FILE_STATUS_STYLE[f.status] ?? FILE_STATUS_STYLE.pending}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded border font-medium flex-shrink-0 ${FILE_STATUS_STYLE[f.status] ?? FILE_STATUS_STYLE.pending}`}>
                           {f.status}
                         </span>
                       </div>
@@ -382,7 +382,7 @@ export default function JobStatus() {
                         {f.event_count != null && (
                           <>
                             <span className="text-text-ghost">·</span>
-                            <span className="font-mono text-[10px] text-text-ghost">{f.event_count.toLocaleString()} events</span>
+                            <span className="text-xs text-text-ghost tabular-nums">{f.event_count.toLocaleString()} events</span>
                           </>
                         )}
                       </div>

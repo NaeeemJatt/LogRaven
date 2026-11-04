@@ -32,9 +32,9 @@ function guessSourceType(filename: string): string {
 
 const FILE_STATUS_STYLE: Record<string, string> = {
   pending: 'bg-white/[0.04] border-white/[0.08] text-text-muted',
-  parsing: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
-  parsed:  'bg-teal-500/10 border-teal-500/20 text-teal-400',
-  failed:  'bg-rose-500/10 border-rose-500/20 text-rose-400',
+  parsing: 'bg-amber-400/10 border-amber-400/20 text-amber-300',
+  parsed:  'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+  failed:  'bg-threat-critical/10 border-threat-critical/20 text-threat-critical',
 }
 
 // Read-only status indicator for pipeline capabilities that reflect server /
@@ -43,13 +43,13 @@ const FILE_STATUS_STYLE: Record<string, string> = {
 function StatusTag({ on, onLabel, offLabel }: { on: boolean; onLabel: string; offLabel: string }) {
   return (
     <span
-      className={`flex-shrink-0 inline-flex items-center gap-1.5 font-mono text-[10px] px-2 py-1 rounded-md border uppercase tracking-wider ${
+      className={`flex-shrink-0 inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded border ${
         on
-          ? 'bg-teal-500/10 border-teal-500/25 text-teal-400'
+          ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
           : 'bg-white/[0.04] border-white/[0.08] text-text-muted'
       }`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-teal-400' : 'bg-text-muted'}`} />
+      <span className={`w-1.5 h-1.5 rounded-full ${on ? 'bg-emerald-400' : 'bg-text-muted'}`} />
       {on ? onLabel : offLabel}
     </span>
   )
@@ -177,7 +177,7 @@ export default function Investigation() {
   if (isLoading) {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-indigo-400 animate-spin" />
+        <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
       </div>
     )
   }
@@ -185,7 +185,7 @@ export default function Investigation() {
   if (!inv) {
     return (
       <div className="pt-16 min-h-screen flex items-center justify-center">
-        <div className="text-rose-400 text-sm font-mono">Investigation not found.</div>
+        <div className="text-threat-critical text-sm">Investigation not found.</div>
       </div>
     )
   }
@@ -202,7 +202,7 @@ export default function Investigation() {
         >
           <Link
             to="/dashboard"
-            className="inline-flex items-center gap-1.5 text-text-muted hover:text-text-secondary text-sm mb-4 transition-colors"
+            className="inline-flex items-center gap-1.5 text-text-muted hover:text-text-secondary text-sm mb-4 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
             Back to investigations
@@ -210,7 +210,7 @@ export default function Investigation() {
 
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <h1 className="font-display font-bold text-text-primary text-2xl">{inv.name}</h1>
+              <h1 className="font-display font-bold text-text-primary text-2xl tracking-tight">{inv.name}</h1>
               <p className="text-text-secondary text-sm mt-0.5">
                 {canEdit
                   ? 'Upload logs, set source types, then run analysis.'
@@ -223,7 +223,7 @@ export default function Investigation() {
             {['queued', 'processing', 'failed'].includes(inv.status) && (
               <Link
                 to={`/investigations/${id}/status`}
-                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start"
+                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
               >
                 {inv.status === 'processing' && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 View analysis progress
@@ -234,7 +234,7 @@ export default function Investigation() {
             {inv.status === 'complete' && (
               <Link
                 to={`/investigations/${id}/report`}
-                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start"
+                className="btn-sovereign flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white self-start focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
               >
                 View report <ArrowRight className="w-3.5 h-3.5" />
               </Link>
@@ -246,7 +246,7 @@ export default function Investigation() {
           {/* Left: file upload */}
           <div className="lg:col-span-2 space-y-4">
 
-            {/* Drop zone — only when editable */}
+            {/* Drop zone - only when editable */}
             {canEdit && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -255,18 +255,18 @@ export default function Investigation() {
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-300 cursor-pointer ${
+                className={`relative rounded-2xl border border-dashed p-8 text-center transition-colors duration-150 cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                   dragOver
-                    ? 'border-indigo-500/50 bg-indigo-500/[0.08]'
-                    : 'border-white/[0.08] hover:border-indigo-500/25 hover:bg-indigo-500/[0.04]'
+                    ? 'border-amber-400/50 bg-amber-400/[0.08]'
+                    : 'border-white/[0.12] bg-surface/30 hover:border-amber-400/30 hover:bg-surface/50'
                 }`}
               >
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-                  <Upload className="w-6 h-6 text-indigo-400" />
+                <div className="w-12 h-12 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center mx-auto mb-3 text-amber-400">
+                  <Upload className="w-5 h-5" />
                 </div>
-                <p className="font-medium text-text-primary mb-1">Drop log files here</p>
-                <p className="text-sm text-text-muted mb-4">Supported: EVTX, syslog, CloudTrail JSON, Nginx/IIS, and text logs</p>
-                <span className="btn-ghost px-4 py-2 rounded-lg text-sm font-medium text-text-secondary pointer-events-none">
+                <p className="font-semibold text-text-primary text-sm mb-1">Drop log files here</p>
+                <p className="text-xs text-text-muted mb-4">Supported: EVTX, syslog, CloudTrail JSON, Nginx/IIS, and text logs</p>
+                <span className="inline-flex px-3 py-1.5 rounded-lg text-xs font-semibold text-text-secondary bg-white/[0.04] border border-white/[0.08] pointer-events-none">
                   Browse files
                 </span>
                 <input
@@ -288,15 +288,15 @@ export default function Investigation() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
-                  className="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 overflow-hidden"
+                  className="rounded-2xl border border-amber-400/20 bg-surface/60 overflow-hidden"
                 >
-                  <div className="px-5 py-3 border-b border-indigo-500/10 flex items-center justify-between">
-                    <span className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase">
+                  <div className="px-5 py-3 border-b border-white/[0.08] flex items-center justify-between">
+                    <span className="text-xs font-semibold text-amber-400">
                       Pending upload ({pendingFiles.length})
                     </span>
                     <button
                       onClick={() => setPendingFiles([])}
-                      className="font-mono text-[10px] text-text-muted hover:text-rose-400 transition-colors"
+                      className="text-xs text-text-muted hover:text-threat-critical transition-colors duration-150 rounded px-1.5 py-0.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
                     >
                       Clear
                     </button>
@@ -304,17 +304,17 @@ export default function Investigation() {
                   <div className="divide-y divide-white/[0.04]">
                     {pendingFiles.map((pf, idx) => (
                       <div key={idx} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                        <FileText className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                        <FileText className="w-4 h-4 text-amber-400 flex-shrink-0" />
                         <span className="flex-1 min-w-[8rem] font-mono text-xs text-text-secondary truncate">
                           {pf.file.name}
                         </span>
-                        <span className="font-mono text-[10px] text-text-muted">
+                        <span className="text-xs text-text-muted tabular-nums">
                           {(pf.file.size / 1024).toFixed(0)} KB
                         </span>
                         <select
                           value={pf.sourceType}
                           onChange={(e) => updateSourceType(idx, e.target.value)}
-                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs font-mono text-sm"
+                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
                           onClick={(e) => e.stopPropagation()}
                         >
                           {SOURCE_TYPES.map((st) => (
@@ -324,7 +324,7 @@ export default function Investigation() {
                         <select
                           value={pf.ingestionMode}
                           onChange={(e) => updateIngestionMode(idx, e.target.value as 'parsers' | 'decoders')}
-                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs font-mono text-sm"
+                          className="sovereign-input rounded-lg px-2.5 py-1 text-xs focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <option value="parsers">Parsers</option>
@@ -332,7 +332,7 @@ export default function Investigation() {
                         </select>
                         <button
                           onClick={() => removePending(idx)}
-                          className="p-1 rounded hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-colors"
+                          className="p-1 rounded hover:bg-threat-critical/10 text-text-muted hover:text-threat-critical transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -340,20 +340,20 @@ export default function Investigation() {
                     ))}
                   </div>
                   {uploadError && (
-                    <div className="px-5 py-2.5 border-t border-white/[0.04] font-mono text-xs text-rose-400">
+                    <div className="px-5 py-2.5 border-t border-threat-critical/20 bg-threat-critical/5 text-xs text-threat-critical">
                       {uploadError}
                       {uploadPlanLimit && (
-                        <a href="mailto:support@lograven.io" className="ml-2 underline text-indigo-300">
+                        <a href="mailto:support@lograven.io" className="ml-2 underline text-amber-300 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
                           Contact support
                         </a>
                       )}
                     </div>
                   )}
-                  <div className="px-5 py-3 border-t border-indigo-500/10 flex justify-end">
+                  <div className="px-5 py-3 border-t border-white/[0.08] flex justify-end">
                     <button
                       onClick={handleUploadAll}
                       disabled={uploading}
-                      className="btn-sovereign flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
+                      className="btn-sovereign flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed motion-reduce:transition-none"
                     >
                       {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                       {uploading ? 'Uploading…' : `Upload ${pendingFiles.length} file${pendingFiles.length > 1 ? 's' : ''}`}
@@ -365,9 +365,9 @@ export default function Investigation() {
 
             {/* Uploaded files */}
             {inv.files && inv.files.length > 0 && (
-              <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
-                <div className="px-5 py-3 border-b border-white/[0.06]">
-                  <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">
+              <div className="rounded-2xl border border-white/[0.08] bg-surface/40 backdrop-blur overflow-hidden">
+                <div className="px-5 py-3 border-b border-white/[0.08]">
+                  <span className="text-xs font-semibold text-text-secondary">
                     Uploaded files ({inv.files.length})
                   </span>
                 </div>
@@ -382,7 +382,7 @@ export default function Investigation() {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.05 }}
-                        className="flex items-center gap-4 px-5 py-3.5 group hover:bg-elevated/30 transition-all"
+                        className="flex items-center gap-4 px-5 py-3.5 group hover:bg-elevated/40 transition-colors duration-150"
                       >
                         <div
                           className="w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0"
@@ -394,22 +394,22 @@ export default function Investigation() {
                           <div className="font-mono text-sm text-text-primary truncate">{f.filename}</div>
                           <div className="flex items-center gap-2 mt-0.5">
                             <SrcIcon className="w-2.5 h-2.5" style={{ color: srcColor }} />
-                            <span className="font-mono text-[10px] text-text-muted">{f.source_type}</span>
+                            <span className="text-xs text-text-muted">{f.source_type}</span>
                             {f.event_count != null && (
                               <>
                                 <span className="text-text-ghost">·</span>
-                                <span className="font-mono text-[10px] text-text-muted">{f.event_count.toLocaleString()} events</span>
+                                <span className="text-xs text-text-muted tabular-nums">{f.event_count.toLocaleString()} events</span>
                               </>
                             )}
                           </div>
                         </div>
-                        <span className={`font-mono text-[10px] px-2 py-0.5 rounded border uppercase tracking-wider flex-shrink-0 ${FILE_STATUS_STYLE[f.status] ?? FILE_STATUS_STYLE.pending}`}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded border capitalize flex-shrink-0 ${FILE_STATUS_STYLE[f.status] ?? FILE_STATUS_STYLE.pending}`}>
                           {f.status}
                         </span>
                         {canEdit && (
                           <button
                             onClick={() => handleDeleteFile(f.id)}
-                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/10 text-text-muted hover:text-rose-400 transition-all"
+                            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-threat-critical/10 text-text-muted hover:text-threat-critical transition-opacity duration-150 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -422,20 +422,20 @@ export default function Investigation() {
             )}
 
             {/* Source type guide */}
-            <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
-              <div className="px-5 py-3 border-b border-white/[0.06]">
-                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Source type guide</span>
+            <div className="rounded-2xl border border-white/[0.08] bg-surface/40 backdrop-blur overflow-hidden">
+              <div className="px-5 py-3 border-b border-white/[0.08]">
+                <span className="text-xs font-semibold text-text-secondary">Source type guide</span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-x divide-y divide-white/[0.04]">
                 {SOURCE_TYPES.map(({ value, label, icon: Icon, color, extensions }) => (
-                  <div key={value} className="flex items-center gap-2.5 p-4 hover:bg-elevated/30 transition-colors">
+                  <div key={value} className="flex items-center gap-2.5 p-4 hover:bg-elevated/30 transition-colors duration-150">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: `${color}12`, border: `1px solid ${color}25` }}>
                       <Icon className="w-3.5 h-3.5" style={{ color }} />
                     </div>
                     <div>
                       <div className="text-xs font-medium text-text-primary">{label}</div>
-                      <div className="font-mono text-[10px] text-text-muted">{extensions}</div>
+                      <div className="font-mono text-xs text-text-muted">{extensions}</div>
                     </div>
                   </div>
                 ))}
@@ -450,17 +450,17 @@ export default function Investigation() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
-              className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden"
+              className="rounded-2xl border border-white/[0.08] bg-surface/40 backdrop-blur overflow-hidden"
             >
-              <div className="px-5 py-3 border-b border-white/[0.06] flex items-center gap-2">
+              <div className="px-5 py-3 border-b border-white/[0.08] flex items-center gap-2">
                 <Settings2 className="w-3.5 h-3.5 text-text-muted" />
-                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Analysis pipeline</span>
+                <span className="text-xs font-semibold text-text-secondary">Analysis pipeline</span>
               </div>
               <div className="p-5 space-y-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <GitMerge className="w-3.5 h-3.5 text-indigo-400" />
+                      <GitMerge className="w-3.5 h-3.5 text-amber-400" />
                       <span className="text-sm font-medium text-text-primary">Cross-file correlation</span>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
@@ -481,11 +481,11 @@ export default function Investigation() {
                       />
                       <span
                         aria-hidden="true"
-                        className="h-6 w-11 rounded-full border border-white/10 bg-white/5 transition-colors peer-checked:border-indigo-500/50 peer-checked:bg-indigo-500/40 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-400 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-deep peer-disabled:opacity-50"
+                        className="h-6 w-11 rounded-full border border-white/10 bg-white/5 transition-colors duration-150 peer-checked:border-amber-400/50 peer-checked:bg-amber-400/30 peer-focus-visible:ring-2 peer-focus-visible:ring-amber-400 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-deep peer-disabled:opacity-50"
                       >
-                        <span className={`block h-4 w-4 translate-y-[3px] rounded-full transition-transform ${
+                        <span className={`block h-4 w-4 translate-y-[3px] rounded-full transition-transform duration-150 motion-reduce:transition-none ${
                           inv.correlation_enabled
-                            ? 'translate-x-6 bg-indigo-300'
+                            ? 'translate-x-6 bg-amber-400'
                             : 'translate-x-1 bg-text-muted'
                         }`} />
                       </span>
@@ -495,7 +495,7 @@ export default function Investigation() {
                   )}
                 </div>
                 {correlationError && (
-                  <p role="alert" className="font-mono text-[10px] text-rose-400">
+                  <p role="alert" className="text-xs text-threat-critical">
                     {correlationError}
                   </p>
                 )}
@@ -503,16 +503,16 @@ export default function Investigation() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <Cpu className="w-3.5 h-3.5 text-violet-400" />
+                      <Cpu className="w-3.5 h-3.5 text-amber-400" />
                       <span className="text-sm font-medium text-text-primary">AI analysis</span>
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-amber-400/10 text-amber-300 border border-amber-400/20">
                         LogRaven AI
                       </span>
                     </div>
                     <p className="text-xs text-text-muted leading-relaxed">
                       {inv.cloud_ai_enabled
                         ? 'Contextualizes findings and generates executive summaries (consent required below)'
-                        : 'No AI provider configured on this server — analysis runs rules and correlation only'}
+                        : 'No AI provider configured on this server - analysis runs rules and correlation only'}
                     </p>
                   </div>
                   <StatusTag on={inv.cloud_ai_enabled} onLabel="Available" offLabel="Off" />
@@ -526,20 +526,20 @@ export default function Investigation() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="rounded-2xl border border-amber-500/15 bg-amber-500/5 p-5"
+                className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-5"
               >
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={cloudAiConsent}
                     onChange={(e) => setCloudAiConsent(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-deep text-indigo-500 focus:ring-indigo-500"
+                    className="mt-0.5 h-4 w-4 rounded border-white/20 bg-deep text-amber-400 focus-visible:ring-2 focus-visible:ring-amber-400"
                   />
                   <div>
                     <p className="text-xs text-text-secondary leading-relaxed">
                       I consent to sending investigation event data to cloud AI providers during analysis.
                     </p>
-                    <p className="text-[10px] text-text-muted mt-1 font-mono">Required for cloud AI enrichment</p>
+                    <p className="text-xs text-text-muted mt-1">Required for cloud AI enrichment</p>
                   </div>
                 </label>
               </motion.div>
@@ -551,16 +551,16 @@ export default function Investigation() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.25 }}
-                className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur p-5 space-y-3"
+                className="rounded-2xl border border-white/[0.08] bg-surface/40 backdrop-blur p-5 space-y-3"
               >
-                <span className="font-mono text-[10px] text-text-muted tracking-widest uppercase">Ready to analyze</span>
+                <span className="text-xs font-semibold text-text-secondary">Ready to analyze</span>
                 {[
                   { label: `${inv.files.length} file${inv.files.length !== 1 ? 's' : ''} uploaded` },
                   { label: inv.correlation_enabled ? 'Correlation enabled' : 'Correlation disabled' },
                   { label: inv.cloud_ai_enabled ? 'AI enrichment enabled' : 'AI enrichment disabled' },
                 ].map(({ label }) => (
                   <div key={label} className="flex items-center gap-2.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                     <span className="text-sm text-text-secondary">{label}</span>
                   </div>
                 ))}
@@ -569,10 +569,10 @@ export default function Investigation() {
 
             {/* Analysis error */}
             {analysisError && (
-              <div className="px-4 py-3 rounded-xl border border-rose-500/20 bg-rose-500/5 font-mono text-xs text-rose-400">
+              <div className="px-4 py-3 rounded-xl border border-threat-critical/20 bg-threat-critical/5 text-xs text-threat-critical">
                 {analysisError}
                 {analysisPlanLimit && (
-                  <a href="mailto:support@lograven.io" className="ml-2 underline text-indigo-300">
+                  <a href="mailto:support@lograven.io" className="ml-2 underline text-amber-300 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
                     Contact support
                   </a>
                 )}
@@ -589,12 +589,12 @@ export default function Investigation() {
                 <button
                   onClick={handleAnalyze}
                   disabled={analyzing || (inv.cloud_ai_enabled && !cloudAiConsent)}
-                  className="btn-sovereign w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl text-sm font-bold text-white disabled:opacity-60"
+                  className="btn-sovereign w-full flex items-center justify-center gap-2.5 py-3 rounded-xl text-sm font-semibold text-white focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed motion-reduce:transition-none"
                 >
                   {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                   {analyzing ? 'Starting analysis…' : 'Run analysis'}
                 </button>
-                <p className="text-center font-mono text-[10px] text-text-muted mt-2">
+                <p className="text-center text-xs text-text-muted mt-2">
                   Estimated time: ~4 minutes
                 </p>
               </motion.div>

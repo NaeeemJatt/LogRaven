@@ -26,6 +26,7 @@ const JobStatus             = lazy(() => import('./pages/JobStatus'))
 const Report                = lazy(() => import('./pages/Report'))
 const PlayParser            = lazy(() => import('./pages/PlayParser'))
 const AuditPage             = lazy(() => import('./pages/AuditPage'))
+const ConnectAccountPage    = lazy(() => import('./pages/ConnectAccountPage'))
 const ProfilePage           = lazy(() => import('./pages/Profile'))
 const AlertFeed             = lazy(() => import('./pages/AlertFeed'))
 const SharedAudit           = lazy(() => import('./pages/SharedAudit'))
@@ -36,7 +37,7 @@ const TermsPage             = lazy(() => import('./pages/Legal').then((m) => ({ 
 function RouteFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-void" role="status" aria-label="Loading page">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-ember border-t-transparent" />
+      <div className="h-8 w-8 motion-safe:animate-spin rounded-full border-2 border-ember border-t-transparent" />
     </div>
   )
 }
@@ -72,6 +73,8 @@ export default function App() {
                           <Route path="/"                               element={<ComplianceDashboard />} />
                           <Route path="/dashboard"                      element={<ComplianceDashboard />} />
                           <Route path="/compliance"                     element={<AuditPage />} />
+                          <Route path="/compliance/connect"             element={<ConnectAccountPage />} />
+                          <Route path="/compliance/connect/:step"       element={<ConnectAccountPage />} />
                           <Route path="/compliance/frameworks"          element={<FrameworkDirectoryPage />} />
                           <Route path="/compliance/frameworks/:frameworkId" element={<FrameworkDetailPage />} />
                           <Route path="/investigations"                 element={<Dashboard />} />

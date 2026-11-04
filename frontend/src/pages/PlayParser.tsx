@@ -1,10 +1,8 @@
 // LogRaven — PlayParser sandbox (compare parsers + quality scores, no investigations DB)
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import {
   Check,
   ChevronDown,
-  ChevronLeft,
   ChevronRight,
   Loader2,
   Sparkles,
@@ -249,6 +247,26 @@ export default function PlayParser() {
     clearPreview()
   }
 
+  const loadSampleLog = () => {
+    const sampleJson = JSON.stringify(
+      {
+        timestamp: new Date().toISOString(),
+        event_id: 4624,
+        user: 'Administrator',
+        domain: 'CORP',
+        logon_type: 10,
+        source_ip: '192.168.1.105',
+        status: 'Success',
+        message: 'An account was successfully logged on via Remote Desktop Protocol.',
+      },
+      null,
+      2
+    )
+    const blob = new Blob([sampleJson], { type: 'application/json' })
+    const sampleFile = new File([blob], 'sample_security_event.json', { type: 'application/json' })
+    onFileChosen(sampleFile)
+  }
+
   const runPlay = async () => {
     setError(null)
     setPlanLimitError(false)
@@ -361,137 +379,131 @@ export default function PlayParser() {
     compareIdle ? 'Decoders idle' : lastRunMode === 'both' && compareResults?.compare ? 'Compared' : 'Decoders run'
 
   return (
-    <div className={`${playPageBg} relative pt-16`}>
+    <div className={`${playPageBg} relative`}>
       <div
         className={`pointer-events-none absolute inset-0 z-0 opacity-[0.28] ${playPageGrid}`}
         aria-hidden
       />
       <div className="relative z-10">
-        <main className="px-4 sm:px-6 lg:px-8 py-8">
+        <main className="p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
           <span id={EVTX_DECODERS_HINT_ID} className="sr-only">
             {EVTX_FORMAT_TOOLTIP}
           </span>
-          {/* Top bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-            <div className="flex items-baseline gap-3 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-play bg-gradient-to-r from-white via-amber-100 to-amber-200/90 bg-clip-text text-transparent">
-                PlayParser
-              </h1>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-400/80">Sandbox</span>
-            </div>
-            <Link
-              to="/dashboard"
-              className={`group inline-flex shrink-0 items-center gap-2 rounded-full border border-amber-500/30 bg-amber-950/25 px-3 py-1.5 text-sm text-amber-100/80 hover:text-amber-200 hover:border-amber-400/50 hover:bg-amber-900/35 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
-            >
-              <span className="flex h-7 w-7 items-center justify-center rounded-full border border-amber-400/35 bg-amber-950/50 text-amber-300 group-hover:border-amber-300/60 group-hover:text-amber-200">
-                <ChevronLeft className="h-4 w-4" aria-hidden />
-              </span>
-              Dashboard
-            </Link>
-          </div>
 
-          {/* Workbench: sticky config sidebar + results canvas */}
-          <div className="grid grid-cols-1 md:grid-cols-[340px_minmax(0,1fr)] gap-6 items-start">
-            <aside className="md:sticky md:top-20 space-y-4">
-              <div className={`${playPanel} overflow-hidden`}>
-              {/* Console header strip */}
-              <div className={`${playSection} !py-4 flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/15`}>
-                <span className="flex items-center gap-2 font-play-mono text-[11px] uppercase tracking-[0.18em] text-amber-200/90">
-                  <Settings2 className="h-3.5 w-3.5 text-amber-400" aria-hidden /> Configuration
+          {/* Top Workbench: Horizontal 3-Step Configuration Panel */}
+          <section className={`${playPanel} overflow-hidden`}>
+            {/* Console header strip */}
+            <div className="px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 border-b border-amber-500/15 bg-surface/50">
+              <span className="flex items-center gap-2 text-xs font-semibold text-amber-200/90">
+                <Settings2 className="h-3.5 w-3.5 text-amber-400" aria-hidden /> Configuration
+              </span>
+              {file ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-950/30 px-2.5 py-1 font-play-mono text-[10px] text-amber-200 max-w-[60%]">
+                  <FileText className="h-3 w-3 shrink-0" aria-hidden />
+                  <span className="truncate">{file.name}</span>
                 </span>
-                {file ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-950/30 px-2.5 py-1 font-play-mono text-[10px] text-amber-200 max-w-[60%]">
-                    <FileText className="h-3 w-3 shrink-0" aria-hidden />
-                    <span className="truncate">{file.name}</span>
-                  </span>
-                ) : (
-                  <span className="font-play-mono text-[10px] text-play-muted">no file selected</span>
-                )}
+              ) : (
+                <span className="font-play-mono text-[10px] text-play-muted">no file selected</span>
+              )}
+            </div>
+
+            {/* 3 parts in one horizontal line */}
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-play-border/50">
+              {/* Part 01: Log file */}
+              <div className="p-5 flex flex-col justify-between gap-3 min-w-0">
+                <div>
+                  <label htmlFor={fileInputId} className={playSubsectionTitle}>
+                    <span className="font-play-mono text-amber-400/70 mr-1">01</span> Log file
+                  </label>
+                  <p className="text-xs text-play-muted mt-0.5">
+                    Select or drop the raw event file
+                  </p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  id={fileInputId}
+                  type="file"
+                  accept=".evtx,.log,.csv,.json,.txt"
+                  className="sr-only"
+                  onChange={(e) => onFileChosen(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragEnter={(e) => {
+                    e.preventDefault()
+                    setDropActive(true)
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    setDropActive(true)
+                  }}
+                  onDragLeave={() => setDropActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    setDropActive(false)
+                    const f = e.dataTransfer.files?.[0]
+                    if (f) onFileChosen(f)
+                  }}
+                  className={`w-full flex-1 min-h-[140px] flex flex-col justify-center rounded-xl border-2 border-dashed px-4 py-4 text-left transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} ${
+                    dropActive
+                      ? 'border-amber-400/70 bg-amber-500/15'
+                      : 'border-amber-600/40 bg-amber-950/20 hover:border-amber-500/55 hover:bg-amber-900/25'
+                  }`}
+                >
+                  <p className="text-sm text-play-fg font-medium">
+                    {file ? (
+                      <span
+                        className="font-play-mono text-amber-300 truncate block max-w-full"
+                        title={file.name}
+                      >
+                        {file.name}
+                      </span>
+                    ) : (
+                      <>Drop a log here or click to browse</>
+                    )}
+                  </p>
+                  <p className="text-play-muted text-xs mt-1.5">
+                    Allowed: .evtx, .log, .csv, .json, .txt
+                  </p>
+                </button>
               </div>
 
-              {/* Inputs (stacked in sidebar) */}
-              <div className="flex flex-col min-w-0 divide-y divide-play-border/50">
-                <div className={`${playSection} flex flex-col gap-4`}>
-                  <div>
-                    <label htmlFor={fileInputId} className={playSubsectionTitle}>
-                      <span className="font-play-mono text-amber-400/70 mr-1">01</span> Log file
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      id={fileInputId}
-                      type="file"
-                      accept=".evtx,.log,.csv,.json,.txt"
-                      className="sr-only"
-                      onChange={(e) => onFileChosen(e.target.files?.[0] ?? null)}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragEnter={(e) => {
-                        e.preventDefault()
-                        setDropActive(true)
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault()
-                        setDropActive(true)
-                      }}
-                      onDragLeave={() => setDropActive(false)}
-                      onDrop={(e) => {
-                        e.preventDefault()
-                        setDropActive(false)
-                        const f = e.dataTransfer.files?.[0]
-                        if (f) onFileChosen(f)
-                      }}
-                      className={`w-full rounded-xl border-2 border-dashed px-4 py-8 text-left transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} ${
-                        dropActive
-                          ? 'border-amber-400/70 bg-amber-500/15'
-                          : 'border-amber-600/40 bg-amber-950/20 hover:border-amber-500/55 hover:bg-amber-900/25'
-                      }`}
-                    >
-                      <p className="text-sm text-play-fg font-medium">
-                        {file ? (
-                          <span
-                            className="font-play-mono text-amber-300 truncate block max-w-full"
-                            title={file.name}
-                          >
-                            {file.name}
-                          </span>
-                        ) : (
-                          <>Drop a log here or click to browse</>
-                        )}
-                      </p>
-                      <p className="text-play-muted text-xs mt-2">
-                        Allowed: .evtx, .log, .csv, .json, .txt (same as investigations). Size follows your account tier.
-                      </p>
-                    </button>
-                  </div>
-
-                  <div>
-                    <span className={playSectionTitle}><span className="font-play-mono text-amber-400/70 mr-1">02</span> Parsers to compare</span>
-                  {playMode === 'decoders_only' ? (
-                    <PlayParserAlert variant="info" title="Parsers disabled" className="mb-4">
-                      In decoders-only mode, native parsers are not run. Switch mode if you need parser quality scores.
-                    </PlayParserAlert>
-                  ) : null}
-                  <div
-                    className={`grid grid-cols-1 min-w-0 gap-2 ${playMode === 'decoders_only' ? 'opacity-45 pointer-events-none' : ''}`}
-                    aria-disabled={playMode === 'decoders_only'}
-                  >
-                    {PARSER_OPTIONS.map((p) => {
-                      const on = !!selected[p.key]
-                      return (
-                        <button
-                          key={p.key}
-                          type="button"
-                          disabled={playMode === 'decoders_only'}
-                          aria-pressed={on}
-                          onClick={() => toggleParser(p.key)}
-                          className={`inline-flex w-full min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} disabled:cursor-not-allowed ${
-                            on
-                              ? 'border-amber-400/55 bg-amber-900/35 text-amber-50'
-                              : 'border-zinc-600/45 bg-zinc-900/35 text-zinc-300 hover:border-amber-700/50 hover:bg-zinc-800/45'
-                          }`}
-                        >
+              {/* Part 02: Parsers to compare */}
+              <div className="p-5 flex flex-col justify-between gap-3 min-w-0">
+                <div>
+                  <span className={playSectionTitle}>
+                    <span className="font-play-mono text-amber-400/70 mr-1">02</span> Parsers to compare
+                  </span>
+                  <p className="text-xs text-play-muted mt-0.5">
+                    Choose one or more native decoders
+                  </p>
+                </div>
+                {playMode === 'decoders_only' ? (
+                  <PlayParserAlert variant="info" title="Parsers disabled" className="mb-2">
+                    In decoders-only mode, native parsers are not run. Switch mode if you need parser quality scores.
+                  </PlayParserAlert>
+                ) : null}
+                <div
+                  className={`flex flex-col gap-1.5 flex-1 ${playMode === 'decoders_only' ? 'opacity-45 pointer-events-none' : ''}`}
+                  aria-disabled={playMode === 'decoders_only'}
+                >
+                  {PARSER_OPTIONS.map((p) => {
+                    const on = !!selected[p.key]
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        disabled={playMode === 'decoders_only'}
+                        aria-pressed={on}
+                        onClick={() => toggleParser(p.key)}
+                        className={`inline-flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-left text-xs transition-colors duration-150 motion-reduce:transition-none ${playFocusRing} disabled:cursor-not-allowed ${
+                          on
+                            ? 'border-amber-400/55 bg-amber-900/35 text-amber-50'
+                            : 'border-zinc-700/50 bg-zinc-900/35 text-zinc-300 hover:border-amber-700/50 hover:bg-zinc-800/45'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2 min-w-0 truncate">
                           <span
                             className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                               on ? 'border-amber-300 bg-amber-500/30 text-amber-200' : 'border-zinc-500 bg-zinc-800/80'
@@ -500,79 +512,85 @@ export default function PlayParser() {
                           >
                             {on ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
                           </span>
-                          <span className="min-w-0 truncate text-play-fg">{p.label}</span>
-                          <span className="font-play-mono text-[10px] text-play-subtle shrink-0">{p.key}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  </div>
+                          <span className="min-w-0 truncate text-play-fg font-medium">{p.label}</span>
+                        </span>
+                        <span className="font-play-mono text-[10px] text-play-subtle shrink-0">{p.key}</span>
+                      </button>
+                    )
+                  })}
                 </div>
+              </div>
 
-                <div className={`${playSection} flex flex-col gap-4`}>
-                  <div>
-                    <span className={playSectionTitle}><span className="font-play-mono text-amber-400/70 mr-1">03</span> Run mode</span>
-                    <div className="flex flex-col gap-2">
-                      {RUN_MODE_OPTIONS.map((opt) => {
-                        const active = playMode === opt.v
-                        const blockedEvtxDecoders = isEvtxFile && opt.v === 'decoders_only'
-                        const modeButton = (
-                          <button
-                            type="button"
-                            disabled={blockedEvtxDecoders}
-                            aria-describedby={blockedEvtxDecoders ? EVTX_DECODERS_HINT_ID : undefined}
-                            onClick={() => {
-                              if (!blockedEvtxDecoders) setPlayMode(opt.v)
-                            }}
-                            className={`rounded-xl border px-3 py-3 text-left w-full transition-all duration-150 motion-reduce:transition-none ${playFocusRing} ${
-                              active
-                                ? 'border-amber-400/60 bg-gradient-to-br from-amber-900/50 to-amber-950/30'
-                                : 'border-zinc-600/50 bg-zinc-900/40 hover:border-amber-600/40 hover:bg-zinc-800/50'
-                            } ${blockedEvtxDecoders ? 'opacity-45 cursor-not-allowed pointer-events-none' : ''}`}
-                          >
-                            <span className="block text-sm font-semibold text-play-fg">{opt.label}</span>
-                            <span className="block text-xs text-play-muted mt-0.5">{opt.description}</span>
-                          </button>
-                        )
+              {/* Part 03: Run mode */}
+              <div className="p-5 flex flex-col justify-between gap-3 min-w-0">
+                <div>
+                  <span className={playSectionTitle}>
+                    <span className="font-play-mono text-amber-400/70 mr-1">03</span> Run mode
+                  </span>
+                  <p className="text-xs text-play-muted mt-0.5">
+                    Compare native rules vs decoders
+                  </p>
+                </div>
+                <div className="flex flex-col gap-1.5 flex-1">
+                  {RUN_MODE_OPTIONS.map((opt) => {
+                    const active = playMode === opt.v
+                    const blockedEvtxDecoders = isEvtxFile && opt.v === 'decoders_only'
+                    const modeButton = (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        disabled={blockedEvtxDecoders}
+                        aria-describedby={blockedEvtxDecoders ? EVTX_DECODERS_HINT_ID : undefined}
+                        onClick={() => {
+                          if (!blockedEvtxDecoders) setPlayMode(opt.v)
+                        }}
+                        className={`rounded-lg border px-3 py-2 text-left w-full transition-colors duration-150 motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
+                          active
+                            ? 'border-amber-400/60 bg-gradient-to-br from-amber-900/50 to-amber-950/30'
+                            : 'border-zinc-700/50 bg-zinc-900/40 hover:border-amber-600/40 hover:bg-zinc-800/50'
+                        } ${blockedEvtxDecoders ? 'opacity-45 cursor-not-allowed pointer-events-none' : ''}`}
+                      >
+                        <span className="block text-xs font-semibold text-play-fg">{opt.label}</span>
+                        <span className="block text-[11px] text-play-muted mt-0.5">{opt.description}</span>
+                      </button>
+                    )
 
-                        if (opt.v === 'decoders_only') {
-                          return (
+                    if (opt.v === 'decoders_only') {
+                      return (
+                        <div
+                          key={opt.v}
+                          className="relative w-full"
+                          onMouseEnter={() => {
+                            if (isEvtxFile) setEvtxDecodersTooltipOpen(true)
+                          }}
+                          onMouseLeave={() => setEvtxDecodersTooltipOpen(false)}
+                        >
+                          {modeButton}
+                          {isEvtxFile && evtxDecodersTooltipOpen ? (
                             <div
-                              key={opt.v}
-                              className="relative w-full"
-                              onMouseEnter={() => {
-                                if (isEvtxFile) setEvtxDecodersTooltipOpen(true)
-                              }}
-                              onMouseLeave={() => setEvtxDecodersTooltipOpen(false)}
+                              role="tooltip"
+                              className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-amber-500/40 bg-zinc-900/95 px-3 py-2 text-xs text-amber-50/95 shadow-lg ring-1 ring-amber-400/15 backdrop-blur-sm pointer-events-none"
                             >
-                              {modeButton}
-                              {isEvtxFile && evtxDecodersTooltipOpen ? (
-                                <div
-                                  role="tooltip"
-                                  className="absolute left-0 right-0 top-full z-50 mt-1.5 rounded-lg border border-amber-500/40 bg-zinc-900/95 px-3 py-2.5 text-xs text-amber-50/95 shadow-[0_8px_30px_-8px_rgba(0,0,0,0.6)] ring-1 ring-amber-400/15 backdrop-blur-sm pointer-events-none"
-                                >
-                                  <span className="font-play-mono text-[11px] text-amber-100/90 leading-relaxed block">
-                                    {EVTX_FORMAT_TOOLTIP}
-                                  </span>
-                                </div>
-                              ) : null}
+                              <span className="font-play-mono text-[11px] text-amber-100/90 leading-relaxed block">
+                                {EVTX_FORMAT_TOOLTIP}
+                              </span>
                             </div>
-                          )
-                        }
+                          ) : null}
+                        </div>
+                      )
+                    }
 
-                        return <React.Fragment key={opt.v}>{modeButton}</React.Fragment>
-                      })}
-                    </div>
-                  </div>
+                    return modeButton
+                  })}
 
                   {(playMode === 'decoders_only' || playMode === 'both') && (
-                    <div className="space-y-2">
-                      <span className={playSubsectionTitle}>Source type (for decoders)</span>
-                      <div className="relative w-full max-w-md">
+                    <div className="space-y-1.5 mt-1">
+                      <span className="text-xs font-medium text-play-muted">Source type</span>
+                      <div className="relative w-full">
                         <select
                           value={compareSourceType}
                           onChange={(e) => setCompareSourceType(e.target.value)}
-                          className={`w-full appearance-none rounded-xl border border-amber-600/35 bg-zinc-900/80 pl-3 pr-10 py-2.5 text-sm text-amber-50 font-play-mono ${playFocusRing} transition-colors hover:border-amber-400/45 hover:bg-zinc-900`}
+                          className={`w-full appearance-none rounded-lg border border-amber-600/35 bg-zinc-900/80 pl-3 pr-8 py-1.5 text-xs text-amber-50 font-play-mono ${playFocusRing} transition-colors hover:border-amber-400/45 hover:bg-zinc-900`}
                         >
                           {COMPARE_SOURCE_TYPES.map((o) => (
                             <option key={o.value} value={o.value}>
@@ -581,49 +599,60 @@ export default function PlayParser() {
                           ))}
                         </select>
                         <ChevronDown
-                          className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-amber-400/80"
+                          className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-amber-400/80"
                           aria-hidden
                         />
                       </div>
                     </div>
                   )}
-
                 </div>
               </div>
+            </div>
 
-              {/* Action bar */}
-              <div className={`${playSection} !py-4 border-t border-amber-500/15 flex flex-col gap-3`}>
-                <p className="font-play-mono text-[11px] text-play-muted">
-                  {file ? 'Ready to evaluate.' : 'Upload a log file to begin.'}
+            {/* Action Bar (spans bottom of configuration) */}
+            <div className="px-5 py-3.5 border-t border-amber-500/15 bg-surface/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <p className="font-play-mono text-xs text-play-muted">
+                  {file ? (
+                    <span className="text-emerald-400 font-medium flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+                      Ready to evaluate ({file.name})
+                    </span>
+                  ) : (
+                    'Upload a log file to begin.'
+                  )}
                 </p>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  type="button"
+                  disabled={detectLoading}
+                  onClick={() => void runDetectorHint()}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-950/20 px-4 py-2 text-xs font-medium text-amber-100/90 hover:bg-amber-950/40 hover:border-amber-400/45 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
+                >
+                  {detectLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-play-accent" aria-hidden />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 text-play-warm-bright" aria-hidden />
+                  )}
+                  Detector hint
+                </button>
                 <button
                   type="button"
                   disabled={runLoading}
                   onClick={() => void runPlay()}
                   title="Run evaluation (keyboard: focus this control and press Enter)"
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl bg-amber-500 px-6 py-2.5 text-sm font-bold text-zinc-950 shadow-[0_4px_16px_rgba(0,0,0,0.35)] hover:bg-amber-400 active:bg-amber-600 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
+                  className={`inline-flex items-center justify-center gap-2 rounded-xl bg-amber-500 px-5 py-2 text-xs font-bold text-zinc-950 hover:bg-amber-400 active:scale-[0.98] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none transition-colors duration-150 motion-reduce:transition-none shadow-md shadow-amber-500/10`}
                 >
-                  {runLoading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
+                  {runLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Play className="h-3.5 w-3.5" aria-hidden />}
                   {runLoading ? 'Running…' : 'Run evaluation'}
-                </button>
-                <button
-                  type="button"
-                  disabled={detectLoading}
-                  onClick={() => void runDetectorHint()}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/35 bg-amber-950/20 px-5 py-2.5 text-sm font-medium text-amber-100/90 hover:bg-amber-950/40 hover:border-amber-400/45 disabled:opacity-50 ${playFocusRing} transition-colors duration-150 motion-reduce:transition-none`}
-                >
-                  {detectLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-play-accent" aria-hidden />
-                  ) : (
-                    <Sparkles className="h-4 w-4 text-play-warm-bright" aria-hidden />
-                  )}
-                  Detector hint
                 </button>
               </div>
             </div>
-            </aside>
+          </section>
 
-            <section className="min-w-0 space-y-6">
+          {/* Results section below configuration */}
+          <section className="space-y-6">
             {error || (hints && hints.length > 0) ? (
               <div className={`${playPanel} overflow-hidden`}>
                 {error ? (
@@ -668,7 +697,7 @@ export default function PlayParser() {
                             </div>
                             <div className="mt-2 h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-zinc-700/80">
                               <div
-                                className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400 transition-[width] duration-200 motion-reduce:transition-none"
+                                className="h-full rounded-full bg-gradient-to-r from-amber-600 to-amber-400 motion-reduce:transition-none"
                                 style={{ width: `${Math.round(h.confidence * 100)}%` }}
                               />
                             </div>
@@ -686,7 +715,7 @@ export default function PlayParser() {
 
             {!lastRunMode && !runLoading && !error && !(hints && hints.length) ? (
             <div className={`${playPanel} overflow-hidden scanline-overlay`}>
-              <div className="px-6 py-16 sm:py-24 flex flex-col items-center text-center">
+              <div className="px-6 py-16 sm:py-20 flex flex-col items-center text-center">
                 <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-center mb-5">
                   <FlaskConical className="h-6 w-6 text-amber-400" aria-hidden />
                 </div>
@@ -701,6 +730,16 @@ export default function PlayParser() {
                   <span className="rounded-md border border-play-border bg-zinc-900/50 px-2 py-1">raw vs parsed</span>
                   <span className="rounded-md border border-play-border bg-zinc-900/50 px-2 py-1">decoder compare</span>
                 </div>
+                <div className="mt-6">
+                  <button
+                    type="button"
+                    onClick={loadSampleLog}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-amber-500/30 bg-amber-950/30 hover:bg-amber-900/40 hover:border-amber-400/50 text-amber-200 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+                  >
+                    <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    Load sample security log
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}
@@ -711,7 +750,7 @@ export default function PlayParser() {
                 <h2 id="compare-heading" className="text-lg font-semibold font-play text-amber-50">
                   {lastRunMode === 'decoders_only' ? 'Decoders result' : 'Parsers vs decoders'}
                 </h2>
-                <span className="rounded-full border border-amber-500/35 bg-amber-950/40 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-200">
+                <span className="rounded-full border border-amber-500/35 bg-amber-950/40 px-2.5 py-0.5 text-xs font-medium text-amber-200">
                   {compareStatusLabel}
                 </span>
               </div>
@@ -758,31 +797,31 @@ export default function PlayParser() {
                     <p className={playSubsectionTitle}>Compare sample</p>
                     <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-2">
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wider text-play-muted">Native events</dt>
+                        <dt className="text-xs text-play-muted font-medium">Native events</dt>
                         <dd className="text-2xl font-play-mono tabular-nums text-play-fg">
                           {compareResults.compare.native_event_count}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wider text-play-muted">Decoder events</dt>
+                        <dt className="text-xs text-play-muted font-medium">Decoder events</dt>
                         <dd className="text-2xl font-play-mono tabular-nums text-play-fg">
                           {compareResults.compare.decoder_event_count}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wider text-play-muted">Δ count</dt>
+                        <dt className="text-xs text-play-muted font-medium">Δ count</dt>
                         <dd className="text-lg font-play-mono tabular-nums text-amber-300">
                           {compareResults.compare.count_delta}
                         </dd>
                       </div>
                       <div>
-                        <dt className="text-[10px] uppercase tracking-wider text-play-muted">Timestamp match</dt>
+                        <dt className="text-xs text-play-muted font-medium">Timestamp match</dt>
                         <dd className="text-lg font-play-mono tabular-nums text-amber-300">
                           {(compareResults.compare.timestamp_agreement_ratio * 100).toFixed(0)}%
                         </dd>
                       </div>
                       <div className="col-span-2">
-                        <dt className="text-[10px] uppercase tracking-wider text-play-muted">Source IP agreement</dt>
+                        <dt className="text-xs text-play-muted font-medium">Source IP agreement</dt>
                         <dd className="text-lg font-play-mono tabular-nums text-play-fg">
                           {(compareResults.compare.source_ip_agreement_ratio * 100).toFixed(0)}%
                         </dd>
@@ -795,7 +834,7 @@ export default function PlayParser() {
               </div>
               <div className="overflow-x-auto border-t border-play-border/60">
                 <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-[10px] uppercase tracking-wider text-amber-200/80">
+                  <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-xs font-medium text-amber-200/80">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Parser</th>
                       <th className="px-4 py-3 font-semibold">OK</th>
@@ -818,11 +857,11 @@ export default function PlayParser() {
                           <td className="px-4 py-2.5 font-play-mono text-play-fg">{row.parser_key}</td>
                           <td className="px-4 py-2.5">
                             {row.ok ? (
-                              <span className="inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300 border border-emerald-500/25">
+                              <span className="inline-flex rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-300 border border-emerald-500/25">
                                 Yes
                               </span>
                             ) : (
-                              <span className="inline-flex rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-300 border border-rose-500/25">
+                              <span className="inline-flex rounded-full bg-rose-500/15 px-2 py-0.5 text-xs font-medium text-rose-300 border border-rose-500/25">
                                 No
                               </span>
                             )}
@@ -849,7 +888,7 @@ export default function PlayParser() {
                 </div>
                 <div className="overflow-x-auto max-h-[min(70vh,48rem)] overflow-y-auto">
                   <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-[10px] uppercase tracking-wider text-amber-200/80">
+                    <thead className="sticky top-0 z-[1] bg-zinc-900/95 backdrop-blur-sm border-b border-amber-500/20 text-left text-xs font-medium text-amber-200/80">
                       <tr>
                         <th className="px-4 py-3 font-semibold">Parser</th>
                         <th className="px-4 py-3 font-semibold">Status</th>
@@ -885,7 +924,7 @@ export default function PlayParser() {
                                   </div>
                                   <div className="h-1.5 w-full rounded-full bg-zinc-700 overflow-hidden">
                                     <div
-                                      className="h-full rounded-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-300 transition-[width] duration-200 motion-reduce:transition-none"
+                                      className="h-full rounded-full bg-gradient-to-r from-amber-700 via-amber-400 to-amber-300 motion-reduce:transition-none"
                                       style={{ width: `${Math.min(100, row.quality.score * 100)}%` }}
                                     />
                                   </div>
@@ -895,7 +934,7 @@ export default function PlayParser() {
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-play-subtle">—</span>
+                                <span className="text-play-subtle">N/A</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-xs text-play-muted max-w-xs">
@@ -1011,7 +1050,7 @@ export default function PlayParser() {
                     aria-busy="true"
                     aria-label="Loading preview"
                   >
-                    <div className="grid grid-cols-[2rem_1fr_1fr_5rem] gap-0 border-b border-amber-500/25 bg-amber-950/30 px-2 py-2 text-[10px] uppercase text-amber-200/90 font-semibold tracking-wider">
+                    <div className="grid grid-cols-[2rem_1fr_1fr_5rem] gap-0 border-b border-amber-500/25 bg-amber-950/30 px-2 py-2 text-xs text-amber-200/90 font-medium">
                       <div>#</div>
                       <div>Raw</div>
                       <div>Parsed</div>
@@ -1061,7 +1100,7 @@ export default function PlayParser() {
                     ) : null}
                     <div className="overflow-x-auto max-h-[28rem] overflow-y-auto rounded-xl border border-amber-600/25">
                       <table className="min-w-full text-xs">
-                        <thead className="sticky top-0 z-[1] bg-zinc-900/98 backdrop-blur-sm border-b border-amber-500/25 text-left text-[10px] uppercase tracking-wider text-amber-200/85">
+                        <thead className="sticky top-0 z-[1] bg-zinc-900/98 backdrop-blur-sm border-b border-amber-500/25 text-left text-xs font-medium text-amber-200/85">
                           <tr>
                             <th className="px-2 py-2 w-10 font-semibold">#</th>
                             <th className="px-2 py-2 min-w-[200px] font-semibold bg-zinc-800/90 text-zinc-200">Raw</th>
@@ -1102,8 +1141,7 @@ export default function PlayParser() {
               </div>
             </section>
           )}
-            </section>
-          </div>
+          </section>
         </main>
       </div>
     </div>
