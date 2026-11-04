@@ -509,10 +509,11 @@ async def trigger_account_scan(
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
             from app.compliance.tasks import run_compliance_audit_inline
             asyncio.create_task(run_compliance_audit_inline(str(audit_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             from app.compliance.tasks import run_soc2_audit

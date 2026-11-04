@@ -76,10 +76,11 @@ async def scan_due_cloud_accounts(db: AsyncSession) -> list[str]:
             from app.config import settings
             from app.tasks.dev_worker import ensure_dev_worker_running
 
-            if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
+            if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
                 from app.compliance.tasks import run_compliance_audit_inline
                 asyncio.create_task(run_compliance_audit_inline(audit_id))
             else:
+                from app.tasks.dev_worker import ensure_dev_worker_running
                 if ensure_dev_worker_running():
                     from app.compliance.tasks import run_soc2_audit
                     run_soc2_audit.apply_async(args=[audit_id], task_id=audit_id)

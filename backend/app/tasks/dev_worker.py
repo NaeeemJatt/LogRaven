@@ -75,9 +75,18 @@ def ensure_dev_worker_running() -> bool:
     if os.name == "nt":
         command.extend(["--pool=solo"])
 
+    env = os.environ.copy()
+    if settings.AWS_ACCESS_KEY_ID:
+        env["AWS_ACCESS_KEY_ID"] = settings.AWS_ACCESS_KEY_ID
+    if settings.AWS_SECRET_ACCESS_KEY:
+        env["AWS_SECRET_ACCESS_KEY"] = settings.AWS_SECRET_ACCESS_KEY
+    if settings.AWS_REGION:
+        env["AWS_REGION"] = settings.AWS_REGION
+
     with _logfile().open("ab") as log_handle:
         kwargs: dict = {
             "cwd": str(_backend_root()),
+            "env": env,
             "stdin": subprocess.DEVNULL,
             "stdout": log_handle,
             "stderr": subprocess.STDOUT,

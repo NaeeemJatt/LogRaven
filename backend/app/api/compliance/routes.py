@@ -530,12 +530,13 @@ async def start_audit(
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
-            logger.info("Celery worker unavailable; running compliance audit %s in-process via asyncio", audit_job.id)
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+            logger.info("Running compliance audit %s in-process via asyncio", audit_job.id)
             from app.compliance.tasks import run_compliance_audit_inline
 
             asyncio.create_task(run_compliance_audit_inline(str(audit_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             task_result = run_soc2_audit.apply_async(
@@ -684,12 +685,13 @@ async def retry_audit(
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
-            logger.info("Celery worker unavailable; running compliance retry %s in-process via asyncio", new_job.id)
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+            logger.info("Running compliance retry %s in-process via asyncio", new_job.id)
             from app.compliance.tasks import run_compliance_audit_inline
 
             asyncio.create_task(run_compliance_audit_inline(str(new_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             run_soc2_audit.apply_async(args=[str(new_job.id)], task_id=str(new_job.id))
