@@ -77,7 +77,7 @@ export const PlayParserAlert: React.FC<PlayParserAlertProps> = ({
                 <button
                   type="button"
                   onClick={() => setDetailOpen((o) => !o)}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded transition-colors motion-reduce:transition-none"
+                  className="inline-flex items-center gap-1 text-xs font-medium text-amber-300 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 rounded transition-colors motion-reduce:transition-none active:scale-[0.98] disabled:opacity-50"
                   aria-expanded={detailOpen}
                   aria-controls={detailOpen ? detailId : undefined}
                 >
@@ -107,7 +107,7 @@ export const PlayParserAlert: React.FC<PlayParserAlertProps> = ({
           <button
             type="button"
             onClick={onDismiss}
-            className="shrink-0 rounded-lg p-1 text-zinc-400 hover:text-white hover:bg-zinc-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 transition-colors motion-reduce:transition-none"
+            className="shrink-0 rounded-lg p-1 text-zinc-400 hover:text-white hover:bg-zinc-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/45 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 transition-colors motion-reduce:transition-none active:scale-[0.98] disabled:opacity-50"
             aria-label="Dismiss"
           >
             <X className="h-4 w-4" />

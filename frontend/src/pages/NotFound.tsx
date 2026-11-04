@@ -1,25 +1,27 @@
 // LogRaven — 404 page (replaces the silent redirect-to-dashboard).
 
 import { Link } from 'react-router-dom'
-import { SearchX } from 'lucide-react'
+import { SearchX, ArrowLeft } from 'lucide-react'
 
 export default function NotFound() {
   return (
-    <div className="pt-16 min-h-screen flex items-center justify-center p-8">
+    <div className="pt-16 min-h-screen flex items-center justify-center p-8 bg-void text-text-primary">
       <div className="text-center max-w-md">
-        <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 flex items-center justify-center">
-          <SearchX className="w-6 h-6 text-indigo-300" aria-hidden />
+        <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center">
+          <SearchX className="w-6 h-6 text-amber-400" aria-hidden />
         </div>
-        <p className="font-mono text-[11px] text-indigo-400 tracking-[0.22em] uppercase mb-2">404 — Not found</p>
-        <h1 className="font-display text-2xl font-bold text-text-primary mb-3">This page doesn't exist</h1>
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-text-primary mb-3">
+          Page not found
+        </h1>
         <p className="text-sm text-text-muted leading-relaxed mb-8">
-          The address may be wrong, or the resource may have been deleted.
+          The address may be incorrect, or the resource may have been relocated or removed.
         </p>
         <Link
           to="/dashboard"
-          className="btn-sovereign inline-block px-6 py-2.5 rounded-lg text-sm font-semibold cursor-pointer"
+          className="btn-sovereign inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold cursor-pointer focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98]"
         >
-          Back to dashboard
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back to dashboard</span>
         </Link>
       </div>
     </div>

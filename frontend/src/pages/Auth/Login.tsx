@@ -1,11 +1,11 @@
 // LogRaven — Animated Characters Login Page
 // All eye-tracking / blinking / peeking animation logic preserved exactly.
-// shadcn replaced with plain HTML using LogRaven's raven-* / electric-* palette.
+// Modern minimal sovereign styling, amber accent, zero arbitrary colors or blurred orbs.
 // Auth wired to real useAuth().login() — no hardcoded credentials.
 
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Shield } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import LegalLinks from '../../components/layout/LegalLinks'
 
@@ -15,7 +15,6 @@ import LegalLinks from '../../components/layout/LegalLinks'
 interface PupilProps {
   size?: number
   maxDistance?: number
-  pupilColor?: string
   forceLookX?: number
   forceLookY?: number
 }
@@ -23,7 +22,6 @@ interface PupilProps {
 function Pupil({
   size = 12,
   maxDistance = 5,
-  pupilColor = '#0D0F14',
   forceLookX,
   forceLookY,
 }: PupilProps) {
@@ -53,12 +51,11 @@ function Pupil({
   return (
     <div
       ref={ref}
-      className="rounded-full"
+      className="rounded-full bg-stone-950 motion-safe:transition-transform motion-reduce:transition-none duration-100 ease-out"
       style={{
-        width: size, height: size,
-        backgroundColor: pupilColor,
+        width: size,
+        height: size,
         transform: `translate(${x}px, ${y}px)`,
-        transition: 'transform 0.1s ease-out',
       }}
     />
   )
@@ -71,8 +68,6 @@ interface EyeBallProps {
   size?: number
   pupilSize?: number
   maxDistance?: number
-  eyeColor?: string
-  pupilColor?: string
   isBlinking?: boolean
   forceLookX?: number
   forceLookY?: number
@@ -82,8 +77,6 @@ function EyeBall({
   size = 48,
   pupilSize = 16,
   maxDistance = 10,
-  eyeColor = 'white',
-  pupilColor = '#0D0F14',
   isBlinking = false,
   forceLookX,
   forceLookY,
@@ -114,22 +107,19 @@ function EyeBall({
   return (
     <div
       ref={ref}
-      className="rounded-full flex items-center justify-center transition-all duration-150"
+      className="rounded-full flex items-center justify-center bg-white overflow-hidden motion-safe:transition-transform motion-reduce:transition-none duration-150"
       style={{
         width: size,
         height: isBlinking ? 2 : size,
-        backgroundColor: eyeColor,
-        overflow: 'hidden',
       }}
     >
       {!isBlinking && (
         <div
-          className="rounded-full"
+          className="rounded-full bg-stone-950 motion-safe:transition-transform motion-reduce:transition-none duration-100 ease-out"
           style={{
-            width: pupilSize, height: pupilSize,
-            backgroundColor: pupilColor,
+            width: pupilSize,
+            height: pupilSize,
             transform: `translate(${x}px, ${y}px)`,
-            transition: 'transform 0.1s ease-out',
           }}
         />
       )}
@@ -143,18 +133,18 @@ function EyeBall({
 export default function Login() {
   const { login } = useAuth()
 
-  const [showPassword, setShowPassword]           = useState(false)
-  const [email, setEmail]                         = useState('')
-  const [password, setPassword]                   = useState('')
-  const [error, setError]                         = useState<string | null>(null)
-  const [loading, setLoading]                     = useState(false)
-  const [mouseX, setMouseX]                       = useState(0)
-  const [mouseY, setMouseY]                       = useState(0)
-  const [isPurpleBlinking, setIsPurpleBlinking]   = useState(false)
-  const [isBlackBlinking, setIsBlackBlinking]     = useState(false)
-  const [isTyping, setIsTyping]                   = useState(false)
+  const [showPassword, setShowPassword]                 = useState(false)
+  const [email, setEmail]                               = useState('')
+  const [password, setPassword]                         = useState('')
+  const [error, setError]                               = useState<string | null>(null)
+  const [loading, setLoading]                           = useState(false)
+  const [mouseX, setMouseX]                             = useState(0)
+  const [mouseY, setMouseY]                             = useState(0)
+  const [isPurpleBlinking, setIsPurpleBlinking]         = useState(false)
+  const [isBlackBlinking, setIsBlackBlinking]           = useState(false)
+  const [isTyping, setIsTyping]                         = useState(false)
   const [isLookingAtEachOther, setIsLookingAtEachOther] = useState(false)
-  const [isPurplePeeking, setIsPurplePeeking]     = useState(false)
+  const [isPurplePeeking, setIsPurplePeeking]           = useState(false)
 
   const purpleRef = useRef<HTMLDivElement>(null)
   const blackRef  = useRef<HTMLDivElement>(null)
@@ -218,9 +208,9 @@ export default function Login() {
     }
   }, [password, showPassword, isPurplePeeking])
 
-  const calcPos = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (!ref.current) return { faceX: 0, faceY: 0, bodySkew: 0 }
-    const rect = ref.current.getBoundingClientRect()
+  const calcPos = (r: React.RefObject<HTMLDivElement | null>) => {
+    if (!r.current) return { faceX: 0, faceY: 0, bodySkew: 0 }
+    const rect = r.current.getBoundingClientRect()
     const cx = rect.left + rect.width / 2
     const cy = rect.top + rect.height / 3
     const dx = mouseX - cx
@@ -246,28 +236,34 @@ export default function Login() {
     setLoading(true)
     try {
       await login(email, password)
-    } catch (err: any) {
-      setError(err?.response?.data?.detail ?? 'Authentication failed.')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : 'Authentication failed. Please verify your credentials.')
     } finally {
       setLoading(false)
     }
   }
 
   const inputClass =
-    'login-input w-full text-sm px-3 py-3 font-mono'
+    'w-full text-sm px-3.5 py-2.5 rounded-lg bg-surface border border-white/[0.08] text-text-primary placeholder:text-text-muted/50 focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors duration-150'
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-[#030508]">
+    <div className="min-h-screen grid lg:grid-cols-2 bg-void text-text-primary">
 
       {/* ── Left panel — dark + characters ─────────────────────────────────── */}
-      <div className="relative hidden lg:flex flex-col justify-between bg-[#080C14] p-12 border-r border-white/[0.04]">
+      <div className="relative hidden lg:flex flex-col justify-between bg-surface/30 p-12 border-r border-white/[0.06]">
 
         {/* Brand */}
         <div className="relative z-20">
-          <p className="font-mono font-bold tracking-widest text-[#818CF8] text-lg uppercase">
-            LOGRAVEN
-          </p>
-          <p className="text-text-muted text-xs tracking-widest uppercase mt-0.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+              <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
+            </div>
+            <span className="font-display font-bold text-base text-text-primary tracking-tight">
+              Log<span className="text-amber-400">Raven</span>
+            </span>
+          </div>
+          <p className="text-text-muted text-xs mt-1.5">
             Watch your logs. Find the threat.
           </p>
         </div>
@@ -279,12 +275,11 @@ export default function Login() {
             {/* Purple — tall rectangle, back layer */}
             <div
               ref={purpleRef}
-              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              className="absolute bottom-0 bg-indigo-600 rounded-t-lg motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
               style={{
-                left: 70, width: 180,
+                left: 70,
+                width: 180,
                 height: hidingPassword ? 440 : 400,
-                backgroundColor: '#6C3FF5',
-                borderRadius: '10px 10px 0 0',
                 zIndex: 1,
                 transform: passwordVisible
                   ? 'skewX(0deg)'
@@ -295,7 +290,7 @@ export default function Login() {
               }}
             >
               <div
-                className="absolute flex gap-8 transition-all duration-700 ease-in-out"
+                className="absolute flex gap-8 motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
                 style={{
                   left: passwordVisible ? 20 : isLookingAtEachOther ? 55 : 45 + purplePos.faceX,
                   top:  passwordVisible ? 35 : isLookingAtEachOther ? 65 : 40 + purplePos.faceY,
@@ -303,7 +298,6 @@ export default function Login() {
               >
                 {[0, 1].map(i => (
                   <EyeBall key={i} size={18} pupilSize={7} maxDistance={5}
-                    eyeColor="white" pupilColor="#0D0F14"
                     isBlinking={isPurpleBlinking}
                     forceLookX={passwordVisible ? (isPurplePeeking ? 4 : -4) : isLookingAtEachOther ? 3 : undefined}
                     forceLookY={passwordVisible ? (isPurplePeeking ? 5 : -4) : isLookingAtEachOther ? 4 : undefined}
@@ -315,11 +309,11 @@ export default function Login() {
             {/* Black — middle layer */}
             <div
               ref={blackRef}
-              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              className="absolute bottom-0 bg-zinc-800 rounded-t-lg motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
               style={{
-                left: 240, width: 120, height: 310,
-                backgroundColor: '#2D2D2D',
-                borderRadius: '8px 8px 0 0',
+                left: 240,
+                width: 120,
+                height: 310,
                 zIndex: 2,
                 transform: passwordVisible
                   ? 'skewX(0deg)'
@@ -332,7 +326,7 @@ export default function Login() {
               }}
             >
               <div
-                className="absolute flex gap-6 transition-all duration-700 ease-in-out"
+                className="absolute flex gap-6 motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
                 style={{
                   left: passwordVisible ? 10 : isLookingAtEachOther ? 32 : 26 + blackPos.faceX,
                   top:  passwordVisible ? 28 : isLookingAtEachOther ? 12 : 32 + blackPos.faceY,
@@ -340,7 +334,6 @@ export default function Login() {
               >
                 {[0, 1].map(i => (
                   <EyeBall key={i} size={16} pupilSize={6} maxDistance={4}
-                    eyeColor="white" pupilColor="#0D0F14"
                     isBlinking={isBlackBlinking}
                     forceLookX={passwordVisible ? -4 : isLookingAtEachOther ? 0  : undefined}
                     forceLookY={passwordVisible ? -4 : isLookingAtEachOther ? -4 : undefined}
@@ -352,25 +345,25 @@ export default function Login() {
             {/* Orange — front left semi-circle */}
             <div
               ref={orangeRef}
-              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              className="absolute bottom-0 bg-orange-500 rounded-t-[120px] motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
               style={{
-                left: 0, width: 240, height: 200,
+                left: 0,
+                width: 240,
+                height: 200,
                 zIndex: 3,
-                backgroundColor: '#FF9B6B',
-                borderRadius: '120px 120px 0 0',
                 transform: passwordVisible ? 'skewX(0deg)' : `skewX(${orangePos.bodySkew || 0}deg)`,
                 transformOrigin: 'bottom center',
               }}
             >
               <div
-                className="absolute flex gap-8 transition-all duration-200 ease-out"
+                className="absolute flex gap-8 motion-safe:transition-transform motion-reduce:transition-none duration-200 ease-out"
                 style={{
                   left: passwordVisible ? 50 : 82 + (orangePos.faceX || 0),
                   top:  passwordVisible ? 85 : 90 + (orangePos.faceY || 0),
                 }}
               >
                 {[0, 1].map(i => (
-                  <Pupil key={i} size={12} maxDistance={5} pupilColor="#0D0F14"
+                  <Pupil key={i} size={12} maxDistance={5}
                     forceLookX={passwordVisible ? -5 : undefined}
                     forceLookY={passwordVisible ? -4 : undefined}
                   />
@@ -381,25 +374,25 @@ export default function Login() {
             {/* Yellow — front right rounded rectangle */}
             <div
               ref={yellowRef}
-              className="absolute bottom-0 transition-all duration-700 ease-in-out"
+              className="absolute bottom-0 bg-amber-400 rounded-t-[70px] motion-safe:transition-transform motion-reduce:transition-none duration-700 ease-in-out"
               style={{
-                left: 310, width: 140, height: 230,
-                backgroundColor: '#E8D754',
-                borderRadius: '70px 70px 0 0',
+                left: 310,
+                width: 140,
+                height: 230,
                 zIndex: 4,
                 transform: passwordVisible ? 'skewX(0deg)' : `skewX(${yellowPos.bodySkew || 0}deg)`,
                 transformOrigin: 'bottom center',
               }}
             >
               <div
-                className="absolute flex gap-6 transition-all duration-200 ease-out"
+                className="absolute flex gap-6 motion-safe:transition-transform motion-reduce:transition-none duration-200 ease-out"
                 style={{
                   left: passwordVisible ? 20 : 52 + (yellowPos.faceX || 0),
                   top:  passwordVisible ? 35 : 40 + (yellowPos.faceY || 0),
                 }}
               >
                 {[0, 1].map(i => (
-                  <Pupil key={i} size={12} maxDistance={5} pupilColor="#0D0F14"
+                  <Pupil key={i} size={12} maxDistance={5}
                     forceLookX={passwordVisible ? -5 : undefined}
                     forceLookY={passwordVisible ? -4 : undefined}
                   />
@@ -407,7 +400,7 @@ export default function Login() {
               </div>
               {/* Mouth */}
               <div
-                className="absolute h-1 bg-raven-900 rounded-full transition-all duration-200 ease-out"
+                className="absolute h-1 bg-stone-900 rounded-full motion-safe:transition-transform motion-reduce:transition-none duration-200 ease-out"
                 style={{
                   width: 80,
                   left: passwordVisible ? 10 : 40 + (yellowPos.faceX || 0),
@@ -420,23 +413,24 @@ export default function Login() {
         </div>
 
         {/* Footer links */}
-        <LegalLinks className="relative z-20 justify-start font-mono uppercase tracking-widest" />
-
-        {/* Decorative blobs */}
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-[#6366F1]/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-[#6366F1]/[0.03] rounded-full blur-3xl pointer-events-none" />
+        <LegalLinks className="relative z-20 justify-start" />
       </div>
 
       {/* ── Right panel — login form ─────────────────────────────────────────── */}
-      <div className="flex items-center justify-center p-8 bg-[#030508]">
+      <div className="flex items-center justify-center p-8 bg-void">
         <div className="w-full max-w-sm">
 
           {/* Mobile brand */}
-          <div className="lg:hidden text-center mb-10">
-            <p className="font-mono font-bold tracking-widest text-[#818CF8] text-lg uppercase">
-              LOGRAVEN
-            </p>
-            <p className="text-text-muted text-xs tracking-widest uppercase mt-1">
+          <div className="lg:hidden flex flex-col items-center mb-10">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
+              </div>
+              <span className="font-display font-bold text-base text-text-primary tracking-tight">
+                Log<span className="text-amber-400">Raven</span>
+              </span>
+            </div>
+            <p className="text-text-muted text-xs mt-1">
               Watch your logs. Find the threat.
             </p>
           </div>
@@ -446,7 +440,7 @@ export default function Login() {
             <h1 className="text-text-primary text-2xl font-semibold tracking-tight mb-1">
               Welcome back
             </h1>
-            <p className="text-text-muted text-xs font-mono uppercase tracking-widest">
+            <p className="text-text-muted text-sm">
               Sign in to your workspace
             </p>
             <div className="mt-4 border-t border-white/[0.06]" />
@@ -456,7 +450,7 @@ export default function Login() {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             <div>
-              <label htmlFor="login-email" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
+              <label htmlFor="login-email" className="block text-xs font-medium text-text-muted mb-1.5">
                 Email
               </label>
               <input
@@ -474,7 +468,7 @@ export default function Login() {
             </div>
 
             <div>
-              <label htmlFor="login-password" className="block text-xs uppercase tracking-widest text-text-muted mb-1">
+              <label htmlFor="login-password" className="block text-xs font-medium text-text-muted mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -492,7 +486,7 @@ export default function Login() {
                   type="button"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-ghost hover:text-text-muted transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded transition-colors active:scale-95"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -501,30 +495,36 @@ export default function Login() {
 
             {/* Forgot password */}
             <div className="flex items-center justify-end">
-              <Link to="/forgot-password" className="text-xs text-[#818CF8] hover:text-[#A5B4FC] font-mono transition-colors">
+              <Link
+                to="/forgot-password"
+                className="text-xs text-amber-400 hover:text-amber-300 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded transition-colors"
+              >
                 Forgot password?
               </Link>
             </div>
 
             {error && (
-              <p className="text-rose-400 text-xs font-mono border border-rose-500/20 bg-rose-500/5 px-3 py-2 rounded">
-                — {error}
+              <p className="text-rose-400 text-xs border border-rose-500/20 bg-rose-500/10 px-3 py-2 rounded-lg">
+                {error}
               </p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="btn-login w-full text-sm font-medium tracking-wide py-3 rounded transition-colors uppercase mt-2"
+              className="w-full text-sm font-medium py-2.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-stone-950 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
-              {loading ? 'Authenticating...' : 'Sign In'}
+              {loading ? 'Authenticating…' : 'Sign in'}
             </button>
           </form>
 
           {/* Register link */}
-          <p className="text-text-muted text-xs font-mono mt-8 text-center">
+          <p className="text-text-muted text-xs mt-8 text-center">
             No account?{' '}
-            <Link to="/register" className="text-[#818CF8] hover:text-[#A5B4FC] transition-colors">
+            <Link
+              to="/register"
+              className="text-amber-400 hover:text-amber-300 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded transition-colors"
+            >
               Register
             </Link>
           </p>

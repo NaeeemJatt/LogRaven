@@ -16,21 +16,21 @@ function LegalShell({ title, updated, children }: {
       <header className="border-b border-white/[0.06] bg-deep/40 backdrop-blur">
         <div className="px-4 sm:px-6 lg:px-8 py-4 max-w-3xl mx-auto flex items-center justify-between gap-3">
           <Link to="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-indigo-300" />
+            <span className="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
             </span>
             <span className="font-display font-bold text-text-primary">LogRaven</span>
           </Link>
-          <Link to="/login" className="inline-flex items-center gap-1 text-xs font-mono text-text-muted hover:text-text-secondary transition-colors">
+          <Link to="/login" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
             <ChevronLeft className="w-3 h-3" /> Back to login
           </Link>
         </div>
       </header>
 
       <main className="px-4 sm:px-6 lg:px-8 py-10 max-w-3xl mx-auto">
-        <div className="font-mono text-[10px] text-indigo-400 tracking-[0.18em] uppercase mb-2">Legal</div>
+        <div className="text-xs font-semibold text-amber-400 mb-2">Legal documentation</div>
         <h1 className="font-display font-bold text-text-primary text-3xl leading-tight">{title}</h1>
-        <p className="font-mono text-[11px] text-text-muted mt-2 mb-8">Last updated: {updated}</p>
+        <p className="text-xs text-text-muted mt-2 mb-8">Last updated: {updated}</p>
         <div className="space-y-8">{children}</div>
         <LegalLinks className="mt-10 border-t border-white/[0.06] pt-6" />
       </main>
@@ -78,14 +78,13 @@ export function PrivacyPage() {
       <Section heading="Retention and deletion">
         <p>
           You can delete individual investigations (including their uploaded files and reports) at
-          any time, and you can permanently delete your entire account from Profile &amp; Settings —
-          this removes your data and stored files. Audit share links expire automatically.
+          any time, and you can permanently delete your entire account from Profile &amp; Settings (this permanently removes your data and stored files). Audit share links expire automatically.
         </p>
       </Section>
       <Section heading="Contact">
         <p>
           Questions about this policy? Email{' '}
-          <a href="mailto:support@lograven.io" className="text-indigo-300 hover:text-indigo-200 transition-colors">
+          <a href="mailto:support@lograven.io" className="text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
             support@lograven.io
           </a>.
         </p>
@@ -100,8 +99,7 @@ export function TermsPage() {
       <Section heading="The service">
         <p>
           LogRaven analyzes the log files you upload and, where connected, cloud account evidence,
-          to surface security findings and compliance posture. Analysis output — including
-          AI-assisted findings and compliance grades — is decision support, not a guarantee: review
+          to surface security findings and compliance posture. Analysis output, including AI-assisted findings and compliance grades, is decision support, not a guarantee: review
           results with a qualified security professional before acting on or submitting them.
         </p>
       </Section>
@@ -109,7 +107,7 @@ export function TermsPage() {
         <p>
           Only upload logs and connect accounts you are authorized to analyze. You are responsible
           for the legality of the data you submit and for safeguarding your account credentials.
-          Attempting to access other users' data, probe the service, or bypass plan limits is
+          Attempting to access other users’ data, probe the service, or bypass plan limits is
           prohibited.
         </p>
       </Section>
@@ -121,7 +119,7 @@ export function TermsPage() {
       </Section>
       <Section heading="Availability and liability">
         <p>
-          The service is provided "as is" without warranty of uninterrupted availability. To the
+          The service is provided “as is” without warranty of uninterrupted availability. To the
           maximum extent permitted by law, LogRaven is not liable for indirect or consequential
           damages arising from use of the service or reliance on its analysis output.
         </p>
@@ -129,7 +127,7 @@ export function TermsPage() {
       <Section heading="Contact">
         <p>
           Questions about these terms? Email{' '}
-          <a href="mailto:support@lograven.io" className="text-indigo-300 hover:text-indigo-200 transition-colors">
+          <a href="mailto:support@lograven.io" className="text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
             support@lograven.io
           </a>.
         </p>

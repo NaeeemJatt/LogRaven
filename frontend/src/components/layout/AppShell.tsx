@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react'
 import AppSidebar from './AppSidebar'
 import AppHeader from './AppHeader'
-import ConnectAccountModal from '../compliance/ConnectAccountModal'
 import AuditorShareModal from '../audit/AuditorShareModal'
 import { listCloudAccounts } from '../../api/compliance'
 import type { CloudAccount } from '../../types/audit'
@@ -22,7 +21,6 @@ export default function AppShell({ children }: AppShellProps) {
   const [activeAccount, setActiveAccount] = useState<CloudAccount | null>(null)
 
   // Global modal triggers
-  const [connectModalOpen, setConnectModalOpen] = useState(false)
   const [auditorModalOpen, setAuditorModalOpen] = useState(false)
 
   const toggleCollapsed = () => {
@@ -56,7 +54,7 @@ export default function AppShell({ children }: AppShellProps) {
         collapsed={collapsed}
         onToggle={toggleCollapsed}
         connectedAccountsCount={accounts.length}
-        onOpenConnectModal={() => setConnectModalOpen(true)}
+        onOpenConnectModal={() => navigate('/compliance/connect/step-1')}
         onOpenAuditorModal={() => setAuditorModalOpen(true)}
       />
 
@@ -67,7 +65,7 @@ export default function AppShell({ children }: AppShellProps) {
           accounts={accounts}
           activeAccount={activeAccount}
           onSelectAccount={(acc) => setActiveAccount(acc)}
-          onOpenConnectModal={() => setConnectModalOpen(true)}
+          onOpenConnectModal={() => navigate('/compliance/connect/step-1')}
           onOpenAuditorModal={() => setAuditorModalOpen(true)}
           onOpenQuickScanModal={() => navigate('/compliance?tab=audit')}
         />
@@ -79,24 +77,13 @@ export default function AppShell({ children }: AppShellProps) {
           <div
             className="pointer-events-none fixed -top-32 right-1/4 w-[600px] h-[600px] rounded-full blur-[140px] opacity-10"
             style={{
-              background: 'radial-gradient(circle, #6366F1 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(99,102,241,0.8) 0%, transparent 70%)',
             }}
           />
 
           <div className="relative">{children}</div>
         </main>
       </div>
-
-      {/* Global Cloud Account Connect Modal */}
-      <ConnectAccountModal
-        isOpen={connectModalOpen}
-        onClose={() => setConnectModalOpen(false)}
-        onAccountConnected={(acc) => {
-          setAccounts((prev) => [...prev, acc])
-          setActiveAccount(acc)
-          void refreshAccounts()
-        }}
-      />
 
       {/* Global Auditor Vault Share Modal */}
       <AuditorShareModal

@@ -34,7 +34,7 @@ function WizardRail({ active }: { active: number }) {
             <div className="flex items-center gap-3 min-w-0">
               <span className={`w-10 h-10 rounded-xl flex items-center justify-center border flex-shrink-0 transition-colors ${
                 isActive ? 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300'
-                : isDone ? 'bg-[#8FBDAD]/12 border-[#8FBDAD]/35 text-[#8FBDAD]'
+                : isDone ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400'
                 : 'bg-white/[0.02] border-white/[0.08] text-text-muted'
               }`}
                 style={isActive ? { boxShadow: '0 0 0 1px rgba(227,181,126,0.22)' } : undefined}
@@ -49,7 +49,7 @@ function WizardRail({ active }: { active: number }) {
               </div>
             </div>
             {i < WIZARD_STEPS.length - 1 && (
-              <div className={`flex-1 h-px mx-3 ${isDone ? 'bg-[#8FBDAD]/30' : 'bg-white/[0.08]'}`} />
+              <div className={`flex-1 h-px mx-3 ${isDone ? 'bg-emerald-500/30' : 'bg-white/[0.08]'}`} />
             )}
           </React.Fragment>
         )
@@ -106,7 +106,7 @@ export default function NewInvestigation() {
               <h1 className="font-display font-bold text-text-primary text-2xl">New investigation</h1>
               <p className="text-text-secondary text-sm">Name your case, then add evidence and run analysis.</p>
             </div>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-text-muted self-start">
+            <span className="inline-flex items-center gap-1.5 text-xs text-text-muted self-start">
               <Clock className="w-3 h-3" /> Results in under 5 min
             </span>
           </div>
@@ -130,9 +130,9 @@ export default function NewInvestigation() {
               className="ops-panel overflow-hidden"
             >
               <div className="px-6 py-5 border-b border-white/[0.07]">
-                <div className="font-mono text-[10px] text-indigo-400 tracking-[0.18em] uppercase mb-1">Step 1 of 3</div>
+                <div className="text-xs text-amber-400 font-semibold mb-1">Step 1 of 3</div>
                 <h2 className="font-display font-bold text-text-primary text-xl leading-tight">Name your investigation</h2>
-                <p className="text-sm text-text-muted mt-1">A descriptive name helps you find this case later. You'll add log files next.</p>
+                <p className="text-sm text-text-muted mt-1">A descriptive name helps you find this case later. You’ll add log files next.</p>
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -153,7 +153,7 @@ export default function NewInvestigation() {
                 </div>
 
                 <div>
-                  <div className="font-mono text-[10px] text-text-muted tracking-[0.16em] uppercase mb-2.5">Quick-start templates</div>
+                  <div className="text-xs font-semibold text-text-muted mb-2.5">Quick-start templates</div>
                   <div className="flex flex-wrap gap-2">
                     {SUGGESTIONS.map((s) => {
                       const sel = name === s
@@ -162,7 +162,7 @@ export default function NewInvestigation() {
                           key={s}
                           type="button"
                           onClick={() => setName(s)}
-                          className={`px-3 py-2 rounded-lg border text-xs text-left transition-all ${
+                          className={`px-3 py-2 rounded-lg border text-xs text-left transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none ${
                             sel ? 'border-indigo-500/45 bg-indigo-500/10 text-indigo-200'
                                 : 'border-white/[0.07] text-text-muted hover:text-text-secondary hover:border-indigo-500/20 hover:bg-white/[0.02]'
                           }`}
@@ -191,7 +191,7 @@ export default function NewInvestigation() {
                   disabled={loading || !name.trim()}
                   className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {loading ? <Loader2 className="w-4 h-4 motion-safe:animate-spin motion-reduce:animate-none" /> : null}
                   {loading ? 'Creating…' : 'Continue to upload'}
                   {!loading && <ArrowRight className="w-4 h-4" />}
                 </button>
@@ -206,7 +206,7 @@ export default function NewInvestigation() {
           >
             <div className="rounded-2xl border border-white/[0.06] bg-surface/40 overflow-hidden">
               <div className="px-4 py-3 border-b border-white/[0.06]">
-                <div className="font-mono text-[10px] text-text-muted tracking-widest uppercase">What happens next</div>
+                <div className="text-xs font-semibold text-text-muted">What happens next</div>
               </div>
               <div className="divide-y divide-white/[0.04]">
                 {WIZARD_STEPS.map((s) => {

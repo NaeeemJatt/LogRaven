@@ -4,6 +4,11 @@ import CloudAccountsManager from './CloudAccountsManager'
 import * as complianceApi from '../../api/compliance'
 import type { CloudAccount } from '../../types/audit'
 
+const mockNavigate = vi.fn()
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => mockNavigate,
+}))
+
 vi.mock('../../api/compliance', () => ({
   listCloudAccounts: vi.fn(),
   createCloudAccount: vi.fn(),
@@ -71,6 +76,7 @@ const sampleAzureAccount: CloudAccount = {
 describe('CloudAccountsManager', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockNavigate.mockReset()
   })
 
   it('renders empty state when no accounts are returned', async () => {
@@ -78,7 +84,7 @@ describe('CloudAccountsManager', () => {
 
     render(<CloudAccountsManager />)
 
-    expect(screen.getByText(/loading accounts.../i)).toBeInTheDocument()
+    expect(screen.getByText(/loading accounts/i)).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByText('No cloud accounts connected')).toBeInTheDocument()
@@ -112,61 +118,22 @@ describe('CloudAccountsManager', () => {
     expect(screen.getByText('Fleet (3)')).toBeInTheDocument()
   })
 
-  it('opens connect modal, validates input, and connects an AWS account', async () => {
-    vi.mocked(complianceApi.listCloudAccounts).mockResolvedValueOnce([])
-    const newAccount: CloudAccount = {
-      ...sampleAwsAccount,
-      id: 'acc-new',
-      name: 'Staging AWS',
-      role_arn: 'arn:aws:iam::999888777666:role/StagingAuditRole',
-    }
-    vi.mocked(complianceApi.createCloudAccount).mockResolvedValueOnce(newAccount)
+  it('navigates to /compliance/connect/step-1 when Connect Cloud Account button is clicked', async () => {
+    vi.mocked(complianceApi.listCloudAccounts).mockResolvedValueOnce([sampleAwsAccount])
 
     render(<CloudAccountsManager />)
 
     await waitFor(() => {
-      expect(screen.getByText('No cloud accounts connected')).toBeInTheDocument()
+      expect(screen.getByText('Production AWS')).toBeInTheDocument()
     })
 
     fireEvent.click(screen.getByRole('button', { name: /connect cloud account/i }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText(/Register AWS, GCP, or Azure credentials for automated continuous auditing./i)).toBeInTheDocument()
-
-    const nameInput = screen.getByLabelText(/account name/i)
-    const roleInput = screen.getByLabelText(/aws iam role arn/i)
-
-    // Trigger validation with invalid ARN
-    fireEvent.change(nameInput, { target: { value: 'Staging AWS' } })
-    fireEvent.change(roleInput, { target: { value: 'invalid-arn' } })
-    fireEvent.click(screen.getByRole('button', { name: /save & connect/i }))
-
-    expect(screen.getByText(/Valid AWS IAM Role ARN is required/i)).toBeInTheDocument()
-    expect(complianceApi.createCloudAccount).not.toHaveBeenCalled()
-
-    // Enter valid ARN and submit
-    fireEvent.change(roleInput, { target: { value: 'arn:aws:iam::999888777666:role/StagingAuditRole' } })
-    fireEvent.click(screen.getByRole('button', { name: /save & connect/i }))
-
-    await waitFor(() => {
-      expect(complianceApi.createCloudAccount).toHaveBeenCalledWith({
-        provider: 'aws',
-        name: 'Staging AWS',
-        role_arn: 'arn:aws:iam::999888777666:role/StagingAuditRole',
-        default_frameworks: ['soc2', 'cis_aws'],
-        scan_schedule: 'weekly',
-      })
-    })
-
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-      expect(screen.getByText('Staging AWS')).toBeInTheDocument()
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance/connect/step-1')
   })
 
-  it('switches to GCP provider tab, validates, and connects a GCP project', async () => {
+  it('navigates to /compliance/connect/step-1 from empty state', async () => {
     vi.mocked(complianceApi.listCloudAccounts).mockResolvedValueOnce([])
-    vi.mocked(complianceApi.createCloudAccount).mockResolvedValueOnce(sampleGcpAccount)
 
     render(<CloudAccountsManager />)
 
@@ -174,82 +141,9 @@ describe('CloudAccountsManager', () => {
       expect(screen.getByText('No cloud accounts connected')).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /connect cloud account/i }))
+    fireEvent.click(screen.getByRole('button', { name: /connect your first account/i }))
 
-    // Switch to GCP tab
-    fireEvent.click(screen.getByRole('button', { name: /^GCP$/i }))
-
-    // Verify GCP fields appeared and AWS role ARN disappeared
-    expect(screen.getByLabelText(/gcp project id/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/service account email/i)).toBeInTheDocument()
-    expect(screen.queryByLabelText(/aws iam role arn/i)).not.toBeInTheDocument()
-
-    // Fill fields
-    fireEvent.change(screen.getByLabelText(/account name/i), { target: { value: 'Security Ops GCP' } })
-    fireEvent.change(screen.getByLabelText(/gcp project id/i), { target: { value: 'gcp-project-secops-999' } })
-    fireEvent.change(screen.getByLabelText(/service account email/i), {
-      target: { value: 'lograven-auditor@gcp-project-secops-999.iam.gserviceaccount.com' },
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: /save & connect/i }))
-
-    await waitFor(() => {
-      expect(complianceApi.createCloudAccount).toHaveBeenCalledWith({
-        provider: 'gcp',
-        name: 'Security Ops GCP',
-        gcp_project_id: 'gcp-project-secops-999',
-        gcp_service_account_email: 'lograven-auditor@gcp-project-secops-999.iam.gserviceaccount.com',
-        default_frameworks: ['soc2', 'cis_gcp'],
-        scan_schedule: 'weekly',
-      })
-    })
-  })
-
-  it('switches to Azure provider tab, validates, and connects an Azure subscription', async () => {
-    vi.mocked(complianceApi.listCloudAccounts).mockResolvedValueOnce([])
-    vi.mocked(complianceApi.createCloudAccount).mockResolvedValueOnce(sampleAzureAccount)
-
-    render(<CloudAccountsManager />)
-
-    await waitFor(() => {
-      expect(screen.getByText('No cloud accounts connected')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: /connect cloud account/i }))
-
-    // Switch to Azure tab
-    fireEvent.click(screen.getByRole('button', { name: /^Azure$/i }))
-
-    // Verify Azure fields appeared
-    expect(screen.getByLabelText(/azure directory \(tenant\) id/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/azure subscription id/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/azure application \(client\) id/i)).toBeInTheDocument()
-
-    // Fill fields
-    fireEvent.change(screen.getByLabelText(/account name/i), { target: { value: 'Core Azure Subscription' } })
-    fireEvent.change(screen.getByLabelText(/azure directory \(tenant\) id/i), {
-      target: { value: '00000000-0000-0000-0000-000000000000' },
-    })
-    fireEvent.change(screen.getByLabelText(/azure subscription id/i), {
-      target: { value: '11111111-1111-1111-1111-111111111111' },
-    })
-    fireEvent.change(screen.getByLabelText(/azure application \(client\) id/i), {
-      target: { value: '22222222-2222-2222-2222-222222222222' },
-    })
-
-    fireEvent.click(screen.getByRole('button', { name: /save & connect/i }))
-
-    await waitFor(() => {
-      expect(complianceApi.createCloudAccount).toHaveBeenCalledWith({
-        provider: 'azure',
-        name: 'Core Azure Subscription',
-        azure_tenant_id: '00000000-0000-0000-0000-000000000000',
-        azure_subscription_id: '11111111-1111-1111-1111-111111111111',
-        azure_client_id: '22222222-2222-2222-2222-222222222222',
-        default_frameworks: ['soc2', 'cis_azure'],
-        scan_schedule: 'weekly',
-      })
-    })
+    expect(mockNavigate).toHaveBeenCalledWith('/compliance/connect/step-1')
   })
 
   it('triggers on-demand audit and calls onStartAudit callback', async () => {

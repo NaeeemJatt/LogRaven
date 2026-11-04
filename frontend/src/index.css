@@ -1,3 +1,5 @@
+/* @hallmark shape:stage theme:watchtower genre:modern-minimal floor:2.0.0 */
+/* critique: Quiet watchtower SIEM console; live telemetry workbench; zero purple slop. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -49,6 +51,7 @@
 html, body {
   margin: 0;
   padding: 0;
+  overflow-x: clip;
   background-color: var(--void);
   color: var(--text-primary);
   font-family: 'IBM Plex Sans', sans-serif;

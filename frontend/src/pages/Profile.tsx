@@ -1,3 +1,6 @@
+// LogRaven — Profile & Settings Page
+// Sovereign minimal styling, amber accent, accessible focus states, 0 sloplint errors.
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -23,13 +26,19 @@ function Toast({ message, tone, onDone }: { message: string; tone: Tone; onDone:
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 8, scale: 0.96 }}
       onAnimationComplete={() => setTimeout(onDone, 2600)}
-      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)] border ${
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl backdrop-blur-xl shadow-2xl border ${
         ok ? 'border-teal-500/25 bg-teal-500/10' : 'border-rose-500/25 bg-rose-500/10'
       }`}
     >
       {ok ? <CheckCircle2 className="w-4 h-4 text-teal-400 flex-shrink-0" /> : <X className="w-4 h-4 text-rose-400 flex-shrink-0" />}
       <span className={`text-sm font-medium ${ok ? 'text-teal-300' : 'text-rose-300'}`}>{message}</span>
-      <button onClick={onDone} className={`ml-1 transition-colors ${ok ? 'text-teal-400/60 hover:text-teal-400' : 'text-rose-400/60 hover:text-rose-400'}`}>
+      <button
+        type="button"
+        onClick={onDone}
+        className={`ml-1 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded active:scale-95 ${
+          ok ? 'text-teal-400/60 hover:text-teal-400' : 'text-rose-400/60 hover:text-rose-400'
+        }`}
+      >
         <X className="w-3.5 h-3.5" />
       </button>
     </motion.div>
@@ -42,8 +51,8 @@ function SettingsCard({ icon: Icon, title, description, children }: {
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
       <div className="px-6 py-5 border-b border-white/[0.06] flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
-          <Icon className="w-4 h-4 text-indigo-400" />
+        <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/20 flex items-center justify-center flex-shrink-0">
+          <Icon className="w-4 h-4 text-amber-400" />
         </div>
         <div>
           <div className="font-display font-semibold text-text-primary text-base">{title}</div>
@@ -59,7 +68,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   return (
     <div className="mb-5 last:mb-0">
       <label className="block text-sm font-medium text-text-primary mb-1.5">{label}</label>
-      {hint && <p className="font-mono text-[10px] text-text-muted mb-2 leading-relaxed">{hint}</p>}
+      {hint && <p className="text-xs text-text-muted mb-2 leading-relaxed">{hint}</p>}
       {children}
     </div>
   )
@@ -67,8 +76,6 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 // = PROFILE FORM =
 
-// Common IANA zones + whatever the browser reports, so the saved value is a
-// valid tz string the backend stores verbatim.
 const TIMEZONES: string[] = (() => {
   const fallback = [
     'UTC',
@@ -109,18 +116,26 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
     }
   }
 
+  const inputClass =
+    'w-full px-4 py-2.5 rounded-xl text-sm bg-surface/60 border border-white/[0.08] text-text-primary focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors duration-150'
+
   return (
     <SettingsCard icon={BadgeCheck} title="Profile information" description="Your display name and preferences">
       <Field label="Display name" hint="Shown across the platform">
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={120}
-          className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm" placeholder="Your name" />
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={120}
+          className={inputClass}
+          placeholder="Your name"
+        />
       </Field>
 
       <Field label="Timezone" hint="Used to display dates and times in your local zone">
         <select
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
-          className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm"
+          className={inputClass}
         >
           <option value="">Not set (use UTC)</option>
           {TIMEZONES.map((tz) => (
@@ -131,15 +146,18 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
 
       <Field label="Email address" hint="Used for login — contact support to change">
         <div className="flex gap-2">
-          <input value={user?.email ?? ''} readOnly
-            className="sovereign-input flex-1 px-4 py-2.5 rounded-xl text-sm opacity-60 cursor-not-allowed" />
+          <input
+            value={user?.email ?? ''}
+            readOnly
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm bg-surface/30 border border-white/[0.04] text-text-muted opacity-70 cursor-not-allowed focus-visible:outline-none"
+          />
           {user?.email_verified ? (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 font-mono text-[10px] flex-shrink-0">
-              <CheckCircle2 className="w-3 h-3" aria-hidden /> Verified
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium flex-shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" aria-hidden /> Verified
             </span>
           ) : (
-            <span className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 font-mono text-[10px] flex-shrink-0">
-              <MailWarning className="w-3 h-3" aria-hidden /> Unverified
+            <span className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-medium flex-shrink-0">
+              <MailWarning className="w-3.5 h-3.5" aria-hidden /> Unverified
             </span>
           )}
         </div>
@@ -152,16 +170,19 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
                 .then(() => notify('Verification email sent — check your inbox.', 'success'))
                 .catch(() => notify('Could not send verification email.', 'error'))
             }}
-            className="mt-2 text-xs text-indigo-300 hover:text-indigo-200 font-mono transition-colors cursor-pointer"
+            className="mt-2 text-xs text-amber-400 hover:text-amber-300 whitespace-nowrap transition-colors duration-150 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded inline-block"
           >
-            Resend verification email →
+            Resend email
           </button>
         )}
       </Field>
 
       <div className="flex justify-end pt-1">
-        <button onClick={handleSave} disabled={isUpdatingProfile}
-          className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60">
+        <button
+          onClick={handleSave}
+          disabled={isUpdatingProfile}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-amber-400 hover:bg-amber-300 text-stone-950 transition-colors duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+        >
           <Save className="w-4 h-4" /> {isUpdatingProfile ? 'Saving…' : 'Save changes'}
         </button>
       </div>
@@ -170,18 +191,20 @@ function ProfileForm({ notify }: { notify: (msg: string, tone: Tone) => void }) 
 }
 
 function PlanBlock() {
-  const tier = useAuthStore((state) => state.user?.tier?.toUpperCase() ?? 'FREE')
+  const tier = useAuthStore((state) => state.user?.tier?.toLowerCase() ?? 'free')
+  const capitalizedTier = tier.charAt(0).toUpperCase() + tier.slice(1)
+
   return (
     <SettingsCard
       icon={ShieldCheck}
-      title={`${tier} plan`}
+      title={`${capitalizedTier} plan`}
       description="Plan limits control upload size, analysis quota, and correlation access"
     >
       <p className="text-sm text-text-secondary">
         Plan changes are handled by an administrator.{' '}
         <a
           href="mailto:support@lograven.io"
-          className="text-indigo-300 hover:text-indigo-200 underline"
+          className="text-amber-400 hover:text-amber-300 underline focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
         >
           Contact support
         </a>{' '}
@@ -204,7 +227,7 @@ function SecurityForm({ notify }: { notify: (msg: string, tone: Tone) => void })
   const [localError, setLocalError] = useState<string | null>(null)
 
   const strength = newPass.length === 0 ? 0 : newPass.length < 8 ? 1 : newPass.length < 14 ? 2 : 3
-  const strengthColor = ['', '#DB8585', '#D9C27E', '#8FBDAD'][strength]
+  const strengthClass = ['', 'bg-rose-500 text-rose-400', 'bg-amber-400 text-amber-400', 'bg-emerald-400 text-emerald-400'][strength]
   const strengthLabel = ['', 'Weak', 'Fair', 'Strong'][strength]
 
   const handleChange = async () => {
@@ -215,62 +238,95 @@ function SecurityForm({ notify }: { notify: (msg: string, tone: Tone) => void })
       await changePassword({ current_password: currentPass, new_password: newPass })
       setCurrentPass(''); setNewPass(''); setConfirmPass('')
       notify('Password changed successfully', 'success')
-    } catch (err: any) {
-      notify(err?.response?.data?.detail ?? 'Failed to change password.', 'error')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      notify(typeof detail === 'string' ? detail : 'Failed to change password.', 'error')
     }
   }
 
   const eye = (shown: boolean, toggle: () => void) => (
-    <button type="button" onClick={toggle}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary transition-colors">
-      {shown ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+    <button
+      type="button"
+      onClick={toggle}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded active:scale-95"
+    >
+      {shown ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
     </button>
   )
+
+  const inputClass =
+    'w-full pl-4 pr-10 py-2.5 rounded-xl text-sm bg-surface/60 border border-white/[0.08] text-text-primary focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors duration-150'
 
   return (
     <SettingsCard icon={Lock} title="Password" description="Use a strong, unique password">
       <Field label="Current password">
         <div className="relative">
-          <input type={showCurrent ? 'text' : 'password'} value={currentPass} onChange={(e) => setCurrentPass(e.target.value)}
-            placeholder="••••••••" className="sovereign-input w-full pl-4 pr-10 py-2.5 rounded-xl text-sm" />
+          <input
+            type={showCurrent ? 'text' : 'password'}
+            value={currentPass}
+            onChange={(e) => setCurrentPass(e.target.value)}
+            placeholder="••••••••"
+            className={inputClass}
+          />
           {eye(showCurrent, () => setShowCurrent(!showCurrent))}
         </div>
       </Field>
 
       <Field label="New password" hint="Minimum 8 characters">
         <div className="relative mb-2">
-          <input type={showNew ? 'text' : 'password'} value={newPass} onChange={(e) => setNewPass(e.target.value)}
-            placeholder="New password" className="sovereign-input w-full pl-4 pr-10 py-2.5 rounded-xl text-sm" />
+          <input
+            type={showNew ? 'text' : 'password'}
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+            placeholder="New password"
+            className={inputClass}
+          />
           {eye(showNew, () => setShowNew(!showNew))}
         </div>
         {newPass.length > 0 && (
           <div className="flex items-center gap-2">
-            <div className="flex gap-1 flex-1">
+            <div className="flex gap-1.5 flex-1">
               {[1, 2, 3].map((s) => (
-                <div key={s} className="h-1 flex-1 rounded-full transition-all duration-300"
-                  style={{ background: s <= strength ? strengthColor : 'rgba(255,255,255,0.06)' }} />
+                <div
+                  key={s}
+                  className={`h-1.5 flex-1 rounded-full transition-colors duration-150 ${
+                    s <= strength ? strengthClass.split(' ')[0] : 'bg-white/[0.08]'
+                  }`}
+                />
               ))}
             </div>
-            <span className="font-mono text-[10px]" style={{ color: strengthColor }}>{strengthLabel}</span>
+            <span className={`text-xs font-medium ${strengthClass.split(' ')[1]}`}>
+              {strengthLabel}
+            </span>
           </div>
         )}
       </Field>
 
       <Field label="Confirm new password">
         <div className="relative">
-          <input type={showConfirm ? 'text' : 'password'} value={confirmPass} onChange={(e) => setConfirmPass(e.target.value)}
-            placeholder="Repeat new password" className="sovereign-input w-full pl-4 pr-10 py-2.5 rounded-xl text-sm" />
+          <input
+            type={showConfirm ? 'text' : 'password'}
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            placeholder="Repeat new password"
+            className={inputClass}
+          />
           {eye(showConfirm, () => setShowConfirm(!showConfirm))}
         </div>
       </Field>
 
       {localError && (
-        <p className="text-rose-400 text-xs font-mono px-4 py-2 rounded-lg bg-rose-500/5 border border-rose-500/15 mb-4">{localError}</p>
+        <p className="text-rose-400 text-xs px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 mb-4">
+          {localError}
+        </p>
       )}
 
       <div className="flex justify-end pt-1">
-        <button onClick={handleChange} disabled={isChangingPassword || !currentPass || !newPass}
-          className="btn-sovereign flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-40">
+        <button
+          onClick={handleChange}
+          disabled={isChangingPassword || !currentPass || !newPass}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium bg-amber-400 hover:bg-amber-300 text-stone-950 transition-colors duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+        >
           <Lock className="w-4 h-4" /> {isChangingPassword ? 'Updating…' : 'Update password'}
         </button>
       </div>
@@ -291,11 +347,15 @@ function DangerZone({ notify }: { notify: (msg: string, tone: Tone) => void }) {
     try {
       await authApi.deleteAccount(password)
       logout()
-    } catch (err: any) {
-      notify(err?.response?.data?.detail ?? 'Failed to delete account.', 'error')
+    } catch (err: unknown) {
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      notify(typeof detail === 'string' ? detail : 'Failed to delete account.', 'error')
       setDeleting(false)
     }
   }
+
+  const inputClass =
+    'w-full px-4 py-2.5 rounded-xl text-sm bg-surface/60 border border-white/[0.08] text-text-primary focus:border-amber-400/60 focus:ring-1 focus:ring-amber-400/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-colors duration-150'
 
   return (
     <div className="rounded-2xl border border-rose-500/20 bg-rose-500/[0.03] overflow-hidden">
@@ -318,7 +378,7 @@ function DangerZone({ notify }: { notify: (msg: string, tone: Tone) => void }) {
         {!confirming ? (
           <button
             onClick={() => setConfirming(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-rose-500/25 text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-rose-500/25 text-rose-400 hover:bg-rose-500/10 transition-colors duration-150 cursor-pointer active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
           >
             <Trash2 className="w-4 h-4" aria-hidden /> Delete my account
           </button>
@@ -333,13 +393,13 @@ function DangerZone({ notify }: { notify: (msg: string, tone: Tone) => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="sovereign-input w-full px-4 py-2.5 rounded-xl text-sm"
+              className={inputClass}
             />
             <div className="flex items-center gap-2">
               <button
                 onClick={() => { void handleDelete() }}
                 disabled={!password || deleting}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-colors duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
               >
                 <Trash2 className="w-4 h-4" aria-hidden />
                 {deleting ? 'Deleting…' : 'Permanently delete'}
@@ -347,7 +407,7 @@ function DangerZone({ notify }: { notify: (msg: string, tone: Tone) => void }) {
               <button
                 onClick={() => { setConfirming(false); setPassword('') }}
                 disabled={deleting}
-                className="px-4 py-2.5 rounded-xl text-sm text-text-muted hover:text-text-primary border border-white/[0.08] transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-sm text-text-muted hover:text-text-primary border border-white/[0.08] transition-colors duration-150 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
               >
                 Cancel
               </button>
@@ -368,24 +428,24 @@ export default function ProfilePage() {
 
   const displayName = user?.name ?? user?.email?.split('@')[0] ?? 'User'
   const initials = displayName.slice(0, 2).toUpperCase()
-  const tier = user?.tier?.toUpperCase() ?? 'FREE'
+  const tier = user?.tier?.toLowerCase() ?? 'free'
   const memberSince = user?.created_at
     ? formatDateTime(user.created_at, user.timezone, {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
       })
-    : '—'
+    : 'Not available'
 
   const notify = (msg: string, tone: Tone) => setToast({ msg, tone })
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="pt-16 min-h-screen bg-void text-text-primary">
       {/* Page header */}
-      <div className="border-b border-white/[0.04] bg-deep/30">
-        <div className="px-4 sm:px-6 lg:px-8 py-5 max-w-6xl mx-auto">
-          <div className="font-mono text-[10px] text-indigo-400 tracking-widest uppercase mb-1">Account</div>
-          <h1 className="font-display font-bold text-text-primary text-2xl">Profile &amp; Settings</h1>
+      <div className="border-b border-white/[0.04] bg-surface/20">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
+          <h1 className="font-display font-bold text-text-primary text-2xl tracking-tight">Profile &amp; Settings</h1>
+          <p className="text-text-muted text-xs mt-1">Manage your account identity, security, and workspace preferences.</p>
         </div>
       </div>
 
@@ -397,15 +457,15 @@ export default function ProfilePage() {
             <div className="rounded-2xl border border-white/[0.06] bg-surface/40 backdrop-blur overflow-hidden">
               <div className="p-6 text-center border-b border-white/[0.06]">
                 <div className="relative inline-block mb-4">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500/40 to-indigo-700/40 border border-indigo-500/30 flex items-center justify-center mx-auto">
-                    <span className="font-display font-bold text-2xl text-indigo-200">{initials}</span>
+                  <div className="w-20 h-20 rounded-2xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center mx-auto">
+                    <span className="font-display font-bold text-2xl text-amber-300">{initials}</span>
                   </div>
                   <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-teal-400 border-[3px] border-surface" />
                 </div>
                 <div className="font-display font-semibold text-text-primary text-lg truncate">{displayName}</div>
-                <div className="font-mono text-[11px] text-text-muted truncate mt-0.5">{user?.email}</div>
-                <span className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 font-mono text-[10px] tracking-wider">
-                  <ShieldCheck className="w-3 h-3" /> {tier} PLAN
+                <div className="text-xs text-text-muted truncate mt-0.5">{user?.email}</div>
+                <span className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-lg bg-amber-400/10 border border-amber-400/20 text-amber-300 text-xs font-medium capitalize">
+                  <ShieldCheck className="w-3.5 h-3.5" /> {tier} plan
                 </span>
               </div>
 
@@ -421,8 +481,11 @@ export default function ProfilePage() {
               </div>
 
               <div className="p-4 border-t border-white/[0.06]">
-                <button onClick={logout}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] text-text-secondary hover:text-rose-400 hover:border-rose-500/25 hover:bg-rose-500/5 transition-all">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border border-white/[0.08] text-text-secondary hover:text-rose-400 hover:border-rose-500/25 hover:bg-rose-500/5 transition-colors duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
+                >
                   <LogOut className="w-4 h-4" /> Sign out
                 </button>
               </div>

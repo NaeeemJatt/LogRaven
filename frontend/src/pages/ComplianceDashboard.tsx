@@ -1,3 +1,6 @@
+// LogRaven — Compliance & Posture Management Dashboard
+// Hallmark · v2.0.0 | shape: stage | theme: watchtower | genre: modern-minimal
+
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
@@ -26,7 +29,6 @@ import {
   downloadAuditReport,
 } from '../api/compliance'
 import type { CloudAccount } from '../types/audit'
-import ConnectAccountModal from '../components/compliance/ConnectAccountModal'
 import AuditorShareModal from '../components/audit/AuditorShareModal'
 import { formatDateTime } from '../utils/dateTime'
 
@@ -40,7 +42,6 @@ export default function ComplianceDashboard() {
   const [loading, setLoading] = useState(true)
 
   // Modals
-  const [connectModalOpen, setConnectModalOpen] = useState(false)
   const [auditorModalOpen, setAuditorModalOpen] = useState(false)
 
   const loadData = async () => {
@@ -118,101 +119,94 @@ export default function ComplianceDashboard() {
   const totalControls = totalPass + totalFail
 
   return (
-    <div className="min-h-screen bg-void text-text-primary p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 select-none">
+    <div className="min-h-dvh bg-void text-text-primary p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 select-none overflow-x-clip">
       {/* ── CASE 1: NO CLOUD ACCOUNT CONNECTED (High-Impact Onboarding) ── */}
       {!hasAccounts && !loading && (
         <div className="space-y-6">
           {/* Top Warning Banner */}
-          <div className="p-4 rounded-2xl border border-amber-500/35 bg-amber-500/10 text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="p-4 rounded-xl border border-amber-400/25 bg-amber-400/5 text-text-primary flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center shrink-0">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
               </div>
               <div>
                 <div className="text-xs font-semibold text-text-primary">
-                  No Cloud Accounts Connected
+                  No cloud accounts connected
                 </div>
-                <div className="font-mono text-[11px] text-amber-200/80 mt-0.5">
-                  Connect your AWS, Azure, or GCP environment to activate automated continuous compliance scans.
+                <div className="text-xs text-text-muted mt-0.5">
+                  Connect your AWS, Azure, or GCP environment to activate continuous compliance audits.
                 </div>
               </div>
             </div>
             <button
-              onClick={() => setConnectModalOpen(true)}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-semibold text-xs transition-colors flex-shrink-0 shadow-lg"
+              type="button"
+              onClick={() => navigate('/compliance/connect/step-1')}
+              className="btn-sovereign inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold shrink-0 motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Cloud className="w-3.5 h-3.5" />
-              <span>Connect Account Now</span>
+              <span>Connect account now</span>
             </button>
           </div>
 
           {/* Hero Command Banner */}
-          <div className="relative rounded-3xl border border-white/[0.08] bg-surface/60 overflow-hidden p-6 sm:p-10 shadow-2xl">
-            <div
-              className="absolute inset-0 pointer-events-none opacity-30"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.25) 0%, transparent 60%)',
-              }}
-            />
-
-            <div className="relative z-10 max-w-2xl space-y-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                <span className="font-mono text-[10px] text-indigo-300 uppercase tracking-widest font-semibold">
-                  Zero-Agent Cloud Security &amp; Compliance
+          <div className="rounded-xl border border-white/[0.08] bg-surface p-6 sm:p-10">
+            <div className="max-w-2xl space-y-4">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-md bg-elevated border border-white/[0.08]">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs text-text-secondary font-medium">
+                  Zero-agent cloud security and compliance
                 </span>
               </div>
 
-              <h1 className="font-display font-bold text-3xl sm:text-4xl text-text-primary tracking-tight leading-tight">
-                Automated Cloud Compliance <br />
-                <span className="gradient-text">Across 14 Standards in 60s</span>
+              <h1 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-text-primary tracking-tight leading-tight">
+                Automated cloud compliance across 14 standards
               </h1>
 
               <p className="text-text-secondary text-sm sm:text-base leading-relaxed">
-                Connect your AWS, Azure, or GCP fleet using a read-only IAM role. LogRaven continuously collects configuration evidence, detects toxic attack paths, maps compliance against SOC 2, ISO 27001, HIPAA &amp; CIS, and generates auditor-approved PDF packages.
+                Connect your AWS, Azure, or GCP fleet using a read-only IAM role. LogRaven continuously collects configuration evidence, detects toxic attack paths, maps compliance against SOC 2, ISO 27001, HIPAA and CIS, and generates auditor-approved PDF packages.
               </p>
 
               <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <button
-                  onClick={() => setConnectModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-semibold text-sm shadow-[0_0_30px_rgba(99,102,241,0.35)] transition-all"
+                  type="button"
+                  onClick={() => navigate('/compliance/connect/step-1')}
+                  className="btn-sovereign flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-xs font-semibold motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Connect Cloud Provider</span>
+                  <span>Connect cloud provider</span>
                 </button>
 
                 <Link
                   to="/compliance/frameworks"
-                  className="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl border border-white/[0.08] hover:border-white/[0.15] bg-white/[0.03] hover:bg-white/[0.06] text-text-secondary hover:text-text-primary text-xs font-medium transition-all"
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-elevated/40 hover:bg-elevated text-text-secondary hover:text-text-primary text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
                 >
                   <Library className="w-4 h-4 text-text-muted" />
-                  <span>Explore Frameworks Directory</span>
+                  <span>Explore frameworks directory</span>
                 </Link>
               </div>
             </div>
 
             {/* Quick 3-Step Preview */}
-            <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-white/[0.06]">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-white/[0.06]">
               {[
                 {
                   step: '01',
-                  title: 'Attach Read-Only IAM Role',
+                  title: 'Attach read-only IAM role',
                   desc: 'Uses standard AWS SecurityAudit policy. Zero write permissions, zero secret keys.',
                 },
                 {
                   step: '02',
-                  title: 'Collect Cloud Telemetry',
+                  title: 'Collect cloud telemetry',
                   desc: 'Collects S3, IAM, CloudTrail, KMS, GuardDuty, and VPC signals once.',
                 },
                 {
                   step: '03',
-                  title: 'Instant Auditor Package',
-                  desc: 'AI correlates evidence across 14 frameworks and generates PDF reports with 1-click fixes.',
+                  title: 'Instant auditor package',
+                  desc: 'Correlates evidence across 14 frameworks and generates PDF reports with verified fixes.',
                 },
               ].map((s) => (
-                <div key={s.step} className="p-4 rounded-2xl bg-black/20 border border-white/[0.04]">
-                  <div className="font-mono text-xs text-indigo-400 font-bold mb-1">{s.step}</div>
+                <div key={s.step} className="p-4 rounded-lg bg-deep border border-white/[0.04]">
+                  <div className="font-mono text-xs text-amber-400 font-bold mb-1">{s.step}</div>
                   <h3 className="text-xs font-semibold text-text-primary mb-1">{s.title}</h3>
                   <p className="text-[11px] text-text-muted leading-relaxed">{s.desc}</p>
                 </div>
@@ -228,33 +222,35 @@ export default function ComplianceDashboard() {
           {/* Executive Header */}
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/[0.08] pb-6">
             <div>
-              <div className="flex items-center gap-2 mb-2 font-mono text-[10px] text-indigo-400 tracking-widest uppercase">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Continuous Compliance Posture · Active</span>
+              <div className="flex items-center gap-2 mb-2 text-xs text-text-muted">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
+                <span>Continuous compliance posture: active</span>
               </div>
-              <h1 className="font-display font-extrabold text-2xl sm:text-3xl text-text-primary tracking-tight">
-                Executive <span className="gradient-text">Compliance Command</span>
+              <h1 className="font-display font-bold text-2xl sm:text-3xl text-text-primary tracking-tight">
+                Executive compliance command
               </h1>
-              <p className="font-mono text-xs text-text-muted mt-1">
-                Monitored Fleet: <span className="text-text-primary font-semibold">{activeAccount?.name || 'All Accounts'}</span> ({activeAccount?.provider?.toUpperCase()})
+              <p className="text-xs text-text-muted mt-1">
+                Monitored fleet: <span className="text-text-primary font-semibold">{activeAccount?.name || 'All accounts'}</span> ({activeAccount?.provider?.toUpperCase()})
               </p>
             </div>
 
             <div className="flex items-center gap-2.5">
               <button
+                type="button"
                 onClick={() => navigate('/compliance?tab=audit')}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-500 text-white font-semibold text-xs shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all"
+                className="btn-sovereign flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Play className="w-3.5 h-3.5 fill-white" />
-                <span>Run Compliance Scan</span>
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Run compliance scan</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setAuditorModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-text-secondary hover:text-text-primary text-xs font-medium transition-all"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-surface text-text-secondary hover:text-text-primary text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Share2 className="w-3.5 h-3.5 text-teal-400" />
-                <span>Share with Auditor</span>
+                <Share2 className="w-3.5 h-3.5 text-amber-400" />
+                <span>Share with auditor</span>
               </button>
             </div>
           </div>
@@ -262,65 +258,66 @@ export default function ComplianceDashboard() {
           {/* Metric Bento Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {/* Overall Posture Score Card */}
-            <div className="sm:col-span-2 rounded-2xl border border-indigo-500/30 bg-gradient-to-br from-indigo-500/15 to-surface/80 p-6 flex items-center justify-between shadow-xl">
+            <div className="sm:col-span-2 rounded-xl border border-white/[0.08] bg-surface p-6 flex items-center justify-between">
               <div className="space-y-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-indigo-300 font-semibold">
-                  Overall Compliance Score
-                </span>
+                <div className="text-xs text-text-muted font-medium">
+                  Overall compliance score
+                </div>
                 <div className="flex items-baseline gap-2">
-                  <span className="font-display font-extrabold text-4xl sm:text-5xl text-text-primary">
+                  <span className="font-display font-bold text-4xl sm:text-5xl text-text-primary tabular-nums">
                     {score}%
                   </span>
                   <span className="flex items-center text-xs font-mono text-emerald-400 font-semibold">
                     <TrendingUp className="w-3.5 h-3.5 mr-0.5" /> +3.2%
                   </span>
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono text-[10px] font-semibold">
-                  <CheckCircle2 className="w-3 h-3" /> Audit Ready
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Audit ready</span>
                 </div>
               </div>
 
-              {/* Circular Gauge Graphic */}
-              <div className="w-20 h-20 rounded-full border-4 border-indigo-500/20 border-t-indigo-400 border-r-teal-400 flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(99,102,241,0.25)]">
-                <ShieldCheck className="w-8 h-8 text-indigo-300" />
+              {/* Clean Gauge Graphic */}
+              <div className="w-20 h-20 rounded-full border-4 border-white/[0.08] border-t-amber-400 border-r-amber-400 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-8 h-8 text-amber-400" />
               </div>
             </div>
 
             {/* Passing Controls */}
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/60 p-5 space-y-1">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Passing Controls
+            <div className="rounded-xl border border-white/[0.08] bg-surface p-5 space-y-1">
+              <div className="text-xs text-text-muted">
+                Passing controls
               </div>
-              <div className="font-display font-bold text-2xl text-emerald-400">
+              <div className="font-display font-bold text-2xl text-emerald-400 tabular-nums">
                 {totalPass}
               </div>
-              <div className="font-mono text-[11px] text-text-muted">
-                out of {totalControls} evaluated
+              <div className="text-[11px] text-text-muted">
+                out of <span className="tabular-nums">{totalControls}</span> evaluated
               </div>
             </div>
 
-            {/* Critical Gaps */}
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/60 p-5 space-y-1">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Critical Exposures
+            {/* Critical Exposures */}
+            <div className="rounded-xl border border-white/[0.08] bg-surface p-5 space-y-1">
+              <div className="text-xs text-text-muted">
+                Critical exposures
               </div>
-              <div className="font-display font-bold text-2xl text-rose-400">
+              <div className="font-display font-bold text-2xl text-threat-critical tabular-nums">
                 {totalFail}
               </div>
-              <div className="font-mono text-[11px] text-text-muted">
+              <div className="text-[11px] text-text-muted">
                 1-click remediation ready
               </div>
             </div>
 
-            {/* Evidence Reuse Multiplier */}
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/60 p-5 space-y-1">
-              <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted">
-                Evidence Crosswalk
+            {/* Evidence Crosswalk */}
+            <div className="rounded-xl border border-white/[0.08] bg-surface p-5 space-y-1">
+              <div className="text-xs text-text-muted">
+                Evidence crosswalk
               </div>
-              <div className="font-display font-bold text-2xl text-indigo-300">
+              <div className="font-display font-bold text-2xl text-amber-400 tabular-nums">
                 {posture?.reuse_factor ? `${posture.reuse_factor}x` : '3.8x'}
               </div>
-              <div className="font-mono text-[11px] text-text-muted">
+              <div className="text-[11px] text-text-muted">
                 collect once, satisfy 14 specs
               </div>
             </div>
@@ -331,18 +328,18 @@ export default function ComplianceDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-display font-bold text-lg text-text-primary">
-                  Framework Readiness Status
+                  Framework readiness status
                 </h2>
-                <p className="font-mono text-xs text-text-muted">
+                <p className="text-xs text-text-muted">
                   Continuous assessment mapped to regulatory baselines
                 </p>
               </div>
 
               <Link
                 to="/compliance/frameworks"
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
               >
-                <span>View All 14 Frameworks</span>
+                <span>View all 14 frameworks</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </Link>
             </div>
@@ -351,14 +348,14 @@ export default function ComplianceDashboard() {
               {frameworks.map((fw) => (
                 <div
                   key={fw.framework_id}
-                  className="rounded-2xl border border-white/[0.08] bg-surface/50 hover:border-indigo-500/30 hover:bg-surface/80 transition-all p-5 flex flex-col justify-between group shadow-sm"
+                  className="rounded-xl border border-white/[0.08] bg-surface p-5 flex flex-col justify-between group"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="font-mono text-xs uppercase tracking-wider text-indigo-300 font-bold">
+                      <span className="text-xs text-text-primary font-semibold">
                         {fw.framework_name}
                       </span>
-                      <span className="font-display font-bold text-sm text-text-primary">
+                      <span className="font-display font-bold text-sm text-text-primary tabular-nums">
                         {fw.score_percent}%
                       </span>
                     </div>
@@ -366,23 +363,24 @@ export default function ComplianceDashboard() {
                     {/* Progress Bar */}
                     <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden mb-4">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-teal-400"
+                        className="h-full rounded-full bg-amber-400"
                         style={{ width: `${fw.score_percent}%` }}
                       />
                     </div>
 
-                    <div className="flex items-center justify-between font-mono text-[11px] text-text-muted mb-4">
-                      <span className="text-emerald-400">{fw.pass_count} Passing</span>
-                      <span className="text-rose-400">{fw.fail_count} Failing</span>
+                    <div className="flex items-center justify-between text-[11px] text-text-muted mb-4 tabular-nums">
+                      <span className="text-emerald-400">{fw.pass_count} passing</span>
+                      <span className="text-threat-critical">{fw.fail_count} failing</span>
                     </div>
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => navigate(`/compliance?tab=audit&fw=${fw.framework_id}`)}
-                    className="w-full py-2 rounded-xl border border-white/[0.08] hover:border-indigo-500/30 bg-white/[0.02] hover:bg-indigo-500/10 text-text-secondary hover:text-indigo-200 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                    className="w-full py-2 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-elevated/40 hover:bg-elevated text-text-secondary hover:text-text-primary text-xs font-medium transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <span>Inspect Controls</span>
-                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                    <span>Inspect controls</span>
+                    <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 motion-safe:transition-transform motion-reduce:transition-none" />
                   </button>
                 </div>
               ))}
@@ -392,58 +390,59 @@ export default function ComplianceDashboard() {
           {/* Quick Attack Path & Remediation Highlight */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Attack Path Canvas Widget */}
-            <div className="lg:col-span-2 rounded-2xl border border-white/[0.08] bg-surface/50 p-6 flex flex-col justify-between">
+            <div className="lg:col-span-2 rounded-xl border border-white/[0.08] bg-surface p-6 flex flex-col justify-between">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <GitMerge className="w-4 h-4 text-rose-400" />
+                    <GitMerge className="w-4 h-4 text-threat-critical" />
                     <h3 className="font-display font-bold text-base text-text-primary">
-                      Toxic Attack Path Discovery
+                      Toxic attack path discovery
                     </h3>
                   </div>
                   <p className="text-xs text-text-secondary leading-relaxed max-w-lg">
-                    LogRaven correlates cloud exposures into multi-hop exploit paths (e.g. Internet-exposed EC2 with admin role accessing sensitive S3 bucket).
+                    LogRaven correlates cloud exposures into multi-hop exploit paths (such as internet-exposed EC2 with admin role accessing sensitive S3 bucket).
                   </p>
                 </div>
 
-                <span className="px-2.5 py-1 rounded-md font-mono text-[10px] font-semibold bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                  Critical Path Detected
+                <span className="px-2.5 py-1 rounded-md text-[10px] font-medium bg-threat-critical/15 text-threat-critical border border-threat-critical/30">
+                  Critical path detected
                 </span>
               </div>
 
               {/* Path preview steps */}
-              <div className="p-4 rounded-xl border border-white/[0.06] bg-black/30 font-mono text-xs flex flex-wrap items-center gap-2 text-text-secondary mb-4">
-                <span className="px-2 py-1 rounded bg-rose-500/20 text-rose-300">0.0.0.0/0 (Internet)</span>
+              <div className="p-4 rounded-lg border border-white/[0.06] bg-deep font-mono text-xs flex flex-wrap items-center gap-2 text-text-secondary mb-4">
+                <span className="px-2 py-1 rounded bg-threat-critical/20 text-threat-critical">0.0.0.0/0 (Internet)</span>
                 <span className="text-text-muted">➔</span>
-                <span className="px-2 py-1 rounded bg-amber-500/20 text-amber-300">Port 22 Open (EC2)</span>
+                <span className="px-2 py-1 rounded bg-threat-high/20 text-threat-high">Port 22 Open (EC2)</span>
                 <span className="text-text-muted">➔</span>
-                <span className="px-2 py-1 rounded bg-indigo-500/20 text-indigo-300">FullAdminRole (IAM)</span>
+                <span className="px-2 py-1 rounded bg-amber-400/20 text-amber-300">FullAdminRole (IAM)</span>
                 <span className="text-text-muted">➔</span>
-                <span className="px-2 py-1 rounded bg-rose-500/20 text-rose-300">CustomerDataBucket (S3)</span>
+                <span className="px-2 py-1 rounded bg-threat-critical/20 text-threat-critical">CustomerDataBucket (S3)</span>
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <span className="font-mono text-xs text-text-muted">
-                  Blast Radius: <strong className="text-rose-400">High Impact</strong>
+                <span className="text-xs text-text-muted">
+                  Blast radius: <strong className="text-threat-critical">High impact</strong>
                 </span>
 
                 <button
+                  type="button"
                   onClick={() => navigate('/compliance?tab=attack-path')}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-400 hover:text-indigo-300"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-400 hover:text-amber-300 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
                 >
-                  <span>Open Interactive DAG Canvas</span>
+                  <span>Open DAG canvas</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
             {/* Fast Track: Remediation Studio */}
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/50 p-6 flex flex-col justify-between">
+            <div className="rounded-xl border border-white/[0.08] bg-surface p-6 flex flex-col justify-between">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <SlidersHorizontal className="w-4 h-4 text-teal-400" />
+                  <SlidersHorizontal className="w-4 h-4 text-emerald-400" />
                   <h3 className="font-display font-bold text-base text-text-primary">
-                    1-Click Remediation
+                    1-click remediation
                   </h3>
                 </div>
                 <p className="text-xs text-text-secondary leading-relaxed mb-4">
@@ -458,10 +457,10 @@ export default function ComplianceDashboard() {
                   ].map((fix) => (
                     <div
                       key={fix.label}
-                      className="p-2.5 rounded-xl border border-white/[0.04] bg-black/20 flex items-center justify-between text-[11px]"
+                      className="p-2.5 rounded-lg border border-white/[0.04] bg-deep flex items-center justify-between text-[11px]"
                     >
                       <span className="text-text-secondary truncate">{fix.label}</span>
-                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-indigo-300">
+                      <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/[0.05] text-amber-300">
                         {fix.tool}
                       </span>
                     </div>
@@ -470,67 +469,69 @@ export default function ComplianceDashboard() {
               </div>
 
               <button
+                type="button"
                 onClick={() => navigate('/compliance?tab=attack-path')}
-                className="w-full mt-4 py-2.5 rounded-xl bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/40 text-teal-200 text-xs font-semibold transition-all"
+                className="w-full mt-4 py-2.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 text-xs font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Launch Remediation Studio
+                Remediation studio
               </button>
             </div>
           </div>
 
           {/* Recent Audits Table */}
           {recentAudits.length > 0 && (
-            <div className="rounded-2xl border border-white/[0.08] bg-surface/50 p-6 space-y-4">
+            <div className="rounded-xl border border-white/[0.08] bg-surface p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-display font-bold text-base text-text-primary">
-                    Recent Compliance Reports
+                    Recent compliance reports
                   </h3>
-                  <p className="font-mono text-xs text-text-muted">
+                  <p className="text-xs text-text-muted">
                     Evidence runs and downloadable audit artifacts
                   </p>
                 </div>
 
                 <Link
                   to="/compliance?tab=history"
-                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                  className="text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
                 >
-                  <span>View All Audits</span>
+                  <span>View all audits</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
               <div className="overflow-x-auto">
-                <table className="w-full text-left font-mono text-xs">
+                <table className="w-full text-left text-xs">
                   <thead>
-                    <tr className="border-b border-white/[0.06] text-text-muted text-[10px] uppercase">
-                      <th className="pb-3">Audit Scope</th>
-                      <th className="pb-3">Frameworks</th>
-                      <th className="pb-3">Date</th>
-                      <th className="pb-3">Score</th>
-                      <th className="pb-3 text-right">Actions</th>
+                    <tr className="border-b border-white/[0.06] text-text-muted text-[11px]">
+                      <th className="pb-3 font-medium">Audit scope</th>
+                      <th className="pb-3 font-medium">Frameworks</th>
+                      <th className="pb-3 font-medium">Date</th>
+                      <th className="pb-3 font-medium">Score</th>
+                      <th className="pb-3 text-right font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.04]">
                     {recentAudits.map((a) => (
-                      <tr key={a.audit_id} className="hover:bg-white/[0.02]">
+                      <tr key={a.audit_id} className="hover:bg-elevated/40 transition-colors">
                         <td className="py-3 font-semibold text-text-primary">{a.company_name}</td>
-                        <td className="py-3 text-text-secondary">{(a.frameworks || []).join(' · ')}</td>
-                        <td className="py-3 text-text-muted">
+                        <td className="py-3 text-text-secondary">{(a.frameworks || []).join(', ')}</td>
+                        <td className="py-3 text-text-muted font-mono tabular-nums">
                           {formatDateTime(a.created_at, null, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
                           })}
                         </td>
-                        <td className="py-3">
-                          <span className="px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                        <td className="py-3 font-mono tabular-nums">
+                          <span className="px-2 py-0.5 rounded-md bg-elevated text-text-primary border border-white/[0.08]">
                             {a.score_percent ? `${a.score_percent}%` : 'Complete'}
                           </span>
                         </td>
                         <td className="py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
+                              type="button"
                               onClick={async () => {
                                 const blob = await downloadAuditReport(a.audit_id)
                                 const url = URL.createObjectURL(blob)
@@ -539,14 +540,15 @@ export default function ComplianceDashboard() {
                                 link.download = `LogRaven-Audit-${a.company_name}.pdf`
                                 link.click()
                               }}
-                              title="Download PDF Report"
-                              className="p-1.5 rounded-lg border border-white/[0.06] hover:bg-white/[0.06] text-text-muted hover:text-text-primary"
+                              title="Download PDF report"
+                              className="p-1.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-elevated/40 text-text-muted hover:text-text-primary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
                             >
                               <Download className="w-3.5 h-3.5" />
                             </button>
                             <button
+                              type="button"
                               onClick={() => navigate(`/compliance?tab=history`)}
-                              className="text-[11px] font-sans font-semibold text-indigo-400 hover:text-indigo-300"
+                              className="text-[11px] font-medium text-amber-400 hover:text-amber-300 transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded px-1.5 py-0.5"
                             >
                               Details
                             </button>
@@ -561,17 +563,6 @@ export default function ComplianceDashboard() {
           )}
         </div>
       )}
-
-      {/* Cloud Account Connection Modal */}
-      <ConnectAccountModal
-        isOpen={connectModalOpen}
-        onClose={() => setConnectModalOpen(false)}
-        onAccountConnected={(acc) => {
-          setAccounts((prev) => [...prev, acc])
-          setActiveAccount(acc)
-          void loadData()
-        }}
-      />
 
       {/* Auditor Share Modal */}
       <AuditorShareModal
