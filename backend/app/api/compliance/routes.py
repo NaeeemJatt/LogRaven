@@ -548,7 +548,6 @@ async def start_audit(
         audit_job.error_message = "Audit could not be dispatched. Please retry."
         await db.commit()
         raise HTTPException(status_code=503, detail="Audit could not be dispatched.") from exc
-    logger.info("Enqueued Celery task %s", task_result.id)
 
     return AuditStartResponse(
         audit_id=str(audit_job.id),
