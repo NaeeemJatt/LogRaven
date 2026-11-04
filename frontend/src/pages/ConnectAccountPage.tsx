@@ -315,13 +315,15 @@ export default function ConnectAccountPage() {
     }
   }
 
+  const logravenAccountId = import.meta.env.VITE_AWS_ACCOUNT_ID || '382764425926'
+
   const trustPolicyJson = `{
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::342061021430:root"
+        "AWS": "arn:aws:iam::${logravenAccountId}:root"
       },
       "Action": "sts:AssumeRole",
       "Condition": {

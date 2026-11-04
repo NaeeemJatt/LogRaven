@@ -19,7 +19,7 @@ import {
 import { listFrameworks, listCloudAccounts } from '../../api/compliance'
 import type { FrameworkInfo, CloudAccount } from '../../types/audit'
 
-const LOGRAVEN_ACCOUNT_ID = import.meta.env.VITE_AWS_ACCOUNT_ID ?? '342061021430'
+const LOGRAVEN_ACCOUNT_ID = import.meta.env.VITE_AWS_ACCOUNT_ID ?? '382764425926'
 const STORAGE_KEY = 'lograven_new_audit_form_v2'
 
 interface AuditFormProps {
