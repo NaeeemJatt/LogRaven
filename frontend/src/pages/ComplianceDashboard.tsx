@@ -376,7 +376,10 @@ export default function ComplianceDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => navigate(`/compliance/frameworks/${fw.framework_id}`)}
+                    onClick={() => {
+                      const targetAuditId = recentAudits.find((a) => a.status === 'complete')?.audit_id || recentAudits[0]?.audit_id || 'latest'
+                      navigate(`/compliance?tab=results&auditId=${targetAuditId}&fw=${fw.framework_id}`)
+                    }}
                     className="w-full py-2 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-elevated/40 hover:bg-elevated text-text-secondary hover:text-text-primary text-xs font-medium transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Inspect controls</span>
@@ -547,7 +550,7 @@ export default function ComplianceDashboard() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate(`/compliance?tab=history`)}
+                              onClick={() => navigate(`/compliance?tab=results&auditId=${a.audit_id}`)}
                               className="text-[11px] font-medium text-amber-400 hover:text-amber-300 transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded px-1.5 py-0.5"
                             >
                               Details

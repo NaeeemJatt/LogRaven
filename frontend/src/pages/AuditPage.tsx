@@ -22,7 +22,7 @@ import ShareAuditModal from '../components/audit/ShareAuditModal'
 import AuditorShareModal from '../components/audit/AuditorShareModal'
 import type { AuditFormData } from '../components/audit/AuditForm'
 import type { AuditStatusResponse } from '../types/audit'
-import { startAudit, getAuditStatus, retryAudit } from '../api/compliance'
+import { startAudit, getAuditStatus, retryAudit, listAudits } from '../api/compliance'
 import type { AuditSummary } from '../api/compliance'
 
 type AuditStep = 'form' | 'progress' | 'results'
@@ -67,6 +67,51 @@ export default function AuditPage() {
     }
   }, [tabParam])
 
+  const auditIdParam = searchParams.get('auditId') || searchParams.get('audit_id')
+  const fwParam = searchParams.get('fw')
+
+  useEffect(() => {
+    let isMounted = true
+    const loadRequestedAudit = async () => {
+      if (tabParam === 'results' || auditIdParam) {
+        try {
+          let targetAuditId = auditIdParam && auditIdParam !== 'latest' ? auditIdParam : null
+          if (!targetAuditId) {
+            const audits = await listAudits(1, 5)
+            const completed = audits.items.find((a) => a.status === 'complete') || audits.items[0]
+            if (completed) {
+              targetAuditId = completed.audit_id
+            }
+          }
+          if (targetAuditId) {
+            const data = await getAuditStatus(targetAuditId)
+            if (!isMounted) return
+            setAuditId(targetAuditId)
+            setCompanyName(data.company_name)
+            if (data.status === 'complete') {
+              setAuditResults(data)
+              setCurrentStep('results')
+            } else if (data.status === 'pending' || data.status === 'running') {
+              setAuditResults(null)
+              setCurrentStep('progress')
+            } else {
+              setErrorMessage(data.error || 'Audit failed.')
+              setCurrentStep('form')
+            }
+            setTab('audit')
+          }
+        } catch {
+          if (!isMounted) return
+          setErrorMessage('Could not load the requested compliance audit.')
+        }
+      }
+    }
+    void loadRequestedAudit()
+    return () => {
+      isMounted = false
+    }
+  }, [tabParam, auditIdParam, setTab])
+
   const handleFormSubmit = async (formData: AuditFormData) => {
     setIsSubmitting(true)
     setErrorMessage(null)
@@ -96,7 +141,11 @@ export default function AuditPage() {
   }, [])
 
   const handleStartNew = () => {
-    setTab('audit')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams()
+      next.set('tab', 'audit')
+      return next
+    }, { replace: true })
     setCurrentStep('form')
     setAuditId(null)
     setCompanyName('')
@@ -273,6 +322,7 @@ export default function AuditPage() {
                   <AuditResults
                     results={auditResults}
                     auditId={auditId}
+                    initialFrameworkId={fwParam || undefined}
                     onStartNew={handleStartNew}
                     onShare={() => setShareTarget({ auditId, companyName })}
                   />
