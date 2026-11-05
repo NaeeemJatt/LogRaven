@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Cloud,
-  PlusCircle, History, Gauge, FileCheck2,
+  PlusCircle, History, Gauge, ShieldCheck, Loader2,
 } from 'lucide-react'
 import AuditForm from '../components/audit/AuditForm'
 import AuditProgress from '../components/audit/AuditProgress'
@@ -29,6 +29,7 @@ type AuditStep = 'form' | 'progress' | 'results'
 type PageTab = 'audit' | 'accounts' | 'history' | 'posture' | 'results'
 
 const BASE_PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
+  { key: 'results',  label: 'Scan Result',    icon: ShieldCheck },
   { key: 'audit',    label: 'New audit',      icon: PlusCircle },
   { key: 'accounts', label: 'Cloud accounts', icon: Cloud },
   { key: 'history',  label: 'History',        icon: History },
@@ -55,6 +56,7 @@ export default function AuditPage() {
   const [auditId, setAuditId]           = useState<string | null>(null)
   const [companyName, setCompanyName]   = useState('')
   const [auditResults, setAuditResults] = useState<AuditStatusResponse | null>(null)
+  const [isLoadingResults, setIsLoadingResults] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryingAuditId, setRetryingAuditId] = useState<string | null>(null)
@@ -74,6 +76,7 @@ export default function AuditPage() {
     let isMounted = true
     const loadRequestedAudit = async () => {
       if (tabParam === 'results' || auditIdParam) {
+        setIsLoadingResults(true)
         try {
           let targetAuditId = auditIdParam && auditIdParam !== 'latest' ? auditIdParam : null
           if (!targetAuditId) {
@@ -102,6 +105,8 @@ export default function AuditPage() {
         } catch {
           if (!isMounted) return
           setErrorMessage('Could not load the requested compliance audit.')
+        } finally {
+          if (isMounted) setIsLoadingResults(false)
         }
       }
     }
@@ -137,7 +142,17 @@ export default function AuditPage() {
   const handleProgressComplete = useCallback((data: AuditStatusResponse) => {
     setAuditResults(data)
     setCurrentStep('results')
-  }, [])
+    setAuditId(data.audit_id)
+    setCompanyName(data.company_name || '')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', 'results')
+      if (data.audit_id) {
+        next.set('auditId', data.audit_id)
+      }
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   const handleStartNew = () => {
     setSearchParams(() => {
@@ -212,59 +227,54 @@ export default function AuditPage() {
           {/* Page tabs: results / new audit / accounts / history / posture */}
           <div className="flex items-center justify-between gap-3 mb-4">
             <div role="tablist" aria-label="Compliance views" className="ops-panel p-1 inline-flex flex-wrap gap-1">
-              {(() => {
-                const activeTabs = (tab === 'results' || currentStep === 'results')
-                  ? [{ key: 'results' as PageTab, label: 'Audit results', icon: FileCheck2 }, ...BASE_PAGE_TABS]
-                  : BASE_PAGE_TABS
-                return activeTabs.map(({ key, label, icon: Icon }) => {
-                  const isActive = (key === 'results' && (tab === 'results' || currentStep === 'results')) || (tab === key && currentStep !== 'results')
-                  return (
-                    <button
-                      key={key}
-                      id={`compliance-tab-${key}`}
-                      role="tab"
-                      aria-selected={isActive}
-                      aria-controls="compliance-tabpanel"
-                      tabIndex={isActive ? 0 : -1}
-                      onClick={() => {
-                        if (key === 'audit') {
-                          handleStartNew()
-                        } else {
-                          setTab(key)
-                        }
-                      }}
-                      onKeyDown={(event) => {
-                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-                        event.preventDefault()
-                        const current = activeTabs.findIndex((item) => item.key === key)
-                        const nextIndex =
-                          event.key === 'Home'
-                            ? 0
-                            : event.key === 'End'
-                              ? activeTabs.length - 1
-                              : (current + (event.key === 'ArrowRight' ? 1 : -1) + activeTabs.length) %
-                                activeTabs.length
-                        const next = activeTabs[nextIndex].key
-                        if (next === 'audit') {
-                          handleStartNew()
-                        } else {
-                          setTab(next)
-                        }
-                        requestAnimationFrame(() =>
-                          document.getElementById(`compliance-tab-${next}`)?.focus(),
-                        )
-                      }}
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
-                        isActive
-                          ? 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
-                          : 'text-text-muted hover:text-text-secondary border border-transparent'
-                      }`}
-                    >
-                      <Icon className="w-3.5 h-3.5" /> {label}
-                    </button>
-                  )
-                })
-              })()}
+              {BASE_PAGE_TABS.map(({ key, label, icon: Icon }) => {
+                const isActive = tab === key
+                return (
+                  <button
+                    key={key}
+                    id={`compliance-tab-${key}`}
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="compliance-tabpanel"
+                    tabIndex={isActive ? 0 : -1}
+                    onClick={() => {
+                      if (key === 'audit') {
+                        handleStartNew()
+                      } else {
+                        setTab(key)
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                      event.preventDefault()
+                      const current = BASE_PAGE_TABS.findIndex((item) => item.key === key)
+                      const nextIndex =
+                        event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? BASE_PAGE_TABS.length - 1
+                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + BASE_PAGE_TABS.length) %
+                              BASE_PAGE_TABS.length
+                      const next = BASE_PAGE_TABS[nextIndex].key
+                      if (next === 'audit') {
+                        handleStartNew()
+                      } else {
+                        setTab(next)
+                      }
+                      requestAnimationFrame(() =>
+                        document.getElementById(`compliance-tab-${next}`)?.focus(),
+                      )
+                    }}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
+                      isActive
+                        ? 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
+                        : 'text-text-muted hover:text-text-secondary border border-transparent'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" /> {label}
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -337,7 +347,7 @@ export default function AuditPage() {
                     isRetrying={retryingAuditId === auditId}
                   />
                 )}
-                {(tab === 'results' || currentStep === 'results') && auditResults && auditId && (
+                {tab === 'results' && auditResults && auditId && (
                   <AuditResults
                     results={auditResults}
                     auditId={auditId}
@@ -345,6 +355,31 @@ export default function AuditPage() {
                     onStartNew={handleStartNew}
                     onShare={() => setShareTarget({ auditId, companyName })}
                   />
+                )}
+                {tab === 'results' && (!auditResults || !auditId) && (
+                  <div className="rounded-2xl border border-white/[0.08] bg-deep/80 backdrop-blur-sm p-12 text-center space-y-4">
+                    {isLoadingResults ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                        <p className="text-xs text-text-muted">Loading scan result...</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <ShieldCheck className="w-10 h-10 text-text-muted" />
+                        <h3 className="text-sm font-semibold text-text-primary">No Scan Result Available</h3>
+                        <p className="text-xs text-text-muted max-w-sm">
+                          No compliance assessments have been run yet. Start a new scan to evaluate controls across your cloud infrastructure.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleStartNew}
+                          className="btn-sovereign inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" /> Start New Scan
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>

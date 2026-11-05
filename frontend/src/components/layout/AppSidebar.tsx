@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Cloud,
   PlayCircle,
+  ShieldCheck,
   Library,
   FileCheck2,
   FileSearch,
@@ -70,6 +71,12 @@ export default function AppSidebar({
           label: 'New Audit Scan',
           href: '/compliance?tab=audit',
           icon: PlayCircle,
+        },
+        {
+          id: 'scan-results',
+          label: 'Scan Result',
+          href: '/compliance?tab=results',
+          icon: ShieldCheck,
         },
         {
           id: 'history',
@@ -140,12 +147,6 @@ export default function AppSidebar({
       const [path, query] = href.split('?')
       const tabParam = new URLSearchParams(query).get('tab')
       const currentTab = new URLSearchParams(location.search).get('tab')
-      if (tabParam === 'history' && (currentTab === 'history' || currentTab === 'results')) {
-        return location.pathname === path
-      }
-      if (tabParam === 'audit' && currentTab === 'results') {
-        return false
-      }
       return location.pathname === path && currentTab === tabParam
     }
     if (href === '/dashboard') {
