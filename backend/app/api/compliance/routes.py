@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
+from app.tasks.celery_app import celery_app
 
 from app.dependencies import get_current_user, get_db
 from app.limiter import limiter
@@ -353,11 +354,19 @@ async def _build_status_response(db: AsyncSession, audit_job: AuditJob) -> Audit
     frameworks = audit_job.frameworks or [DEFAULT_FRAMEWORK]
 
     if audit_job.status in ("pending", "running"):
-        celery_result = AsyncResult(str(job_uuid))
         percent = step = None
-        if celery_result.state == "PROGRESS" and celery_result.info:
-            percent = celery_result.info.get("percent")
-            step = celery_result.info.get("step")
+        try:
+            celery_result = AsyncResult(str(job_uuid), app=celery_app)
+            if celery_result.state == "PROGRESS" and celery_result.info:
+                percent = celery_result.info.get("percent")
+                step = celery_result.info.get("step")
+        except Exception:
+            logger.exception("Failed to query Celery task state for audit %s", job_uuid)
+
+        if percent is None and audit_job.status == "running":
+            percent = 10
+            step = "connecting"
+
         return AuditStatusResponse(
             audit_id=str(job_uuid), status=audit_job.status, percent=percent, step=step,
             frameworks=frameworks, company_name=audit_job.company_name,

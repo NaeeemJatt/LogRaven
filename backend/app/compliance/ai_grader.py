@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 from typing import Any
 
 from google.genai import types
@@ -84,7 +85,8 @@ def _system_prompt(framework: Framework) -> str:
         "FAIL means the control is not implemented or is failing. "
         "When evidence for a control is unavailable (null), assess PARTIAL and note that "
         "manual evidence is required rather than failing it. "
-        "You respond only with valid JSON. No preamble, no markdown, no explanation outside the JSON."
+        "You respond only with valid JSON. No preamble, no markdown, no explanation outside the JSON. "
+        "CRITICAL: Escape all internal double quotes inside string values (use \" or single quotes)."
     )
 
 
@@ -118,13 +120,128 @@ Return a JSON array with exactly {count} objects. Each object must have:
 """
 
 
+def _clean_json_text(text: str) -> str:
+    """Strip markdown fences, leading/trailing fluff, and trailing commas."""
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\s*```$", "", cleaned)
+        cleaned = cleaned.strip()
+    return cleaned
+
+
+def _extract_control_blocks(text: str) -> list[str]:
+    """Extract individual JSON object blocks delimited by balanced braces."""
+    blocks: list[str] = []
+    depth = 0
+    start = -1
+    for i, ch in enumerate(text):
+        if ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0 and start != -1:
+                block = text[start : i + 1].strip()
+                if '"control_id"' in block:
+                    blocks.append(block)
+                start = -1
+    return blocks
+
+
+def _salvage_control_block(snippet: str) -> dict[str, Any] | None:
+    """Attempt tolerant parsing or regex field extraction for an individual control item."""
+    cleaned = re.sub(r",\s*([\]}])", r"\1", snippet)
+    try:
+        data = json.loads(cleaned)
+        if isinstance(data, dict) and data.get("control_id"):
+            return data
+    except Exception:
+        pass
+
+    # Regex salvage of standard fields if unescaped quotes broke json.loads
+    cid_match = re.search(r'"control_id"\s*:\s*"([^"]+)"', snippet)
+    if not cid_match:
+        return None
+    cid = cid_match.group(1).strip()
+
+    status_match = re.search(r'"status"\s*:\s*"(PASS|FAIL|PARTIAL|SUPPRESSED)"', snippet, re.IGNORECASE)
+    status = status_match.group(1).upper() if status_match else "PARTIAL"
+
+    conf_match = re.search(r'"confidence"\s*:\s*"(HIGH|MEDIUM|LOW)"', snippet, re.IGNORECASE)
+    conf = conf_match.group(1).upper() if conf_match else "LOW"
+
+    name_match = re.search(r'"control_name"\s*:\s*"([^"]+)"', snippet)
+    name = name_match.group(1).strip() if name_match else ""
+
+    desc = ""
+    desc_match = re.search(r'"ai_description"\s*:\s*"(.*?)"(?:\s*,\s*"\w+"\s*:|\s*\})', snippet, re.DOTALL)
+    if desc_match:
+        desc = desc_match.group(1).strip()
+    else:
+        desc_match_greedy = re.search(r'"ai_description"\s*:\s*"(.*)"\s*\}', snippet, re.DOTALL)
+        if desc_match_greedy:
+            desc = desc_match_greedy.group(1).strip()
+
+    gaps = []
+    gaps_match = re.search(r'"gaps"\s*:\s*\[(.*?)\]', snippet, re.DOTALL)
+    if gaps_match:
+        gaps = [re.sub(r'["\']', "", g).strip() for g in gaps_match.group(1).split(",") if g.strip()]
+
+    refs = []
+    refs_match = re.search(r'"evidence_references"\s*:\s*\[(.*?)\]', snippet, re.DOTALL)
+    if refs_match:
+        refs = [re.sub(r'["\']', "", r).strip() for r in refs_match.group(1).split(",") if r.strip()]
+
+    return {
+        "control_id": cid,
+        "control_name": name,
+        "status": status,
+        "confidence": conf,
+        "evidence_references": refs,
+        "gaps": gaps,
+        "ai_description": desc,
+    }
+
+
 def parse_and_validate(text: str, controls: list[dict[str, str]]) -> list[dict[str, Any]]:
     """Parse the model JSON and guarantee exactly one normalized result per control."""
+    cleaned = _clean_json_text(text)
+    parsed = None
+
+    # Attempt 1: Direct JSON load
     try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError as exc:
+        parsed = json.loads(cleaned)
+    except Exception:
+        pass
+
+    # Attempt 2: Extract array substring between outer brackets
+    if parsed is None:
+        start_bracket = cleaned.find("[")
+        end_bracket = cleaned.rfind("]")
+        if start_bracket != -1 and end_bracket > start_bracket:
+            array_candidate = cleaned[start_bracket : end_bracket + 1]
+            array_candidate = re.sub(r",\s*([\]}])", r"\1", array_candidate)
+            try:
+                parsed = json.loads(array_candidate)
+            except Exception:
+                pass
+
+    # Attempt 3: Object-level block extraction and regex repair
+    if parsed is None or not isinstance(parsed, list):
+        blocks = _extract_control_blocks(cleaned)
+        salvaged = []
+        for b in blocks:
+            item = _salvage_control_block(b)
+            if item:
+                salvaged.append(item)
+        if salvaged:
+            parsed = salvaged
+
+    if parsed is None:
         snippet = text[:500] if text else ""
-        raise MappingError(f"AI engine returned invalid JSON: {exc}. Raw snippet: {snippet}") from exc
+        raise MappingError(f"AI engine returned invalid JSON. Raw snippet: {snippet}")
 
     if isinstance(parsed, dict):
         for key in ("controls", "results", "data"):
@@ -167,6 +284,125 @@ def parse_and_validate(text: str, controls: list[dict[str, str]]) -> list[dict[s
     return results
 
 
+def evaluate_framework_deterministically(
+    framework: Framework, all_signals: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """
+    Deterministic rule-based fallback based strictly on collected telemetry signals.
+    Guarantees the audit completes with accurate evidence references and scores
+    even if the AI API is rate-limited, times out, or fails to return valid JSON.
+    """
+    results: list[dict[str, Any]] = []
+
+    for control in framework.controls:
+        if not control.automatable or not control.signals:
+            results.append(
+                {
+                    "control_id": control.control_id,
+                    "control_name": control.name,
+                    "status": "PARTIAL",
+                    "confidence": "LOW",
+                    "evidence_references": [],
+                    "gaps": [control.guidance or "Manual policy documentation and procedural audit required."],
+                    "ai_description": (
+                        f"{control.name} requires organizational policy documentation and manual administrative review."
+                    ),
+                }
+            )
+            continue
+
+        refs: list[str] = []
+        gaps: list[str] = []
+        signal_statuses: list[str] = []
+
+        for sig_key in control.signals:
+            val = all_signals.get(sig_key)
+            if val is None:
+                refs.append(f"{sig_key} = null")
+                signal_statuses.append("PARTIAL")
+                gaps.append(f"Telemetry for {sig_key} is unavailable")
+                continue
+
+            refs.append(f"{sig_key} = {val}")
+
+            if isinstance(val, bool):
+                if val:
+                    signal_statuses.append("PASS")
+                else:
+                    signal_statuses.append("FAIL")
+                    gaps.append(control.guidance or f"{sig_key} is disabled")
+            elif isinstance(val, (int, float)):
+                if "rate" in sig_key or "enforcement" in sig_key:
+                    if val >= 100.0:
+                        signal_statuses.append("PASS")
+                    elif val >= 70.0:
+                        signal_statuses.append("PARTIAL")
+                        gaps.append(f"{sig_key} ({val:.1f}%) is below 100% full coverage")
+                    else:
+                        signal_statuses.append("FAIL")
+                        gaps.append(f"{sig_key} ({val:.1f}%) fails minimum threshold")
+                elif sig_key in (
+                    "guardduty_high_severity_findings",
+                    "open_security_groups",
+                    "access_analyzer_external_findings",
+                ):
+                    if val == 0:
+                        signal_statuses.append("PASS")
+                    else:
+                        signal_statuses.append("FAIL")
+                        gaps.append(f"{val} findings detected for {sig_key}")
+                elif sig_key == "iam_password_min_length":
+                    if val >= 14:
+                        signal_statuses.append("PASS")
+                    elif val >= 8:
+                        signal_statuses.append("PARTIAL")
+                        gaps.append(f"Password minimum length ({val}) is less than recommended 14")
+                    else:
+                        signal_statuses.append("FAIL")
+                        gaps.append(f"Password minimum length ({val}) is insufficient")
+                elif sig_key == "cloudwatch_log_retention_days":
+                    if val >= 365:
+                        signal_statuses.append("PASS")
+                    elif val >= 90:
+                        signal_statuses.append("PARTIAL")
+                        gaps.append(f"Log retention ({val} days) is less than 365 days")
+                    else:
+                        signal_statuses.append("FAIL")
+                        gaps.append(f"Log retention ({val} days) is insufficient")
+                else:
+                    signal_statuses.append("PASS" if val > 0 else "PARTIAL")
+            else:
+                signal_statuses.append("PARTIAL")
+
+        if all(s == "PASS" for s in signal_statuses):
+            overall_status = "PASS"
+            confidence = "HIGH"
+            desc = f"Evidence verifies {control.name} is fully operating in accordance with compliance baseline."
+            gaps = []
+        elif any(s == "FAIL" for s in signal_statuses):
+            overall_status = "FAIL"
+            confidence = "HIGH"
+            desc = f"Telemetry reveals non-compliance for {control.name}. Gaps require remediation."
+        else:
+            overall_status = "PARTIAL"
+            confidence = "MEDIUM"
+            desc = f"Partial compliance observed for {control.name}; further evidence or remediation required."
+
+        results.append(
+            {
+                "control_id": control.control_id,
+                "control_name": control.name,
+                "status": overall_status,
+                "confidence": confidence,
+                "evidence_references": refs,
+                "gaps": gaps,
+                "ai_description": desc,
+            }
+        )
+
+    return results
+
+
 async def _call_model(client: Any, system_prompt: str, user_prompt: str) -> str:
     response = await asyncio.wait_for(
         client.aio.models.generate_content(
@@ -194,32 +430,69 @@ async def grade_framework(framework: Framework, all_signals: dict[str, Any]) -> 
     Returns one normalized result dict per control, annotated with category and
     remediation guidance (used by the PDF, the UI, and the remediation workflow).
     """
-    client = _get_client()
-    system_prompt = _system_prompt(framework)
-    user_prompt = _build_user_prompt(framework, all_signals)
-    controls = [c.as_prompt_dict() for c in framework.controls]
+    client = None
+    try:
+        client = _get_client()
+    except Exception as exc:
+        logger.warning(
+            "AI client initialization failed for %s (%s). Using deterministic signal evaluation.",
+            framework.id,
+            exc,
+        )
 
-    for attempt in range(2):
-        try:
-            text = await _call_model(client, system_prompt, user_prompt)
-            results = parse_and_validate(text, controls)
-            break
-        except asyncio.TimeoutError as exc:
-            if attempt == 0:
-                logger.warning("AI grading timed out for %s — retrying in %ds", framework.id, RETRY_DELAY_SECONDS)
-                await asyncio.sleep(RETRY_DELAY_SECONDS)
-                continue
-            raise MappingError(f"AI grading for {framework.id} timed out after retry") from exc
-        except MappingError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            if attempt == 0 and "timeout" in str(exc).lower():
-                logger.warning("AI grading error for %s — retrying: %s", framework.id, exc)
-                await asyncio.sleep(RETRY_DELAY_SECONDS)
-                continue
-            raise MappingError(f"AI grading for {framework.id} failed: {exc}") from exc
-    else:  # pragma: no cover
-        raise MappingError(f"AI grading for {framework.id} failed after retry")
+    results: list[dict[str, Any]] | None = None
+    if client is not None:
+        system_prompt = _system_prompt(framework)
+        user_prompt = _build_user_prompt(framework, all_signals)
+        controls = [c.as_prompt_dict() for c in framework.controls]
+
+        for attempt in range(2):
+            try:
+                text = await _call_model(client, system_prompt, user_prompt)
+                results = parse_and_validate(text, controls)
+                break
+            except asyncio.TimeoutError as exc:
+                if attempt == 0:
+                    logger.warning("AI grading timed out for %s — retrying in %ds", framework.id, RETRY_DELAY_SECONDS)
+                    await asyncio.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                logger.error(
+                    "AI grading for %s timed out after retry; falling back to deterministic evaluation: %s",
+                    framework.id,
+                    exc,
+                )
+                break
+            except MappingError as exc:
+                if attempt == 0:
+                    logger.warning(
+                        "AI grading returned invalid data for %s (attempt 0): %s — retrying in %ds",
+                        framework.id,
+                        exc,
+                        RETRY_DELAY_SECONDS,
+                    )
+                    await asyncio.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                logger.error(
+                    "AI grading for %s failed to parse after retry: %s; falling back to deterministic evaluation.",
+                    framework.id,
+                    exc,
+                )
+                break
+            except Exception as exc:  # noqa: BLE001
+                if attempt == 0 and "timeout" in str(exc).lower():
+                    logger.warning("AI grading error for %s — retrying: %s", framework.id, exc)
+                    await asyncio.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                logger.error(
+                    "AI grading error for %s: %s; falling back to deterministic evaluation.",
+                    framework.id,
+                    exc,
+                )
+                break
+
+    if results is None:
+        logger.info("Evaluating framework %s using deterministic signal engine", framework.id)
+        results = evaluate_framework_deterministically(framework, all_signals)
 
     # Annotate with category + remediation guidance + actionable guide from catalog.
     from app.compliance.remediation import get_remediation_guide
@@ -239,7 +512,7 @@ async def grade_framework(framework: Framework, all_signals: dict[str, Any]) -> 
                     guidance=control.guidance,
                 )
                 result["remediation_guide"] = guide.model_dump()
-    logger.info("AI grading complete for %s: %d controls assessed", framework.id, len(results))
+    logger.info("Compliance grading complete for %s: %d controls assessed", framework.id, len(results))
     return results
 
 
@@ -261,4 +534,3 @@ def score_results(results: list[dict[str, Any]], total: int | None = None) -> di
         "raw_score_percent": raw_score_percent,
         "score_percent": score_percent,
     }
-

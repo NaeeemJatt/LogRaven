@@ -141,6 +141,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             frameworks = _resolve_frameworks(audit_job.frameworks)
             audit_job.status = "running"
             await db.commit()
+            task_self.update_state(state="PROGRESS", meta={"step": "connecting", "percent": 10})
             logger.info("  company: %s", audit_job.company_name)
             logger.info("  frameworks: %s", ", ".join(frameworks))
             logger.info("  audit period: %s to %s", audit_job.audit_start_date, audit_job.audit_end_date)
@@ -162,6 +163,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
 
             # ── Step 2 & 3: Multi-Cloud Evidence Collection ─────────────────
             logger.info("Step 2 & 3: Collecting evidence for cloud provider: %s", provider)
+            task_self.update_state(state="PROGRESS", meta={"step": "collecting", "percent": 20})
             if provider == "gcp":
                 from app.compliance.collectors.gcp import GCPCollector
                 gcp_collector = GCPCollector()
@@ -238,7 +240,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                     logger.error(traceback.format_exc())
                     return await _fail(db, audit_job, f"Error collecting AWS evidence: {e}")
 
-            task_self.update_state(state="PROGRESS", meta={"step": "collecting", "percent": 25})
+            task_self.update_state(state="PROGRESS", meta={"step": "collecting", "percent": 35})
 
             # ── Step 4: Sanitize + build signals ────────────────────────────
             logger.info("Step 4: Sanitizing evidence and building signals...")
@@ -284,6 +286,11 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             total_frameworks = len(frameworks)
             for idx, framework_id in enumerate(frameworks):
                 framework = get_framework(framework_id)
+                grading_percent = 50 + int((idx / max(total_frameworks, 1)) * 35)
+                task_self.update_state(
+                    state="PROGRESS",
+                    meta={"step": "grading", "percent": grading_percent, "framework": framework_id},
+                )
                 logger.info("Step 5: Grading %s (%d/%d)...", framework_id, idx + 1, total_frameworks)
                 try:
                     control_results = await ai_grader.grade_framework(framework, signals)
@@ -379,6 +386,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
 
             # ── Step 7: Generate per-framework PDFs ─────────────────────────
             logger.info("Step 7: Generating PDF reports...")
+            task_self.update_state(state="PROGRESS", meta={"step": "packaging", "percent": 90})
             await _generate_reports(db, audit_job, frameworks)
 
             audit_job.status = "complete"
