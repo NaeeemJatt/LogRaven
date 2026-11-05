@@ -220,13 +220,19 @@ def _build_cover_page(audit_job: "AuditJob", framework_name: str = "SOC 2 Type I
     story = []
 
     story.append(Spacer(1, 1 * cm))
-    story.append(
-        Paragraph(
-            f"<font color='{_HEX_ACCENT}' size=24><b>LogRaven</b></font>",
-            normal_style,
+    logo_path = Path(__file__).parent.parent / "reports" / "assets" / "logo.png"
+    if logo_path.exists():
+        from reportlab.platypus import Image as RLImage
+        story.append(RLImage(str(logo_path), width=5.0 * cm, height=1.25 * cm))
+        story.append(Spacer(1, 0.5 * cm))
+    else:
+        story.append(
+            Paragraph(
+                f"<font color='{_HEX_ACCENT}' size=24><b>LogRaven</b></font>",
+                normal_style,
+            )
         )
-    )
-    story.append(Spacer(1, 0.5 * cm))
+        story.append(Spacer(1, 0.5 * cm))
 
     story.append(
         Paragraph(

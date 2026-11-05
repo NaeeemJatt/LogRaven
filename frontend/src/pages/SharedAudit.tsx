@@ -1,3 +1,4 @@
+import Logo from '../components/brand/Logo'
 // LogRaven — Public shared audit view (/shared/audit/:token)
 //
 // Read-only compliance results for external auditors, gated only by the
@@ -7,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ShieldCheck, Loader2, Link2, Lock } from 'lucide-react'
+import { Loader2, Link2, Lock } from 'lucide-react'
 import AuditResults from '../components/audit/AuditResults'
 import { getSharedAudit } from '../api/compliance'
 import type { AuditStatusResponse } from '../types/audit'
@@ -36,11 +37,8 @@ export default function SharedAudit() {
       {/* Minimal public header */}
       <header className="border-b border-white/[0.06] bg-deep/40 backdrop-blur">
         <div className="px-4 sm:px-6 lg:px-8 py-4 max-w-[1200px] mx-auto flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/25 flex items-center justify-center text-amber-400">
-              <ShieldCheck className="w-4 h-4" />
-            </span>
-            <span className="font-display font-bold text-text-primary">LogRaven</span>
+          <Link to="/" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg">
+            <Logo size={30} showSignal={false} />
           </Link>
           <span className="inline-flex items-center gap-1.5 text-xs text-text-muted">
             <Lock className="w-3.5 h-3.5 text-amber-400" />

@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" fill="none">
+  <defs>
+    <linearGradient id="h_shieldBg" x1="40" y1="8" x2="40" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#151A26"/>
+      <stop offset="100%" stop-color="#080B12"/>
+    </linearGradient>
+    <linearGradient id="h_shieldBorder" x1="10" y1="8" x2="70" y2="72" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F59E0B" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#3B82F6" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="h_ravenBeak" x1="38" y1="32" x2="68" y2="48" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="h_wingPlates" x1="12" y1="20" x2="56" y2="68" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#2A344A"/>
+      <stop offset="100%" stop-color="#0E1422"/>
+    </linearGradient>
+    <radialGradient id="h_eyeGlow" cx="39" cy="33" r="8" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#F59E0B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Left Icon Mark -->
+  <g transform="translate(6, 6) scale(0.55)">
+    <!-- Shield -->
+    <path d="M 64,10 L 106,26 L 106,68 Q 106,98 64,118 Q 22,98 22,68 L 22,26 Z" 
+          fill="url(#h_shieldBg)" stroke="url(#h_shieldBorder)" stroke-width="3" stroke-linejoin="round"/>
+    
+    <!-- Feather Plating -->
+    <path d="M 33,36 L 54,44 L 46,60 L 32,54 Z" fill="url(#h_wingPlates)" stroke="#384766" stroke-width="1"/>
+    <path d="M 32,58 L 52,66 L 44,82 L 34,74 Z" fill="url(#h_wingPlates)" stroke="#384766" stroke-width="1"/>
+    <path d="M 36,80 L 52,86 L 64,104 Q 48,94 36,80 Z" fill="url(#h_wingPlates)" stroke="#384766" stroke-width="1"/>
+
+    <!-- Head & Crown -->
+    <path d="M 46,30 L 64,20 L 76,28 L 84,38 L 74,44 L 88,48 L 72,56 L 60,48 L 52,38 Z" 
+          fill="#1E273A" stroke="#475569" stroke-width="1.2" stroke-linejoin="round"/>
+
+    <!-- Beak -->
+    <path d="M 66,48 L 104,66 L 70,78 L 62,64 Z" 
+          fill="url(#h_ravenBeak)" stroke="#FDE047" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M 70,78 L 82,72 L 64,88 L 54,76 L 62,64 Z" fill="#B45309"/>
+
+    <!-- Eye Sensor -->
+    <circle cx="63" cy="52" r="9" fill="url(#h_eyeGlow)"/>
+    <circle cx="63" cy="52" r="4" fill="#FEF08A"/>
+    <circle cx="64" cy="51" r="1.5" fill="#FFFFFF"/>
+    
+    <!-- Spine Beam -->
+    <path d="M 64,88 L 64,106" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Typography: LogRaven -->
+  <text x="82" y="47" font-family="'Chakra Petch', 'IBM Plex Sans', -apple-system, sans-serif" font-size="34" font-weight="700" letter-spacing="-0.5" fill="#F8FAFC">
+    Log<tspan fill="#F59E0B">Raven</tspan>
+  </text>
+  
+  <!-- Subtitle Tagline -->
+  <text x="84" y="64" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="600" letter-spacing="3.5" fill="#64748B" text-transform="uppercase">
+    CLOUD SECURITY SOC
+  </text>
+  
+  <!-- Live Signal Pill -->
+  <circle cx="282" cy="38" r="3.5" fill="#10B981"/>
+  <circle cx="282" cy="38" r="7" fill="none" stroke="#10B981" stroke-width="1" opacity="0.4"/>
+</svg>

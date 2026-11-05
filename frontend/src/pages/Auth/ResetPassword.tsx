@@ -1,3 +1,4 @@
+import Logo from '../../components/brand/Logo'
 // LogRaven — Reset Password
 //
 // Sets a new password from the token in the emailed reset link
@@ -12,7 +13,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight, Shield } from 'lucide-react'
+import { Lock, Eye, EyeOff, CheckCircle2, AlertTriangle, ShieldCheck, ArrowRight } from 'lucide-react'
 import { authApi } from '../../api/auth'
 import { encryptPayload, isWebCryptoAvailable } from '../../utils/crypto'
 import PasswordStrengthMeter, { evaluatePasswordStrength } from '../../components/auth/PasswordStrengthMeter'
@@ -138,13 +139,8 @@ export default function ResetPassword() {
     <div className="min-h-screen bg-void text-text-primary flex flex-col">
       <header className="border-b border-white/[0.05] bg-void/95">
         <div className="flex h-14 items-center px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-indigo-400" strokeWidth={2} />
-            </div>
-            <span className="font-display font-bold text-base text-text-primary tracking-tight">
-              Log<span className="text-indigo-400">Raven</span>
-            </span>
+          <Link to="/" className="flex items-center gap-2.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg">
+            <Logo size={30} showSignal={false} />
           </Link>
         </div>
       </header>

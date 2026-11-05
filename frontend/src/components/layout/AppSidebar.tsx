@@ -1,7 +1,7 @@
 // LogRaven — Multi-Cloud SOC & Compliance Collapsible Navigation Sidebar
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import Logo, { LogoIcon } from '../brand/Logo'
 import {
   LayoutDashboard,
   Cloud,
@@ -14,9 +14,7 @@ import {
   KeyRound,
   Settings,
   ChevronLeft,
-  Shield,
   Gauge,
-  Menu,
 } from 'lucide-react'
 
 interface SidebarNavProps {
@@ -180,7 +178,7 @@ export default function AppSidebar({
             title="Expand sidebar"
             className="w-10 h-10 rounded-xl border border-white/[0.08] hover:border-amber-400/40 bg-white/[0.03] hover:bg-amber-400/10 flex items-center justify-center text-text-muted hover:text-amber-300 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
           >
-            <Menu className="w-5 h-5 group-hover:scale-105 transition-transform duration-150" />
+            <LogoIcon size={26} className="group-hover:scale-110 transition-transform duration-150" />
           </button>
         ) : (
           <>
@@ -188,25 +186,7 @@ export default function AppSidebar({
               to="/dashboard"
               className="flex items-center gap-3 min-w-0 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-xl"
             >
-              <div className="w-9 h-9 rounded-xl bg-amber-400/10 border border-amber-400/25 flex items-center justify-center flex-shrink-0 text-amber-400">
-                <Shield className="w-4 h-4" />
-              </div>
-              <motion.div
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -6 }}
-                className="min-w-0"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="font-display font-bold text-base text-text-primary tracking-tight">
-                    Log<span className="text-amber-400">Raven</span>
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none" />
-                </div>
-                <p className="text-[10px] text-text-muted truncate">
-                  Cloud Security SOC
-                </p>
-              </motion.div>
+              <Logo size={34} subtitle="Cloud Security SOC" showSignal={true} />
             </Link>
 
             <button

@@ -1,9 +1,10 @@
+import Logo from '../components/brand/Logo'
 // LogRaven — Legal pages (Privacy Policy & Terms of Service)
 //
 // Public static pages linked from auth footers. One shared shell, two exports.
 
 import { Link } from 'react-router-dom'
-import { ShieldCheck, ChevronLeft } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import LegalLinks from '../components/layout/LegalLinks'
 
 function LegalShell({ title, updated, children }: {
@@ -15,11 +16,8 @@ function LegalShell({ title, updated, children }: {
     <div className="min-h-screen bg-void grid-bg">
       <header className="border-b border-white/[0.06] bg-deep/40 backdrop-blur">
         <div className="px-4 sm:px-6 lg:px-8 py-4 max-w-3xl mx-auto flex items-center justify-between gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-            </span>
-            <span className="font-display font-bold text-text-primary">LogRaven</span>
+          <Link to="/" className="flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg">
+            <Logo size={30} showSignal={false} />
           </Link>
           <Link to="/login" className="inline-flex items-center gap-1 text-xs text-text-muted hover:text-text-secondary transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded">
             <ChevronLeft className="w-3 h-3" /> Back to login

@@ -60,14 +60,20 @@ async def send_email(to_email: str, subject: str, text_body: str, html_body: str
 
 def _button_html(heading: str, body: str, link: str, button_label: str) -> str:
     return f"""\
-<div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a2e">
-  <h2 style="margin:0 0 12px">{heading}</h2>
+<div style="font-family:Arial,Helvetica,sans-serif;max-width:540px;margin:0 auto;border:1px solid #1E293B;border-radius:10px;overflow:hidden;background:#ffffff;color:#0F172A">
+  <div style="background:#0B0F19;padding:16px 24px;border-bottom:2px solid #F59E0B">
+    <span style="font-size:20px;font-weight:bold;color:#F8FAFC;letter-spacing:-0.5px">Log<span style="color:#F59E0B">Raven</span></span>
+    <span style="font-size:10px;color:#94A3B8;margin-left:10px;letter-spacing:1.5px;text-transform:uppercase;font-family:monospace">Cloud Security SOC</span>
+  </div>
+  <div style="padding:24px">
+  <h2 style="margin:0 0 12px;color:#0F172A">{heading}</h2>
   <p style="line-height:1.6;color:#444">{body}</p>
   <p style="margin:24px 0">
     <a href="{link}" style="background:#4F46E5;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;display:inline-block">{button_label}</a>
   </p>
   <p style="font-size:12px;color:#888">If the button doesn't work, copy this link into your browser:<br>{link}</p>
   <p style="font-size:12px;color:#888">If you didn't request this, you can safely ignore this email.</p>
+  </div>
 </div>"""
 
 
