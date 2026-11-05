@@ -376,7 +376,7 @@ export default function ComplianceDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => navigate(`/compliance?tab=audit&fw=${fw.framework_id}`)}
+                    onClick={() => navigate(`/compliance/frameworks/${fw.framework_id}`)}
                     className="w-full py-2 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-elevated/40 hover:bg-elevated text-text-secondary hover:text-text-primary text-xs font-medium transition-colors flex items-center justify-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>Inspect controls</span>
