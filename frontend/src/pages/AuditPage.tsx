@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Cloud,
-  PlusCircle, History, Gauge,
+  PlusCircle, History, Gauge, FileCheck2,
 } from 'lucide-react'
 import AuditForm from '../components/audit/AuditForm'
 import AuditProgress from '../components/audit/AuditProgress'
@@ -26,9 +26,9 @@ import { startAudit, getAuditStatus, retryAudit, listAudits } from '../api/compl
 import type { AuditSummary } from '../api/compliance'
 
 type AuditStep = 'form' | 'progress' | 'results'
-type PageTab = 'audit' | 'accounts' | 'history' | 'posture'
+type PageTab = 'audit' | 'accounts' | 'history' | 'posture' | 'results'
 
-const PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
+const BASE_PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
   { key: 'audit',    label: 'New audit',      icon: PlusCircle },
   { key: 'accounts', label: 'Cloud accounts', icon: Cloud },
   { key: 'history',  label: 'History',        icon: History },
@@ -39,7 +39,7 @@ export default function AuditPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab') as PageTab | null
-  const tab: PageTab = (tabParam && ['audit', 'accounts', 'history', 'posture'].includes(tabParam))
+  const tab: PageTab = (tabParam && ['audit', 'accounts', 'history', 'posture', 'results'].includes(tabParam))
     ? tabParam
     : 'audit'
 
@@ -87,7 +87,7 @@ export default function AuditPage() {
             const data = await getAuditStatus(targetAuditId)
             if (!isMounted) return
             setAuditId(targetAuditId)
-            setCompanyName(data.company_name)
+            setCompanyName(data.company_name || '')
             if (data.status === 'complete') {
               setAuditResults(data)
               setCurrentStep('results')
@@ -98,7 +98,6 @@ export default function AuditPage() {
               setErrorMessage(data.error || 'Audit failed.')
               setCurrentStep('form')
             }
-            setTab('audit')
           }
         } catch {
           if (!isMounted) return
@@ -141,7 +140,7 @@ export default function AuditPage() {
   }, [])
 
   const handleStartNew = () => {
-    setSearchParams((prev) => {
+    setSearchParams(() => {
       const next = new URLSearchParams()
       next.set('tab', 'audit')
       return next
@@ -184,7 +183,12 @@ export default function AuditPage() {
         const data = await getAuditStatus(audit.audit_id)
         setAuditResults(data)
         setCurrentStep('results')
-        setTab('audit')
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('tab', 'results')
+          next.set('auditId', audit.audit_id)
+          return next
+        }, { replace: true })
       } catch {
         setErrorMessage('Could not load that audit — please try again.')
       }
@@ -205,47 +209,62 @@ export default function AuditPage() {
 
       <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 max-w-[1400px] mx-auto">
         <main className="min-w-0">
-          {/* Page tabs: new audit flow / history / posture */}
+          {/* Page tabs: results / new audit / accounts / history / posture */}
           <div className="flex items-center justify-between gap-3 mb-4">
             <div role="tablist" aria-label="Compliance views" className="ops-panel p-1 inline-flex flex-wrap gap-1">
-              {PAGE_TABS.map(({ key, label, icon: Icon }) => {
-                const isActive = tab === key
-                return (
-                  <button
-                    key={key}
-                    id={`compliance-tab-${key}`}
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls="compliance-tabpanel"
-                    tabIndex={isActive ? 0 : -1}
-                    onClick={() => setTab(key)}
-                    onKeyDown={(event) => {
-                      if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
-                      event.preventDefault()
-                      const current = PAGE_TABS.findIndex((item) => item.key === key)
-                      const nextIndex =
-                        event.key === 'Home'
-                          ? 0
-                          : event.key === 'End'
-                            ? PAGE_TABS.length - 1
-                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
-                              PAGE_TABS.length
-                      const next = PAGE_TABS[nextIndex].key
-                      setTab(next)
-                      requestAnimationFrame(() =>
-                        document.getElementById(`compliance-tab-${next}`)?.focus(),
-                      )
-                    }}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
-                      isActive
-                        ? 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
-                        : 'text-text-muted hover:text-text-secondary border border-transparent'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" /> {label}
-                  </button>
-                )
-              })}
+              {(() => {
+                const activeTabs = (tab === 'results' || currentStep === 'results')
+                  ? [{ key: 'results' as PageTab, label: 'Audit results', icon: FileCheck2 }, ...BASE_PAGE_TABS]
+                  : BASE_PAGE_TABS
+                return activeTabs.map(({ key, label, icon: Icon }) => {
+                  const isActive = (key === 'results' && (tab === 'results' || currentStep === 'results')) || (tab === key && currentStep !== 'results')
+                  return (
+                    <button
+                      key={key}
+                      id={`compliance-tab-${key}`}
+                      role="tab"
+                      aria-selected={isActive}
+                      aria-controls="compliance-tabpanel"
+                      tabIndex={isActive ? 0 : -1}
+                      onClick={() => {
+                        if (key === 'audit') {
+                          handleStartNew()
+                        } else {
+                          setTab(key)
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                        event.preventDefault()
+                        const current = activeTabs.findIndex((item) => item.key === key)
+                        const nextIndex =
+                          event.key === 'Home'
+                            ? 0
+                            : event.key === 'End'
+                              ? activeTabs.length - 1
+                              : (current + (event.key === 'ArrowRight' ? 1 : -1) + activeTabs.length) %
+                                activeTabs.length
+                        const next = activeTabs[nextIndex].key
+                        if (next === 'audit') {
+                          handleStartNew()
+                        } else {
+                          setTab(next)
+                        }
+                        requestAnimationFrame(() =>
+                          document.getElementById(`compliance-tab-${next}`)?.focus(),
+                        )
+                      }}
+                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] ${
+                        isActive
+                          ? 'bg-amber-400/10 text-amber-300 border border-amber-400/30'
+                          : 'text-text-muted hover:text-text-secondary border border-transparent'
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </button>
+                  )
+                })
+              })()}
             </div>
           </div>
 
@@ -318,7 +337,7 @@ export default function AuditPage() {
                     isRetrying={retryingAuditId === auditId}
                   />
                 )}
-                {tab === 'audit' && currentStep === 'results' && auditResults && auditId && (
+                {(tab === 'results' || currentStep === 'results') && auditResults && auditId && (
                   <AuditResults
                     results={auditResults}
                     auditId={auditId}

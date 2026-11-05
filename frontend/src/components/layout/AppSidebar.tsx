@@ -142,6 +142,12 @@ export default function AppSidebar({
       const [path, query] = href.split('?')
       const tabParam = new URLSearchParams(query).get('tab')
       const currentTab = new URLSearchParams(location.search).get('tab')
+      if (tabParam === 'history' && (currentTab === 'history' || currentTab === 'results')) {
+        return location.pathname === path
+      }
+      if (tabParam === 'audit' && currentTab === 'results') {
+        return false
+      }
       return location.pathname === path && currentTab === tabParam
     }
     if (href === '/dashboard') {

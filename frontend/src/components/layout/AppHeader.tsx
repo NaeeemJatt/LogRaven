@@ -74,6 +74,10 @@ export default function AppHeader({
       return { section: 'Cloud Compliance', page: 'Connect Cloud Account' }
     }
     if (p === '/compliance') {
+      const currentTab = new URLSearchParams(location.search).get('tab')
+      if (currentTab === 'results') {
+        return { section: 'Cloud Compliance', page: 'Audit Assessment Results' }
+      }
       return { section: '', page: 'Compliance Control Room' }
     }
     if (p === '/compliance/frameworks') {

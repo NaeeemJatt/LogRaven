@@ -70,8 +70,6 @@ export default function ConnectAccountModal({
   const [stepError, setStepError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Deterministic External ID for confused-deputy protection
-  const [externalId] = useState(() => 'lgr-ext-' + Math.random().toString(36).substring(2, 10) + '-sec')
 
   if (!isOpen) return null
 
