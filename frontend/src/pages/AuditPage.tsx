@@ -222,7 +222,7 @@ export default function AuditPage() {
         style={{ background: 'radial-gradient(ellipse 70% 100% at 20% 0%, rgba(227,181,126,0.05), transparent 70%)' }}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 max-w-[1400px] mx-auto">
+      <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 w-full">
         <main className="min-w-0">
           {/* Page tabs: results / new audit / accounts / history / posture */}
           <div className="flex items-center justify-between gap-3 mb-4">

@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Cloud,
   Plus,
-  Share2,
   ChevronDown,
   User as UserIcon,
   LogOut,
@@ -23,7 +22,7 @@ interface AppHeaderProps {
   activeAccount: CloudAccount | null
   onSelectAccount: (account: CloudAccount) => void
   onOpenConnectModal: () => void
-  onOpenAuditorModal: () => void
+  onOpenAuditorModal?: () => void
   onOpenQuickScanModal: () => void
 }
 
@@ -32,7 +31,6 @@ export default function AppHeader({
   activeAccount,
   onSelectAccount,
   onOpenConnectModal,
-  onOpenAuditorModal,
   onOpenQuickScanModal,
 }: AppHeaderProps) {
   const location = useLocation()
@@ -67,8 +65,8 @@ export default function AppHeader({
   const getBreadcrumbs = () => {
     const p = location.pathname
 
-    if (p === '/dashboard') {
-      return { section: 'Cloud Compliance', page: 'Executive Posture Overview' }
+    if (p === '/dashboard' || p === '/') {
+      return { section: '', page: 'Cloud Compliance Overview' }
     }
     if (p.startsWith('/compliance/connect')) {
       return { section: 'Cloud Compliance', page: 'Connect Cloud Account' }
@@ -246,16 +244,6 @@ export default function AppHeader({
             >
               <Play className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
               <span>Quick Scan</span>
-            </button>
-
-            {/* Auditor Share Link */}
-            <button
-              onClick={onOpenAuditorModal}
-              title="Share Evidence Vault with External Auditor"
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-text-secondary hover:text-text-primary text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
-            >
-              <Share2 className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Auditor Link</span>
             </button>
           </>
         )}

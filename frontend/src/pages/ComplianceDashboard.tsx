@@ -8,13 +8,11 @@ import {
   AlertTriangle,
   Cloud,
   Plus,
-  Play,
   Library,
   GitMerge,
   ArrowRight,
   TrendingUp,
   Download,
-  Share2,
   ChevronRight,
   SlidersHorizontal,
   CheckCircle2,
@@ -119,7 +117,7 @@ export default function ComplianceDashboard() {
   const totalControls = totalPass + totalFail
 
   return (
-    <div className="min-h-dvh bg-void text-text-primary p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8 select-none overflow-x-clip">
+    <div className="min-h-dvh bg-void text-text-primary p-4 sm:p-6 lg:p-8 w-full space-y-8 select-none overflow-x-clip">
       {/* ── CASE 1: NO CLOUD ACCOUNT CONNECTED (High-Impact Onboarding) ── */}
       {!hasAccounts && !loading && (
         <div className="space-y-6">
@@ -219,41 +217,6 @@ export default function ComplianceDashboard() {
       {/* ── CASE 2: CLOUD ACCOUNT CONNECTED (Executive Command Center) ── */}
       {hasAccounts && (
         <div className="space-y-8">
-          {/* Executive Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-white/[0.08] pb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-2 text-xs text-text-muted">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse" />
-                <span>Continuous compliance posture: active</span>
-              </div>
-              <h1 className="font-display font-bold text-2xl sm:text-3xl text-text-primary tracking-tight">
-                Executive compliance command
-              </h1>
-              <p className="text-xs text-text-muted mt-1">
-                Monitored fleet: <span className="text-text-primary font-semibold">{activeAccount?.name || 'All accounts'}</span> ({activeAccount?.provider?.toUpperCase()})
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => navigate('/compliance?tab=audit')}
-                className="btn-sovereign flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-semibold motion-safe:transition-transform motion-safe:active:scale-[0.98] motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Run compliance scan</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setAuditorModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/[0.08] hover:border-white/[0.18] bg-surface text-text-secondary hover:text-text-primary text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Share2 className="w-3.5 h-3.5 text-amber-400" />
-                <span>Share with auditor</span>
-              </button>
-            </div>
-          </div>
 
           {/* Metric Bento Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
