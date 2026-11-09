@@ -26,21 +26,24 @@ const STEPS = [
 ]
 
 function checkedCount(percent: number): number {
-  if (percent >= 75) return 4
-  if (percent >= 50) return 3
-  if (percent >= 30) return 2
+  if (percent >= 100) return 4
+  if (percent >= 85)  return 3
+  if (percent >= 50)  return 2
+  if (percent >= 20)  return 1
   return 0
 }
 
 function stepLabel(step: string | null | undefined, percent: number): string {
-  if (step === 'collecting') return 'Collecting AWS evidence...'
-  if (step === 'sanitizing') return 'Sanitizing evidence...'
-  if (step === 'mapping')    return 'Mapping evidence to selected framework controls...'
-  if (step === 'saving')     return 'Saving results...'
-  if (percent >= 75) return 'Generating evidence package...'
-  if (percent >= 50) return 'Analyzing controls with AI...'
-  if (percent >= 30) return 'Collecting AWS evidence...'
-  return 'Connecting to AWS account...'
+  if (step === 'connecting') return 'Connecting to cloud account...'
+  if (step === 'collecting') return 'Collecting evidence signals...'
+  if (step === 'sanitizing') return 'Sanitizing evidence & redacting PII...'
+  if (step === 'grading' || step === 'mapping') return 'Evaluating framework controls with AI...'
+  if (step === 'packaging' || step === 'saving') return 'Packaging reports & evidence...'
+  if (percent >= 85) return 'Packaging reports & evidence...'
+  if (percent >= 50) return 'Evaluating framework controls with AI...'
+  if (percent >= 20) return 'Collecting evidence signals...'
+  if (percent >= 10) return 'Connecting to cloud account...'
+  return 'Connecting to cloud account...'
 }
 
 export default function AuditProgress({

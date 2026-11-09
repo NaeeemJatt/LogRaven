@@ -1,3 +1,4 @@
+import { LogoIcon } from '../components/brand/Logo'
 // LogRaven — External CPA Auditor Portal
 //
 // Specialized read-only evidence room for external auditors (SOC 2, ISO 27001).
@@ -7,7 +8,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
-  ShieldCheck, Download, Lock, CheckCircle2,
+  Download, Lock, CheckCircle2,
   ShieldAlert, KeyRound, Loader2,
 } from 'lucide-react'
 import type { AuditorPortalException, AuditorPortalOverview } from '../types/audit'
@@ -152,9 +153,7 @@ export default function AuditorPortalPage() {
         {/* Top Branding Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl border border-white/[0.08] bg-surface">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
+            <LogoIcon size={38} />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-emerald-400 font-semibold">

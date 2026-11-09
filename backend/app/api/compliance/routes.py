@@ -30,6 +30,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from celery.result import AsyncResult
+from app.tasks.celery_app import celery_app
 
 from app.dependencies import get_current_user, get_db
 from app.limiter import limiter
@@ -353,11 +354,19 @@ async def _build_status_response(db: AsyncSession, audit_job: AuditJob) -> Audit
     frameworks = audit_job.frameworks or [DEFAULT_FRAMEWORK]
 
     if audit_job.status in ("pending", "running"):
-        celery_result = AsyncResult(str(job_uuid))
         percent = step = None
-        if celery_result.state == "PROGRESS" and celery_result.info:
-            percent = celery_result.info.get("percent")
-            step = celery_result.info.get("step")
+        try:
+            celery_result = AsyncResult(str(job_uuid), app=celery_app)
+            if celery_result.state == "PROGRESS" and celery_result.info:
+                percent = celery_result.info.get("percent")
+                step = celery_result.info.get("step")
+        except Exception:
+            logger.exception("Failed to query Celery task state for audit %s", job_uuid)
+
+        if percent is None and audit_job.status == "running":
+            percent = 10
+            step = "connecting"
+
         return AuditStatusResponse(
             audit_id=str(job_uuid), status=audit_job.status, percent=percent, step=step,
             frameworks=frameworks, company_name=audit_job.company_name,
@@ -530,12 +539,13 @@ async def start_audit(
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
-            logger.info("Celery worker unavailable; running compliance audit %s in-process via asyncio", audit_job.id)
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+            logger.info("Running compliance audit %s in-process via asyncio", audit_job.id)
             from app.compliance.tasks import run_compliance_audit_inline
 
             asyncio.create_task(run_compliance_audit_inline(str(audit_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             task_result = run_soc2_audit.apply_async(
@@ -548,7 +558,6 @@ async def start_audit(
         audit_job.error_message = "Audit could not be dispatched. Please retry."
         await db.commit()
         raise HTTPException(status_code=503, detail="Audit could not be dispatched.") from exc
-    logger.info("Enqueued Celery task %s", task_result.id)
 
     return AuditStartResponse(
         audit_id=str(audit_job.id),
@@ -685,12 +694,13 @@ async def retry_audit(
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
-            logger.info("Celery worker unavailable; running compliance retry %s in-process via asyncio", new_job.id)
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+            logger.info("Running compliance retry %s in-process via asyncio", new_job.id)
             from app.compliance.tasks import run_compliance_audit_inline
 
             asyncio.create_task(run_compliance_audit_inline(str(new_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             run_soc2_audit.apply_async(args=[str(new_job.id)], task_id=str(new_job.id))

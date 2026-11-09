@@ -440,16 +440,16 @@ export default function ProfilePage() {
   const notify = (msg: string, tone: Tone) => setToast({ msg, tone })
 
   return (
-    <div className="pt-16 min-h-screen bg-void text-text-primary">
+    <div className="min-h-screen bg-void text-text-primary">
       {/* Page header */}
       <div className="border-b border-white/[0.04] bg-surface/20">
-        <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
+        <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
           <h1 className="font-display font-bold text-text-primary text-2xl tracking-tight">Profile &amp; Settings</h1>
           <p className="text-text-muted text-xs mt-1">Manage your account identity, security, and workspace preferences.</p>
         </div>
       </div>
 
-      <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-6xl mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="grid md:grid-cols-[300px_1fr] gap-6 items-start">
 
           {/* Identity rail */}

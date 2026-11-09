@@ -10,7 +10,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Cloud,
-  PlusCircle, History, Gauge,
+  PlusCircle, History, Gauge, ShieldCheck, Loader2,
 } from 'lucide-react'
 import AuditForm from '../components/audit/AuditForm'
 import AuditProgress from '../components/audit/AuditProgress'
@@ -22,13 +22,14 @@ import ShareAuditModal from '../components/audit/ShareAuditModal'
 import AuditorShareModal from '../components/audit/AuditorShareModal'
 import type { AuditFormData } from '../components/audit/AuditForm'
 import type { AuditStatusResponse } from '../types/audit'
-import { startAudit, getAuditStatus, retryAudit } from '../api/compliance'
+import { startAudit, getAuditStatus, retryAudit, listAudits } from '../api/compliance'
 import type { AuditSummary } from '../api/compliance'
 
 type AuditStep = 'form' | 'progress' | 'results'
-type PageTab = 'audit' | 'accounts' | 'history' | 'posture'
+type PageTab = 'audit' | 'accounts' | 'history' | 'posture' | 'results'
 
-const PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
+const BASE_PAGE_TABS: { key: PageTab; label: string; icon: React.ElementType }[] = [
+  { key: 'results',  label: 'Scan Result',    icon: ShieldCheck },
   { key: 'audit',    label: 'New audit',      icon: PlusCircle },
   { key: 'accounts', label: 'Cloud accounts', icon: Cloud },
   { key: 'history',  label: 'History',        icon: History },
@@ -39,7 +40,7 @@ export default function AuditPage() {
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
   const tabParam = searchParams.get('tab') as PageTab | null
-  const tab: PageTab = (tabParam && ['audit', 'accounts', 'history', 'posture'].includes(tabParam))
+  const tab: PageTab = (tabParam && ['audit', 'accounts', 'history', 'posture', 'results'].includes(tabParam))
     ? tabParam
     : 'audit'
 
@@ -55,6 +56,7 @@ export default function AuditPage() {
   const [auditId, setAuditId]           = useState<string | null>(null)
   const [companyName, setCompanyName]   = useState('')
   const [auditResults, setAuditResults] = useState<AuditStatusResponse | null>(null)
+  const [isLoadingResults, setIsLoadingResults] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [retryingAuditId, setRetryingAuditId] = useState<string | null>(null)
@@ -66,6 +68,53 @@ export default function AuditPage() {
       setIsAuditorModalOpen(true)
     }
   }, [tabParam])
+
+  const auditIdParam = searchParams.get('auditId') || searchParams.get('audit_id')
+  const fwParam = searchParams.get('fw')
+
+  useEffect(() => {
+    let isMounted = true
+    const loadRequestedAudit = async () => {
+      if (tabParam === 'results' || auditIdParam) {
+        setIsLoadingResults(true)
+        try {
+          let targetAuditId = auditIdParam && auditIdParam !== 'latest' ? auditIdParam : null
+          if (!targetAuditId) {
+            const audits = await listAudits(1, 5)
+            const completed = audits.items.find((a) => a.status === 'complete') || audits.items[0]
+            if (completed) {
+              targetAuditId = completed.audit_id
+            }
+          }
+          if (targetAuditId) {
+            const data = await getAuditStatus(targetAuditId)
+            if (!isMounted) return
+            setAuditId(targetAuditId)
+            setCompanyName(data.company_name || '')
+            if (data.status === 'complete') {
+              setAuditResults(data)
+              setCurrentStep('results')
+            } else if (data.status === 'pending' || data.status === 'running') {
+              setAuditResults(null)
+              setCurrentStep('progress')
+            } else {
+              setErrorMessage(data.error || 'Audit failed.')
+              setCurrentStep('form')
+            }
+          }
+        } catch {
+          if (!isMounted) return
+          setErrorMessage('Could not load the requested compliance audit.')
+        } finally {
+          if (isMounted) setIsLoadingResults(false)
+        }
+      }
+    }
+    void loadRequestedAudit()
+    return () => {
+      isMounted = false
+    }
+  }, [tabParam, auditIdParam, setTab])
 
   const handleFormSubmit = async (formData: AuditFormData) => {
     setIsSubmitting(true)
@@ -93,10 +142,24 @@ export default function AuditPage() {
   const handleProgressComplete = useCallback((data: AuditStatusResponse) => {
     setAuditResults(data)
     setCurrentStep('results')
-  }, [])
+    setAuditId(data.audit_id)
+    setCompanyName(data.company_name || '')
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set('tab', 'results')
+      if (data.audit_id) {
+        next.set('auditId', data.audit_id)
+      }
+      return next
+    }, { replace: true })
+  }, [setSearchParams])
 
   const handleStartNew = () => {
-    setTab('audit')
+    setSearchParams(() => {
+      const next = new URLSearchParams()
+      next.set('tab', 'audit')
+      return next
+    }, { replace: true })
     setCurrentStep('form')
     setAuditId(null)
     setCompanyName('')
@@ -135,7 +198,12 @@ export default function AuditPage() {
         const data = await getAuditStatus(audit.audit_id)
         setAuditResults(data)
         setCurrentStep('results')
-        setTab('audit')
+        setSearchParams((prev) => {
+          const next = new URLSearchParams(prev)
+          next.set('tab', 'results')
+          next.set('auditId', audit.audit_id)
+          return next
+        }, { replace: true })
       } catch {
         setErrorMessage('Could not load that audit — please try again.')
       }
@@ -154,12 +222,12 @@ export default function AuditPage() {
         style={{ background: 'radial-gradient(ellipse 70% 100% at 20% 0%, rgba(227,181,126,0.05), transparent 70%)' }}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 max-w-[1400px] mx-auto">
+      <div className="relative px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 pb-6 w-full">
         <main className="min-w-0">
-          {/* Page tabs: new audit flow / history / posture */}
+          {/* Page tabs: results / new audit / accounts / history / posture */}
           <div className="flex items-center justify-between gap-3 mb-4">
             <div role="tablist" aria-label="Compliance views" className="ops-panel p-1 inline-flex flex-wrap gap-1">
-              {PAGE_TABS.map(({ key, label, icon: Icon }) => {
+              {BASE_PAGE_TABS.map(({ key, label, icon: Icon }) => {
                 const isActive = tab === key
                 return (
                   <button
@@ -169,20 +237,30 @@ export default function AuditPage() {
                     aria-selected={isActive}
                     aria-controls="compliance-tabpanel"
                     tabIndex={isActive ? 0 : -1}
-                    onClick={() => setTab(key)}
+                    onClick={() => {
+                      if (key === 'audit') {
+                        handleStartNew()
+                      } else {
+                        setTab(key)
+                      }
+                    }}
                     onKeyDown={(event) => {
                       if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
                       event.preventDefault()
-                      const current = PAGE_TABS.findIndex((item) => item.key === key)
+                      const current = BASE_PAGE_TABS.findIndex((item) => item.key === key)
                       const nextIndex =
                         event.key === 'Home'
                           ? 0
                           : event.key === 'End'
-                            ? PAGE_TABS.length - 1
-                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + PAGE_TABS.length) %
-                              PAGE_TABS.length
-                      const next = PAGE_TABS[nextIndex].key
-                      setTab(next)
+                            ? BASE_PAGE_TABS.length - 1
+                            : (current + (event.key === 'ArrowRight' ? 1 : -1) + BASE_PAGE_TABS.length) %
+                              BASE_PAGE_TABS.length
+                      const next = BASE_PAGE_TABS[nextIndex].key
+                      if (next === 'audit') {
+                        handleStartNew()
+                      } else {
+                        setTab(next)
+                      }
                       requestAnimationFrame(() =>
                         document.getElementById(`compliance-tab-${next}`)?.focus(),
                       )
@@ -269,13 +347,39 @@ export default function AuditPage() {
                     isRetrying={retryingAuditId === auditId}
                   />
                 )}
-                {tab === 'audit' && currentStep === 'results' && auditResults && auditId && (
+                {tab === 'results' && auditResults && auditId && (
                   <AuditResults
                     results={auditResults}
                     auditId={auditId}
+                    initialFrameworkId={fwParam || undefined}
                     onStartNew={handleStartNew}
                     onShare={() => setShareTarget({ auditId, companyName })}
                   />
+                )}
+                {tab === 'results' && (!auditResults || !auditId) && (
+                  <div className="rounded-2xl border border-white/[0.08] bg-deep/80 backdrop-blur-sm p-12 text-center space-y-4">
+                    {isLoadingResults ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+                        <p className="text-xs text-text-muted">Loading scan result…</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3">
+                        <ShieldCheck className="w-10 h-10 text-text-muted" />
+                        <h3 className="text-sm font-semibold text-text-primary">No Scan Result Available</h3>
+                        <p className="text-xs text-text-muted max-w-sm">
+                          No compliance assessments have been run yet. Start a new scan to evaluate controls across your cloud infrastructure.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleStartNew}
+                          className="btn-sovereign inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
+                        >
+                          <PlusCircle className="w-3.5 h-3.5" /> Start New Scan
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </motion.div>
             </AnimatePresence>

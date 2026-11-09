@@ -94,7 +94,13 @@ def get_aws_session(role_arn: str, external_id: str | None = None) -> boto3.Sess
     Credentials exist in memory only for the session lifetime (max 1 hour).
     """
     try:
-        sts = boto3.client("sts")
+        client_kwargs: dict[str, Any] = {}
+        if settings.AWS_REGION:
+            client_kwargs["region_name"] = settings.AWS_REGION
+        if settings.AWS_ACCESS_KEY_ID and settings.AWS_SECRET_ACCESS_KEY:
+            client_kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+            client_kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+        sts = boto3.client("sts", **client_kwargs)
         assume_kwargs: dict[str, Any] = {
             "RoleArn": role_arn,
             "RoleSessionName": SESSION_NAME,
@@ -115,6 +121,7 @@ def get_aws_session(role_arn: str, external_id: str | None = None) -> boto3.Sess
             aws_access_key_id=creds["AccessKeyId"],
             aws_secret_access_key=creds["SecretAccessKey"],
             aws_session_token=creds["SessionToken"],
+            region_name=settings.AWS_REGION or DEFAULT_REGION,
         )
     except ClientError as exc:
         code = exc.response.get("Error", {}).get("Code", "Unknown")

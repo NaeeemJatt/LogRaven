@@ -1,3 +1,4 @@
+import Logo from '../../components/brand/Logo'
 // LogRaven — Animated Characters Login Page
 // All eye-tracking / blinking / peeking animation logic preserved exactly.
 // Modern minimal sovereign styling, amber accent, zero arbitrary colors or blurred orbs.
@@ -5,7 +6,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, EyeOff, Shield } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import LegalLinks from '../../components/layout/LegalLinks'
 
@@ -255,17 +256,7 @@ export default function Login() {
 
         {/* Brand */}
         <div className="relative z-20">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
-            </div>
-            <span className="font-display font-bold text-base text-text-primary tracking-tight">
-              Log<span className="text-amber-400">Raven</span>
-            </span>
-          </div>
-          <p className="text-text-muted text-xs mt-1.5">
-            Watch your logs. Find the threat.
-          </p>
+          <Logo size={36} subtitle="Watch your logs. Find the threat." showSignal={false} />
         </div>
 
         {/* Characters stage */}
@@ -422,17 +413,7 @@ export default function Login() {
 
           {/* Mobile brand */}
           <div className="lg:hidden flex flex-col items-center mb-10">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
-              </div>
-              <span className="font-display font-bold text-base text-text-primary tracking-tight">
-                Log<span className="text-amber-400">Raven</span>
-              </span>
-            </div>
-            <p className="text-text-muted text-xs mt-1">
-              Watch your logs. Find the threat.
-            </p>
+            <Logo size={32} subtitle="Watch your logs. Find the threat." showSignal={false} />
           </div>
 
           {/* Header */}

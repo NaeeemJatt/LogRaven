@@ -1,10 +1,10 @@
+import Logo from '../components/brand/Logo'
 // LogRaven — Security Operations Center & Compliance Intelligence Platform
 // Hallmark · v2.0.0 | shape: stage | theme: watchtower | genre: modern-minimal
 
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Shield,
   ArrowRight,
   Terminal,
   FileCode2,
@@ -62,12 +62,7 @@ export default function Landing() {
             className="flex items-center gap-2.5 rounded-lg focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none"
             aria-label="LogRaven Home"
           >
-            <div className="w-8 h-8 rounded-lg bg-surface border border-white/[0.08] flex items-center justify-center">
-              <Shield className="w-4 h-4 text-amber-400" strokeWidth={2} />
-            </div>
-            <span className="font-display font-bold text-lg tracking-tight text-text-primary">
-              Log<span className="text-amber-400">Raven</span>
-            </span>
+            <Logo size={32} showSignal={false} />
           </Link>
 
           <nav aria-label="Primary" className="hidden md:flex items-center gap-8 text-sm text-text-secondary">
@@ -599,12 +594,7 @@ tags:
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-white/[0.06]">
             <div className="flex items-center gap-3">
-              <div className="w-7 h-7 rounded-lg bg-surface border border-white/[0.08] flex items-center justify-center">
-                <Shield className="w-3.5 h-3.5 text-amber-400" />
-              </div>
-              <span className="font-display font-bold text-sm tracking-tight text-text-primary">
-                Log<span className="text-amber-400">Raven</span>
-              </span>
+              <Logo size={28} showSignal={false} />
             </div>
 
             <div className="flex items-center gap-2 text-xs text-text-muted">

@@ -455,67 +455,78 @@ async def trigger_account_scan(
     except ValueError:
         raise HTTPException(status_code=404, detail="Cloud account not found")
 
-    res = await db.execute(
-        select(CloudAccount).where(CloudAccount.id == acc_uuid, CloudAccount.user_id == current_user.id)
-    )
-    account = res.scalar_one_or_none()
-    if not account:
-        raise HTTPException(status_code=404, detail="Cloud account not found")
+    try:
+        res = await db.execute(
+            select(CloudAccount).where(CloudAccount.id == acc_uuid, CloudAccount.user_id == current_user.id)
+        )
+        account = res.scalar_one_or_none()
+        if not account:
+            raise HTTPException(status_code=404, detail="Cloud account not found")
 
-    today = date.today()
-    start_date = today - timedelta(days=90)
+        today = date.today()
+        start_date = today - timedelta(days=90)
 
-    role_arn_val = account.role_arn or f"{account.provider}:{account.account_id or 'cloud'}"
+        role_arn_val = account.role_arn or f"{account.provider}:{account.account_id or 'cloud'}"
 
-    audit_job = AuditJob(
-        user_id=current_user.id,
-        cloud_account_id=account.id,
-        company_name=account.name,
-        role_arn=role_arn_val,
-        audit_start_date=start_date,
-        audit_end_date=today,
-        frameworks=account.default_frameworks or ["soc2"],
-        recurrence=account.scan_schedule,
-        status="pending",
-    )
-    db.add(audit_job)
-    await db.flush()
+        audit_job = AuditJob(
+            user_id=current_user.id,
+            cloud_account_id=account.id,
+            company_name=account.name,
+            role_arn=role_arn_val,
+            audit_start_date=start_date,
+            audit_end_date=today,
+            frameworks=account.default_frameworks or ["soc2"],
+            recurrence=account.scan_schedule,
+            status="pending",
+        )
+        db.add(audit_job)
+        await db.flush()
 
-    account.last_scanned_at = datetime.now(timezone.utc)
+        account.last_scanned_at = datetime.now(timezone.utc)
 
-    add_audit(
-        db,
-        user_id=current_user.id,
-        action="compliance_audit_started",
-        request=request,
-        metadata={
-            "audit_id": str(audit_job.id),
-            "cloud_account_id": str(account.id),
-            "frameworks": audit_job.frameworks,
-        },
-    )
-    await db.commit()
-    await db.refresh(audit_job)
+        add_audit(
+            db,
+            user_id=current_user.id,
+            action="compliance_audit_started",
+            request=request,
+            metadata={
+                "audit_id": str(audit_job.id),
+                "cloud_account_id": str(account.id),
+                "frameworks": audit_job.frameworks,
+            },
+        )
+        await db.commit()
+        await db.refresh(audit_job)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await db.rollback()
+        logger.exception("Failed to create audit job for cloud account %s: %s", account_id, exc)
+        raise HTTPException(status_code=500, detail=f"Database error creating audit job: {exc}") from exc
 
     # Dispatch audit execution
     try:
         from app.config import settings
         from app.tasks.dev_worker import ensure_dev_worker_running
 
-        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not ensure_dev_worker_running():
+        if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
             from app.compliance.tasks import run_compliance_audit_inline
             asyncio.create_task(run_compliance_audit_inline(str(audit_job.id)))
         else:
+            from app.tasks.dev_worker import ensure_dev_worker_running
             if not ensure_dev_worker_running():
                 raise RuntimeError("Celery worker is unavailable")
             from app.compliance.tasks import run_soc2_audit
             run_soc2_audit.apply_async(args=[str(audit_job.id)], task_id=str(audit_job.id))
     except Exception as exc:
-        logger.exception("Failed to dispatch compliance scan for account %s", account.id)
-        audit_job.status = "failed"
-        audit_job.error_message = "Scan could not be dispatched."
-        await db.commit()
-        raise HTTPException(status_code=503, detail="Scan could not be dispatched.") from exc
+        logger.exception("Failed to dispatch compliance scan for account %s: %s", account.id, exc)
+        try:
+            audit_job.status = "failed"
+            audit_job.error_message = f"Scan could not be dispatched: {exc}"
+            await db.commit()
+        except Exception:
+            await db.rollback()
+        raise HTTPException(status_code=503, detail=f"Scan could not be dispatched: {exc}") from exc
 
     return {
         "audit_id": str(audit_job.id),

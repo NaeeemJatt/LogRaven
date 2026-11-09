@@ -70,8 +70,6 @@ export default function ConnectAccountModal({
   const [stepError, setStepError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // Deterministic External ID for confused-deputy protection
-  const [externalId] = useState(() => 'lgr-ext-' + Math.random().toString(36).substring(2, 10) + '-sec')
 
   if (!isOpen) return null
 
@@ -235,20 +233,17 @@ export default function ConnectAccountModal({
     onClose()
   }
 
+  const logravenAccountId = import.meta.env.VITE_AWS_ACCOUNT_ID || '382764425926'
+
   const trustPolicyJson = `{
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::342061021430:root"
+        "AWS": "arn:aws:iam::${logravenAccountId}:root"
       },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "sts:ExternalId": "${externalId}"
-        }
-      }
+      "Action": "sts:AssumeRole"
     }
   ]
 }`

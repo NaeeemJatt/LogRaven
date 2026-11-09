@@ -415,7 +415,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       {isError && (
         <div role="alert" className="p-4 rounded-lg border border-threat-critical/30 bg-threat-critical/[0.07] text-threat-critical text-xs flex items-center justify-between gap-3">
           <span>Failed to load investigations.</span>

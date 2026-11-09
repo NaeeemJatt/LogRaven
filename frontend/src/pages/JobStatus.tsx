@@ -112,7 +112,7 @@ export default function JobStatus() {
 
   if (isLoading) {
     return (
-      <div className="pt-16 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-amber-400 motion-safe:animate-spin motion-reduce:animate-none" />
       </div>
     )
@@ -120,7 +120,7 @@ export default function JobStatus() {
 
   if (isError || status === undefined) {
     return (
-      <div className="pt-16 min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
         <div className="px-5 py-4 rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-400 text-sm text-center max-w-md">
           Could not load investigation status. Check that you are signed in and the investigation exists.
         </div>
@@ -133,7 +133,7 @@ export default function JobStatus() {
 
   if (isDraft) {
     return (
-      <div className="pt-16 min-h-screen flex flex-col items-center justify-center gap-4 px-4">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
         <div className="text-center max-w-md">
           <h1 className="font-display text-xl font-semibold text-text-primary mb-2">Analysis not started</h1>
           <p className="text-text-muted text-sm mb-6">
@@ -151,7 +151,7 @@ export default function JobStatus() {
   }
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="min-h-screen">
       <div className="px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Header */}

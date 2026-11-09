@@ -24,6 +24,12 @@ from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
 
 
+
+def _utc_now() -> datetime:
+    """Return naive UTC datetime for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns."""
+    return datetime.now(timezone.utc).replace(tzinfo=None)
+
+
 class AuditJob(Base):
     __tablename__ = "soc2_audit_jobs"
 
@@ -58,8 +64,8 @@ class AuditJob(Base):
         nullable=True,
         index=True,
     )
-    created_at:       Mapped[datetime]    = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
-    updated_at:       Mapped[datetime]    = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at:       Mapped[datetime]    = mapped_column(DateTime, default=_utc_now)
+    updated_at:       Mapped[datetime]    = mapped_column(DateTime, default=_utc_now, onupdate=_utc_now)
 
     cloud_account: Mapped["CloudAccount | None"] = relationship("CloudAccount", back_populates="audit_jobs")
     results: Mapped[list["AuditResult"]] = relationship(
@@ -95,7 +101,7 @@ class AuditResult(Base):
     evidence_count:       Mapped[int]        = mapped_column(Integer, nullable=False)
     ai_description:       Mapped[str]        = mapped_column(Text, nullable=False)
     raw_evidence_summary:   Mapped[dict]       = mapped_column(JSONB, default=dict)
-    created_at:             Mapped[datetime]   = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at:             Mapped[datetime]   = mapped_column(DateTime, default=_utc_now)
 
     audit_job: Mapped["AuditJob"] = relationship("AuditJob", back_populates="results")
 
@@ -122,7 +128,7 @@ class ComplianceSnapshot(Base):
     score_delta:      Mapped[float | None] = mapped_column(Float, nullable=True)
     evidence_signals: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     results:          Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    created_at:       Mapped[datetime]   = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at:       Mapped[datetime]   = mapped_column(DateTime, default=_utc_now, index=True)
 
     audit_job: Mapped["AuditJob"] = relationship("AuditJob", back_populates="snapshots")
 
@@ -151,11 +157,11 @@ class ComplianceException(Base):
     suppressed_by:          Mapped[str]              = mapped_column(String(255), nullable=False)
     status:                 Mapped[str]              = mapped_column(String(20), nullable=False, default="active", index=True)
     expires_at:             Mapped[datetime | None]  = mapped_column(DateTime, nullable=True)
-    created_at:             Mapped[datetime]         = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at:             Mapped[datetime]         = mapped_column(DateTime, default=_utc_now, index=True)
     updated_at:             Mapped[datetime]         = mapped_column(
         DateTime,
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=_utc_now,
+        onupdate=_utc_now,
     )
 
 

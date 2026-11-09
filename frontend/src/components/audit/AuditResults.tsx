@@ -26,6 +26,7 @@ import AttackPathCanvas from './AttackPathCanvas'
 interface AuditResultsProps {
   results: AuditStatusResponse
   auditId: string
+  initialFrameworkId?: string
   onStartNew?: () => void
   /** When set, shows a Share button in the actions column. */
   onShare?: () => void
@@ -104,12 +105,23 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
   )
 }
 
-export default function AuditResults({ results, auditId, onStartNew, onShare, readOnly = false }: AuditResultsProps) {
+export default function AuditResults({ results, auditId, initialFrameworkId, onStartNew, onShare, readOnly = false }: AuditResultsProps) {
   const [localResults, setLocalResults] = useState<AuditStatusResponse>(results)
   useEffect(() => { setLocalResults(results) }, [results])
 
   const frameworks = useMemo(() => deriveFrameworks(localResults), [localResults])
-  const [activeFwId, setActiveFwId] = useState(frameworks[0]?.framework_id ?? 'soc2')
+  const [activeFwId, setActiveFwId] = useState(() => {
+    if (initialFrameworkId && frameworks.some((f) => f.framework_id === initialFrameworkId)) {
+      return initialFrameworkId
+    }
+    return frameworks[0]?.framework_id ?? 'soc2'
+  })
+
+  useEffect(() => {
+    if (initialFrameworkId && frameworks.some((f) => f.framework_id === initialFrameworkId)) {
+      setActiveFwId(initialFrameworkId)
+    }
+  }, [initialFrameworkId, frameworks])
   const [view, setView] = useState<ViewMode>('controls')
   const [downloading, setDownloading] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)

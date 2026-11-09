@@ -16,6 +16,7 @@ import {
   listCloudAccounts,
   deleteCloudAccount, verifyCloudAccount, triggerAccountScan,
 } from '../../api/compliance'
+import { normalizeApiError } from '../../api/errors'
 
 interface CloudAccountsManagerProps {
   onStartAudit?: (auditId: string, companyName: string) => void
@@ -69,8 +70,8 @@ export default function CloudAccountsManager({ onStartAudit }: CloudAccountsMana
       } else {
         await fetchAccounts()
       }
-    } catch {
-      setError(`Failed to trigger scan for ${account.name}.`)
+    } catch (err: unknown) {
+      setError(normalizeApiError(err, `Failed to trigger scan for ${account.name}.`).message)
     } finally {
       setActionLoadingId(null)
     }
@@ -81,8 +82,8 @@ export default function CloudAccountsManager({ onStartAudit }: CloudAccountsMana
     try {
       const updated = await verifyCloudAccount(accountId)
       setAccounts((prev) => prev.map((a) => (a.id === accountId ? updated : a)))
-    } catch {
-      setError('Verification failed.')
+    } catch (err: unknown) {
+      setError(normalizeApiError(err, 'Verification failed.').message)
     } finally {
       setActionLoadingId(null)
     }
@@ -96,8 +97,8 @@ export default function CloudAccountsManager({ onStartAudit }: CloudAccountsMana
     try {
       await deleteCloudAccount(accountId)
       setAccounts((prev) => prev.filter((a) => a.id !== accountId))
-    } catch {
-      setError(`Failed to delete account ${accName}.`)
+    } catch (err: unknown) {
+      setError(normalizeApiError(err, `Failed to delete account ${accName}.`).message)
     } finally {
       setActionLoadingId(null)
     }

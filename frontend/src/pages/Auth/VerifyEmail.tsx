@@ -1,3 +1,4 @@
+import Logo from '../../components/brand/Logo'
 // LogRaven — Verify Email
 //
 // Landing page for the verification link (/verify-email?token=...).
@@ -5,7 +6,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CheckCircle2, XCircle, Loader2, Shield } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2 } from 'lucide-react'
 import { authApi } from '../../api/auth'
 import LegalLinks from '../../components/layout/LegalLinks'
 import { useAuthStore } from '../../store/authStore'
@@ -42,11 +43,8 @@ export default function VerifyEmail() {
   return (
     <div className="min-h-screen flex items-center justify-center p-8 bg-void text-text-primary">
       <div className="w-full max-w-sm text-center">
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-amber-400/15 border border-amber-400/30 flex items-center justify-center">
-            <Shield className="w-4 h-4 text-amber-400" />
-          </div>
-          <span className="font-display font-bold text-lg text-text-primary tracking-tight">LogRaven</span>
+        <div className="flex items-center justify-center mb-8">
+          <Logo size={36} showSignal={false} />
         </div>
 
         <div role="status" aria-live="polite">

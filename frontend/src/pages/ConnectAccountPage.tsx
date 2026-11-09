@@ -315,20 +315,17 @@ export default function ConnectAccountPage() {
     }
   }
 
+  const logravenAccountId = import.meta.env.VITE_AWS_ACCOUNT_ID || '382764425926'
+
   const trustPolicyJson = `{
   "Version": "2012-10-17",
   "Statement": [
     {
       "Effect": "Allow",
       "Principal": {
-        "AWS": "arn:aws:iam::342061021430:root"
+        "AWS": "arn:aws:iam::${logravenAccountId}:root"
       },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "sts:ExternalId": "${form.externalId}"
-        }
-      }
+      "Action": "sts:AssumeRole"
     }
   ]
 }`
@@ -354,7 +351,7 @@ aws iam attach-role-policy \\
         }}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8 pt-4 pb-8 max-w-[1400px] mx-auto space-y-5">
+      <div className="relative px-4 sm:px-6 lg:px-8 pt-4 pb-8 w-full space-y-5">
         {/* Top Breadcrumb & Back Link */}
         <div className="flex items-center justify-between gap-4">
           <Link

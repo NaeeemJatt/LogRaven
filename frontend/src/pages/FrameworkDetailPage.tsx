@@ -97,7 +97,7 @@ export default function FrameworkDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-void text-text-primary p-4 sm:p-8 max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-void text-text-primary p-4 sm:p-6 lg:p-8 w-full space-y-8">
       {/* Top Breadcrumb & Back Action */}
       <div className="flex items-center justify-between gap-4">
         <Link

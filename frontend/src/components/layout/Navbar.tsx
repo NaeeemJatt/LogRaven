@@ -1,8 +1,9 @@
+import Logo from '../brand/Logo'
 import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Shield, LayoutDashboard, Terminal, CheckSquare,
+  LayoutDashboard, Terminal, CheckSquare,
   LogOut, Menu, X, Radio, User
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
@@ -92,22 +93,8 @@ export default function Navbar() {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex items-center h-16 gap-8">
           {/* Logo */}
-          <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className="relative">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center group-hover:border-indigo-400/60 transition-all duration-300">
-                <Shield className="w-4 h-4 text-indigo-400" strokeWidth={2.25} />
-              </div>
-              <div className="absolute inset-0 rounded-lg bg-indigo-500/10 blur-md group-hover:bg-indigo-500/25 transition-all duration-300" />
-            </div>
-            <div className="flex flex-col leading-none">
-              <span className="font-display font-bold text-lg text-text-primary tracking-tight">
-                Log<span className="text-indigo-400">Raven</span>
-              </span>
-              <span className="hidden sm:flex items-center gap-1 font-mono text-[8px] text-text-muted tracking-[0.25em] uppercase mt-0.5">
-                <span className="inline-block w-1 h-1 rounded-full bg-indigo-400 animate-pulse" />
-                Monitoring
-              </span>
-            </div>
+          <Link to="/dashboard" className="flex items-center gap-2.5 group flex-shrink-0 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg">
+            <Logo size={32} subtitle="Monitoring" showSignal={true} />
           </Link>
 
           {/* Nav links — desktop */}

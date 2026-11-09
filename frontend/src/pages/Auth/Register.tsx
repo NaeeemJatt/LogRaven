@@ -1,6 +1,7 @@
+import Logo from '../../components/brand/Logo'
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import PasswordStrengthMeter, { evaluatePasswordStrength } from '../../components/auth/PasswordStrengthMeter'
 import LegalLinks from '../../components/layout/LegalLinks'
@@ -49,13 +50,8 @@ export default function Register() {
     <div className="min-h-screen bg-void text-text-primary flex flex-col">
       <header className="border-b border-white/[0.05] bg-void/95">
         <div className="flex h-14 items-center px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-              <Shield className="w-4 h-4 text-indigo-400" strokeWidth={2} />
-            </div>
-            <span className="font-display font-bold text-base text-text-primary tracking-tight">
-              Log<span className="text-indigo-400">Raven</span>
-            </span>
+          <Link to="/" className="flex items-center gap-2.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded-lg">
+            <Logo size={30} showSignal={false} />
           </Link>
         </div>
       </header>
