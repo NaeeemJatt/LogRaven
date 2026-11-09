@@ -14,7 +14,6 @@ import {
   FileText,
   Layers,
   X,
-  Sparkles,
 } from 'lucide-react'
 import { findingsApi } from '../api/investigations'
 import type { FeedFinding } from '../api/investigations'
@@ -287,7 +286,6 @@ export default function AlertFeed() {
   const [mitreMatrixActive, setMitreMatrixActive] = useState(false)
   const [groupBy, setGroupBy] = useState('none')
   const [sortBy, setSortBy] = useState('time_desc')
-  const [riskModalOpen, setRiskModalOpen] = useState(false)
 
   // Selection & Inspector state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -361,7 +359,6 @@ export default function AlertFeed() {
           onGroupByChange={setGroupBy}
           sortBy={sortBy}
           onSortByChange={setSortBy}
-          onOpenRiskTuning={() => setRiskModalOpen(true)}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
@@ -535,64 +532,6 @@ export default function AlertFeed() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Risk Score Tuning Modal */}
-      {riskModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="risk-tuning-title"
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setRiskModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-white/[0.12] bg-deep/95 p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <h3 id="risk-tuning-title" className="text-sm font-semibold text-text-primary">
-                  Risk Score Tuning Engine
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRiskModalOpen(false)}
-                className="p-1 rounded text-text-muted hover:text-text-primary"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Adjust heuristic weights and ML correlation thresholds for telemetry ingested from AWS, Azure, and GCP. Changes calibrate real-time risk scores without altering raw audit evidence.
-            </p>
-            <div className="space-y-3 py-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-text-muted">Adversary TTP Multiplier</span>
-                <span className="font-mono text-amber-300">1.5x</span>
-              </div>
-              <div className="w-full bg-white/[0.05] rounded-full h-1.5">
-                <div className="bg-amber-400 h-1.5 rounded-full w-3/4" />
-              </div>
-              <div className="flex items-center justify-between text-xs pt-2">
-                <span className="text-text-muted">Asset Criticality Bias</span>
-                <span className="font-mono text-amber-300">High (Production Fleet)</span>
-              </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setRiskModalOpen(false)}
-                className="btn-sovereign px-4 py-2 rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                Apply Weights
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

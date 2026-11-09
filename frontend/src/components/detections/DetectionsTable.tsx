@@ -138,44 +138,10 @@ export default function DetectionsTable({
             role="tab"
             aria-selected={activeTab === 'detections'}
             onClick={() => onTabChange('detections')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'detections'
-                ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
-                : 'text-text-muted hover:text-text-primary border border-transparent'
-            }`}
+            className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-400/15 text-amber-300 border border-amber-400/30 flex items-center gap-1.5 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none cursor-pointer"
           >
             <span>Detections</span>
             <span className="text-[11px] font-mono opacity-80">({totalCount.toLocaleString()})</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'leads'}
-            onClick={() => onTabChange('leads')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'leads'
-                ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
-                : 'text-text-muted hover:text-text-primary border border-transparent'
-            }`}
-          >
-            <span>Automated leads</span>
-            <span className="text-[11px] font-mono opacity-80">(14)</span>
-          </button>
-
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'cases'}
-            onClick={() => onTabChange('cases')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none cursor-pointer flex items-center gap-1.5 ${
-              activeTab === 'cases'
-                ? 'bg-amber-400/15 text-amber-300 border border-amber-400/30'
-                : 'text-text-muted hover:text-text-primary border border-transparent'
-            }`}
-          >
-            <span>Cases</span>
-            <span className="text-[11px] font-mono opacity-80">(3)</span>
           </button>
         </div>
 
@@ -209,7 +175,7 @@ export default function DetectionsTable({
               <th className="py-2.5 px-3 min-w-[240px]">Attributes</th>
               <th className="py-2.5 px-3 whitespace-nowrap">Assigned to</th>
               <th className="py-2.5 px-3 whitespace-nowrap">Status</th>
-              <th className="py-2.5 px-3 whitespace-nowrap">Vendor & Source</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Source</th>
               <th className="py-2.5 pr-4 pl-2 text-right w-10">Actions</th>
             </tr>
           </thead>
@@ -343,25 +309,27 @@ export default function DetectionsTable({
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="inline-flex items-center gap-1.5">
                             <div className="w-5 h-5 rounded-full bg-amber-400/15 border border-amber-400/30 text-amber-300 flex items-center justify-center text-[10px] font-semibold">
-                              AR
+                              LR
                             </div>
-                            <span className="text-text-secondary">Abdul Rehman</span>
+                            <span className="text-text-secondary">Security Ops</span>
                           </div>
                         </td>
 
                         {/* Status */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                            New
+                            Active
                           </span>
                         </td>
 
-                        {/* Vendor & Source Product */}
+                        {/* Source Product */}
                         <td className="py-2.5 px-3 whitespace-nowrap">
-                          <div className="flex flex-col">
-                            <span className="text-text-primary font-medium text-[11px]">AWS, CrowdStrike</span>
-                            <span className="text-[10px] text-text-muted">
-                              {finding.finding_type?.toUpperCase().includes('TRAIL') ? 'AWS CloudTrail' : 'AWS WAF'}
+                          <div className="flex flex-col max-w-[140px]">
+                            <span className="text-text-primary font-medium text-[11px] truncate">
+                              {finding.finding_type || 'Cloud Log Event'}
+                            </span>
+                            <span className="text-[10px] text-text-muted font-mono truncate">
+                              {finding.source_files?.[0] || 'SIEM Telemetry'}
                             </span>
                           </div>
                         </td>

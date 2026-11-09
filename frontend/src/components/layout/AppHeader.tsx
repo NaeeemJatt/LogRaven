@@ -12,10 +12,6 @@ import {
   Check,
   Layers,
   Search,
-  Sparkles,
-  X,
-  Send,
-  Bot,
 } from 'lucide-react'
 import { useAuthStore } from '../../store/authStore'
 import { useAuth } from '../../hooks/useAuth'
@@ -50,8 +46,6 @@ export default function AppHeader({
   const [accountMenuOpen, setAccountMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [aiModalOpen, setAiModalOpen] = useState(false)
-  const [aiPrompt, setAiPrompt] = useState('')
 
   const accountMenuRef = useRef<HTMLDivElement>(null)
   const profileRef = useRef<HTMLDivElement>(null)
@@ -144,14 +138,6 @@ export default function AppHeader({
     navigate(`/alerts?q=${encodeURIComponent(searchQuery)}`)
   }
 
-  const handleAiSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!aiPrompt.trim()) return
-    navigate(`/alerts?q=${encodeURIComponent(aiPrompt)}`)
-    setAiModalOpen(false)
-    setAiPrompt('')
-  }
-
   return (
     <header className="h-16 border-b border-white/[0.08] bg-surface/70 backdrop-blur-xl px-4 sm:px-6 flex items-center justify-between gap-4 z-30 select-none">
       {/* Left: Breadcrumbs & Context indicator (strictly preserving main's design) */}
@@ -178,9 +164,9 @@ export default function AppHeader({
         <div className="min-w-0" />
       )}
 
-      {/* Center: Global Omnibar Search & Raven AI Assistant Trigger */}
-      <div className="flex-1 max-w-xl hidden md:flex items-center gap-2 mx-2">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1">
+      {/* Center: Global Omnibar Search */}
+      <div className="flex-1 max-w-xl hidden md:flex items-center gap-2 mx-4">
+        <form onSubmit={handleSearchSubmit} className="relative w-full">
           <Search className="w-3.5 h-3.5 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             id="lograven-omnibar"
@@ -194,15 +180,6 @@ export default function AppHeader({
             Ctrl K
           </kbd>
         </form>
-
-        <button
-          type="button"
-          onClick={() => setAiModalOpen(true)}
-          className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-amber-400/30 bg-amber-400/10 hover:bg-amber-400/20 text-amber-300 text-xs font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none motion-safe:active:scale-[0.98] motion-reduce:transform-none cursor-pointer whitespace-nowrap flex-shrink-0"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span>Raven AI</span>
-        </button>
       </div>
 
       {/* Right: Quick actions, account switcher & profile (strictly preserving main) */}
@@ -396,81 +373,6 @@ export default function AppHeader({
           </AnimatePresence>
         </div>
       </div>
-
-      {/* Raven AI Assistant Modal */}
-      {aiModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="raven-ai-title"
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 select-text"
-          onClick={() => setAiModalOpen(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-white/[0.12] bg-deep/95 p-6 space-y-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-amber-400" />
-                <h3 id="raven-ai-title" className="text-sm font-semibold text-text-primary">
-                  Raven AI Security Analyst
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setAiModalOpen(false)}
-                className="p-1 rounded text-text-muted hover:text-text-primary cursor-pointer"
-                aria-label="Close dialog"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-text-secondary leading-relaxed">
-              Ask Raven AI about active attack paths, adversary tactics, automated remediation CLI commands, or compliance readiness.
-            </p>
-
-            <form onSubmit={handleAiSubmit} className="space-y-3">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="e.g. Find critical attack paths in production..."
-                  className="w-full h-10 pl-3 pr-10 rounded-xl border border-white/[0.1] bg-void/60 text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:border-amber-400/50 focus:ring-1 focus:ring-amber-400/40"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  aria-label="Ask Raven AI"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg bg-amber-400/15 text-amber-300 hover:bg-amber-400/25 transition-colors cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-text-muted">Suggested:</span>
-                <button
-                  type="button"
-                  onClick={() => setAiPrompt('Show critical attack paths')}
-                  className="text-[11px] text-amber-300 hover:underline px-1.5 py-0.5 rounded bg-white/[0.03]"
-                >
-                  Show critical attack paths
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAiPrompt('Correlate recent AWS CloudTrail logs')}
-                  className="text-[11px] text-amber-300 hover:underline px-1.5 py-0.5 rounded bg-white/[0.03]"
-                >
-                  Correlate AWS CloudTrail logs
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </header>
   )
 }

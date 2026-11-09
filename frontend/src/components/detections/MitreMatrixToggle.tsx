@@ -3,7 +3,6 @@ import { useState } from 'react'
 import {
   ArrowUpDown,
   Layers,
-  Sparkles,
   Grid,
   List,
   ShieldAlert,
@@ -28,7 +27,6 @@ export default function MitreMatrixToggle({
   onGroupByChange,
   sortBy,
   onSortByChange,
-  onOpenRiskTuning,
   viewMode = 'table',
   onViewModeChange,
 }: MitreMatrixToggleProps) {
@@ -79,16 +77,6 @@ export default function MitreMatrixToggle({
             />
           </button>
         </div>
-
-        {/* Risk Score Tuning Button */}
-        <button
-          type="button"
-          onClick={onOpenRiskTuning}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/[0.08] hover:border-amber-400/40 bg-white/[0.02] hover:bg-amber-400/10 text-xs font-medium text-text-secondary hover:text-amber-300 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none cursor-pointer"
-        >
-          <Sparkles className="w-3 h-3 text-amber-400" />
-          <span>Risk score tuning</span>
-        </button>
       </div>
 
       {/* Right: Group By, Sort By, Layout View Mode */}
