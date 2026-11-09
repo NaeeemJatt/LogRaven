@@ -119,3 +119,6 @@ memory-bank/
 # Documentation binaries & manuals
 *.pdf
 *.pdf
+
+# Design inspiration assets
+inspiration/
