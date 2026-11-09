@@ -276,7 +276,7 @@ export default function AlertFeed() {
 
   return (
     <div className="min-h-screen grid-bg">
-      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 max-w-[1500px] mx-auto">
+      <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 w-full">
 
         {/* Status & Distribution strip */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">

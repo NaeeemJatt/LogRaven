@@ -351,7 +351,7 @@ aws iam attach-role-policy \\
         }}
       />
 
-      <div className="relative px-4 sm:px-6 lg:px-8 pt-4 pb-8 max-w-[1400px] mx-auto space-y-5">
+      <div className="relative px-4 sm:px-6 lg:px-8 pt-4 pb-8 w-full space-y-5">
         {/* Top Breadcrumb & Back Link */}
         <div className="flex items-center justify-between gap-4">
           <Link

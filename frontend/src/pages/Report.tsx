@@ -226,8 +226,8 @@ export default function Report() {
   ]
 
   return (
-    <div className="pt-16 min-h-screen grid-bg">
-      <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-[1500px] mx-auto">
+    <div className="min-h-screen grid-bg">
+      <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
 
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>

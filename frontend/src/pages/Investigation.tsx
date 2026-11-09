@@ -176,7 +176,7 @@ export default function Investigation() {
 
   if (isLoading) {
     return (
-      <div className="pt-16 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-amber-400 animate-spin" />
       </div>
     )
@@ -184,14 +184,14 @@ export default function Investigation() {
 
   if (!inv) {
     return (
-      <div className="pt-16 min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-threat-critical text-sm">Investigation not found.</div>
       </div>
     )
   }
 
   return (
-    <div className="pt-16 min-h-screen">
+    <div className="min-h-screen">
       <div className="px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Header */}
