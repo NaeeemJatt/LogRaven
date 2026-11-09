@@ -1,11 +1,13 @@
-// LogRaven — Unified Application Shell & Navigation Frame
+// LogRaven — Unified Application Shell & Navigation Frame (Falcon Cloud Security Architecture)
 import { useState, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import AppSidebar from './AppSidebar'
 import AppHeader from './AppHeader'
+import AppSubNav from './AppSubNav'
+import FilterBar from './FilterBar'
 import AuditorShareModal from '../audit/AuditorShareModal'
 import { listCloudAccounts } from '../../api/compliance'
 import type { CloudAccount } from '../../types/audit'
-import { useNavigate } from 'react-router-dom'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -13,6 +15,7 @@ interface AppShellProps {
 
 export default function AppShell({ children }: AppShellProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('lograven_sidebar_collapsed') === 'true'
   })
@@ -47,6 +50,14 @@ export default function AppShell({ children }: AppShellProps) {
     void refreshAccounts()
   }, [])
 
+  // Show contextual query filter bar on primary monitoring & investigation views
+  const showFilterBar =
+    location.pathname === '/' ||
+    location.pathname === '/dashboard' ||
+    location.pathname === '/compliance' ||
+    location.pathname === '/alerts' ||
+    location.pathname.startsWith('/investigations')
+
   return (
     <div className="flex h-screen bg-void text-text-primary overflow-hidden">
       {/* Collapsible Left Mission Rail */}
@@ -60,7 +71,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header & Sub-Navigation */}
+        {/* Level 0 Top Masthead */}
         <AppHeader
           accounts={accounts}
           activeAccount={activeAccount}
@@ -68,20 +79,27 @@ export default function AppShell({ children }: AppShellProps) {
           onOpenConnectModal={() => navigate('/compliance/connect/step-1')}
           onOpenAuditorModal={() => setAuditorModalOpen(true)}
           onOpenQuickScanModal={() => navigate('/compliance?tab=audit')}
+          onToggleSidebar={toggleCollapsed}
         />
+
+        {/* Level 1 Horizontal Dropdown Sub-Nav Ribbon */}
+        <AppSubNav />
+
+        {/* Level 2 Contextual Filter Ribbon */}
+        {showFilterBar && <FilterBar />}
 
         {/* Scrollable Working Canvas */}
         <main className="flex-1 overflow-y-auto bg-void relative">
-          {/* Subtle Cybernetic Grid Texture & Ambient Wash */}
-          <div className="pointer-events-none fixed inset-0 grid-bg opacity-40" />
+          {/* Subtle Cybernetic Grid Texture & Telemetry Ambient Wash */}
+          <div className="pointer-events-none fixed inset-0 grid-bg opacity-30" />
           <div
             className="pointer-events-none fixed -top-32 right-1/4 w-[600px] h-[600px] rounded-full blur-[140px] opacity-10"
             style={{
-              background: 'radial-gradient(circle, rgba(99,102,241,0.8) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(227,181,126,0.15) 0%, transparent 70%)',
             }}
           />
 
-          <div className="relative">{children}</div>
+          <div className="relative w-full">{children}</div>
         </main>
       </div>
 
