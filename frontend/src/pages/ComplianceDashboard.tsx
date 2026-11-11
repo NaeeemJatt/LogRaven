@@ -135,8 +135,8 @@ export default function ComplianceDashboard() {
       {/* ── CASE 2: CONNECTED FLEET (Command Center) ── */}
       {(hasAccounts || loading) && (
         <>
-          {/* 4 Top Bento KPI Cards with Solid Bottom Accents */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* 3 Top Bento KPI Cards with Solid Bottom Accents */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Card 1: Overall Score */}
             <div className="rounded-xl border border-white/[0.08] bg-deep/80 backdrop-blur-md p-5 flex flex-col justify-between relative overflow-hidden">
               <div className="flex items-start justify-between">
@@ -238,29 +238,6 @@ export default function ComplianceDashboard() {
                 </Link>
               </div>
               <div className="absolute bottom-0 inset-x-0 h-1 bg-threat-critical" />
-            </div>
-
-            {/* Card 4: Fleet & Evidence Crosswalk */}
-            <div className="rounded-xl border border-white/[0.08] bg-deep/80 backdrop-blur-md p-5 flex flex-col justify-between relative overflow-hidden">
-              <div>
-                <span className="text-xs font-medium text-text-muted">Evidence crosswalk</span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="font-display text-3xl font-bold text-text-primary tabular-nums tracking-tight">
-                    3.41x
-                  </span>
-                  <span className="text-xs text-text-muted">
-                    efficiency multiplier
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-text-muted">
-                <span>Fleet telemetry</span>
-                <span className="font-medium text-text-secondary">
-                  Collect once, satisfy {frameworks.length} specs
-                </span>
-              </div>
-              <div className="absolute bottom-0 inset-x-0 h-1 bg-threat-info" />
             </div>
           </div>
 

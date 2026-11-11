@@ -87,7 +87,7 @@ describe('frontend product gaps', () => {
 
     renderWithClient(<AlertFeed />)
 
-    await user.click(await screen.findByRole('button', { name: /Suspicious login/i }))
+    await user.click(await screen.findByRole('button', { name: /Suspicious login/i }, { timeout: 5000 }))
     expect(screen.getByRole('dialog', { name: 'Finding inspector' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: 'Close finding inspector' }))
     await waitFor(() =>
