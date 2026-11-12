@@ -1,11 +1,11 @@
 // LogRaven — Unified Application Shell & Navigation Frame
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import AppSidebar from './AppSidebar'
 import AppHeader from './AppHeader'
 import AuditorShareModal from '../audit/AuditorShareModal'
 import { listCloudAccounts } from '../../api/compliance'
 import type { CloudAccount } from '../../types/audit'
-import { useNavigate } from 'react-router-dom'
 
 interface AppShellProps {
   children: React.ReactNode
@@ -49,7 +49,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-screen bg-void text-text-primary overflow-hidden">
-      {/* Collapsible Left Mission Rail */}
+      {/* Collapsible Left Navigation Rail */}
       <AppSidebar
         collapsed={collapsed}
         onToggle={toggleCollapsed}
@@ -60,7 +60,7 @@ export default function AppShell({ children }: AppShellProps) {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header & Sub-Navigation */}
+        {/* Top Header */}
         <AppHeader
           accounts={accounts}
           activeAccount={activeAccount}
@@ -68,20 +68,21 @@ export default function AppShell({ children }: AppShellProps) {
           onOpenConnectModal={() => navigate('/compliance/connect/step-1')}
           onOpenAuditorModal={() => setAuditorModalOpen(true)}
           onOpenQuickScanModal={() => navigate('/compliance?tab=audit')}
+          onToggleSidebar={toggleCollapsed}
         />
 
         {/* Scrollable Working Canvas */}
         <main className="flex-1 overflow-y-auto bg-void relative">
           {/* Subtle Cybernetic Grid Texture & Ambient Wash */}
-          <div className="pointer-events-none fixed inset-0 grid-bg opacity-40" />
+          <div className="pointer-events-none fixed inset-0 grid-bg opacity-30" />
           <div
             className="pointer-events-none fixed -top-32 right-1/4 w-[600px] h-[600px] rounded-full blur-[140px] opacity-10"
             style={{
-              background: 'radial-gradient(circle, rgba(99,102,241,0.8) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(227,181,126,0.15) 0%, transparent 70%)',
             }}
           />
 
-          <div className="relative">{children}</div>
+          <div className="relative w-full">{children}</div>
         </main>
       </div>
 
@@ -94,3 +95,4 @@ export default function AppShell({ children }: AppShellProps) {
     </div>
   )
 }
+

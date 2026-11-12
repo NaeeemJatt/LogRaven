@@ -157,7 +157,7 @@ export default function AppSidebar({
 
   return (
     <aside
-      className={`relative z-40 flex flex-col h-screen border-r border-white/[0.08] transition-all duration-200 ease-in-out select-none flex-shrink-0 ${
+      className={`relative z-40 flex flex-col h-screen border-r border-white/[0.08] transition-colors duration-150 select-none flex-shrink-0 ${
         collapsed ? 'w-[72px]' : 'w-[260px]'
       }`}
       style={{
