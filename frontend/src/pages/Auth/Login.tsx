@@ -238,8 +238,16 @@ export default function Login() {
     try {
       await login(email, password)
     } catch (err: unknown) {
-      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'Authentication failed. Please verify your credentials.')
+      const resp = (err as { response?: { status?: number; data?: { detail?: string } } })?.response
+      if (!resp) {
+        setError('Cannot reach server. Please ensure the backend is running on port 8000.')
+      } else if (resp.status >= 500) {
+        const detail = resp.data?.detail
+        setError(typeof detail === 'string' ? detail : 'Server temporarily unavailable. Please verify the backend is running on port 8000.')
+      } else {
+        const detail = resp.data?.detail
+        setError(typeof detail === 'string' ? detail : 'Authentication failed. Please verify your credentials.')
+      }
     } finally {
       setLoading(false)
     }
