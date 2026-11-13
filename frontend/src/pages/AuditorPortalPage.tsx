@@ -96,6 +96,7 @@ export default function AuditorPortalPage() {
           <form onSubmit={handlePasscodeSubmit} className="space-y-4">
             <input
               type="password"
+              autoComplete="current-password"
               required
               autoFocus
               placeholder="Enter Access Passcode"

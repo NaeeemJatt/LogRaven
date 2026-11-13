@@ -39,11 +39,15 @@ describe('SuppressFindingModal', () => {
 
     // Fill in justification
     const justificationInput = screen.getByLabelText(/business justification/i)
-    await user.type(justificationInput, 'Break-glass root account with physical YubiKey stored in bank safe.')
+    fireEvent.change(justificationInput, {
+      target: { value: 'Break-glass root account with physical YubiKey stored in bank safe.' },
+    })
 
     // Fill in compensating controls
     const compensatingInput = screen.getByLabelText(/compensating controls/i)
-    await user.type(compensatingInput, 'Quarterly audit log review and real-time SNS alerts on root login.')
+    fireEvent.change(compensatingInput, {
+      target: { value: 'Quarterly audit log review and real-time SNS alerts on root login.' },
+    })
 
     // Submit form
     const submitBtn = screen.getByRole('button', { name: /authorize & suppress/i })
