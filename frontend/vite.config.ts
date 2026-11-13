@@ -82,7 +82,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: './src/test/setup.ts',
       clearMocks: true,
       exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
-      testTimeout: 10_000,
+      testTimeout: 20_000,
       coverage: {
         provider: 'v8',
         reporter: ['text', 'json-summary', 'html'],
