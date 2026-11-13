@@ -1,8 +1,9 @@
-﻿# LogRaven API -- run from LogRaven\backend (the folder that contains app\ and alembic.ini)
+# LogRaven API -- run from LogRaven\backend (the folder that contains app\ and alembic.ini)
 param([int]$Port = 8000)
 $ErrorActionPreference = "Stop"
 $BackendRoot = $PSScriptRoot
-$env:PYTHONPATH = $BackendRoot
+$RepoRoot = Split-Path $BackendRoot -Parent
+$env:PYTHONPATH = "$BackendRoot;$RepoRoot"
 Set-Location $BackendRoot
 
 # Load .env from repo root
