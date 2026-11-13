@@ -12,6 +12,7 @@ import {
   Cloud, Copy, Check, ArrowRight, ArrowLeft,
   Terminal, Lock, Loader2, HelpCircle, RefreshCw, CheckCircle2,
   AlertCircle, AlertTriangle, X, ChevronRight, ShieldCheck,
+  Download, FileCode,
 } from 'lucide-react'
 import { createCloudAccount, verifyCloudAccount } from '../api/compliance'
 import type { CreateCloudAccountBody } from '../types/audit'
@@ -156,6 +157,65 @@ export default function ConnectAccountPage() {
       }
     }
   }, [currentStep, routeStep, form, validateStep1, validateStep2, navigate])
+
+  const handleDownloadFile = (filename: string, content: string, mime: string) => {
+    const blob = new Blob([content], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const terraformHclSnippet = `provider "aws" {
+  region = "us-east-1"
+}
+
+resource "aws_iam_role" "lograven_reader" {
+  name = "LogRavenCSPMReader"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = { AWS = "arn:aws:iam::112233445566:root" }
+      Action = "sts:AssumeRole"
+      Condition = { StringEquals = { "sts:ExternalId" = "${form.externalId}" } }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "security_audit" {
+  role       = aws_iam_role.lograven_reader.name
+  policy_arn = "arn:aws:iam::aws:policy/SecurityAudit"
+}`
+
+  const cloudFormationStackSetSnippet = `AWSTemplateFormatVersion: '2010-09-09'
+Description: LogRaven Enterprise Multi-Region StackSet Connector
+Parameters:
+  ExternalId:
+    Type: String
+    Default: '${form.externalId}'
+Resources:
+  LogRavenReaderRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LogRavenCSPMReader
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: 'arn:aws:iam::112233445566:root'
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                sts:ExternalId: !Ref ExternalId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/SecurityAudit
+Outputs:
+  RoleArn:
+    Value: !GetAtt LogRavenReaderRole.Arn`
 
   const handleCopy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text)
@@ -646,6 +706,33 @@ aws iam attach-role-policy \\
                         >
                           {copiedKey === 'cli' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Terminal className="w-3.5 h-3.5" />}
                           {copiedKey === 'cli' ? 'Copied' : 'Copy CLI'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Automated IaC Deployment: StackSet & Terraform */}
+                    <div className="pt-3 border-t border-white/[0.08] space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-text-primary flex items-center gap-1.5">
+                          <FileCode className="w-3.5 h-3.5 text-amber-400" /> Automated IaC StackSets &amp; Terraform
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadFile(`lograven-stackset-${form.externalId.slice(-6)}.yaml`, cloudFormationStackSetSnippet, 'text/yaml')}
+                          className="px-3 py-2 rounded-lg bg-surface/60 hover:bg-surface border border-white/[0.08] text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5 text-amber-400" />
+                          Download StackSet YAML
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(terraformHclSnippet, 'terraform')}
+                          className="px-3 py-2 rounded-lg bg-surface/60 hover:bg-surface border border-white/[0.08] text-xs font-medium text-text-secondary hover:text-text-primary flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          {copiedKey === 'terraform' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-400" />}
+                          {copiedKey === 'terraform' ? 'Copied HCL' : 'Copy Terraform HCL'}
                         </button>
                       </div>
                     </div>
