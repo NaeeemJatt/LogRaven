@@ -23,6 +23,14 @@ function createApiProxy(apiTarget: string) {
         const color = s < 300 ? '\x1b[32m' : s < 500 ? '\x1b[33m' : '\x1b[31m'
         console.log(`\x1b[36m← ${label}\x1b[0m ${color}${s}\x1b[0m ${r.method?.padEnd(6)} ${r.url}`)
       })
+      proxy.on('error', (err, _req, res) => {
+        console.log(`\x1b[31m✕ ${label} proxy error:\x1b[0m ${err.message}`)
+        const r = res as { writeHead?: (code: number, headers: Record<string, string>) => void; end?: (data: string) => void; headersSent?: boolean }
+        if (r && typeof r.writeHead === 'function' && !r.headersSent) {
+          r.writeHead(502, { 'Content-Type': 'application/json' })
+          r.end?.(JSON.stringify({ detail: 'Backend server unavailable at ' + apiTarget }))
+        }
+      })
     }
 
   return {

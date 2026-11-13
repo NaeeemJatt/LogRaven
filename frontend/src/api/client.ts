@@ -9,6 +9,7 @@ let refreshPromise: Promise<void> | null = null
 const client = axios.create({
   baseURL,
   withCredentials: true,
+  timeout: 10_000,
 })
 
 function redirectToLogin() {

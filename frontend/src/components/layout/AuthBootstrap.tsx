@@ -10,6 +10,13 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
 
   useEffect(() => {
     let cancelled = false
+    const fallbackTimer = setTimeout(() => {
+      if (!cancelled) {
+        logout()
+        setReady(true)
+      }
+    }, 2500)
+
     ;(async () => {
       try {
         const me = await authApi.me()
@@ -23,11 +30,13 @@ export default function AuthBootstrap({ children }: { children: React.ReactNode 
       } catch {
         if (!cancelled) logout()
       } finally {
+        clearTimeout(fallbackTimer)
         if (!cancelled) setReady(true)
       }
     })()
     return () => {
       cancelled = true
+      clearTimeout(fallbackTimer)
     }
   }, [setUser, logout])
 

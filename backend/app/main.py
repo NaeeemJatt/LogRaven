@@ -1,5 +1,12 @@
 # LogRaven — FastAPI Application Entry Point
 
+import sys
+if "ujson" not in sys.modules:
+    try:
+        import ujson  # noqa: F401
+    except (ImportError, OSError):
+        sys.modules["ujson"] = None
+
 import logging
 import os
 import time
