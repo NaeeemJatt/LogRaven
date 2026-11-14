@@ -65,3 +65,4 @@ def test_completely_isolated_clean_workload():
 
     assert evaluation["truerisk_score"] == 0
     assert evaluation["risk_tier"] == "LOW"
+

@@ -152,3 +152,4 @@ def test_toxic_combination_detection_standalone():
     assert finding["toxic_type"] == "INTERNET_EXPOSED_VULNERABLE_ADMIN"
     assert finding["severity"] == "CRITICAL"
     assert finding["truerisk_score"] >= 85
+

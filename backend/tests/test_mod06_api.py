@@ -192,3 +192,4 @@ async def test_compute_chokepoint_api(test_user):
         assert data["chokepoint"]["remediation_friction"] == 1.5
 
     app.dependency_overrides.clear()
+

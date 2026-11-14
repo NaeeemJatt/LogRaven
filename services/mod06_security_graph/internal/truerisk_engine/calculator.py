@@ -140,3 +140,4 @@ class TrueRiskCalculator:
                 "t_active": {"raw": t_active, "weighted": round(WEIGHT_T_ACTIVE * t_active, 2)},
             },
         }
+

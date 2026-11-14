@@ -59,3 +59,4 @@ def test_edmonds_karp_single_linear_chain():
     assert result["max_flow"] == 1.0
     assert result["chokepoint"]["edge_id"] == "e2"
     assert result["chokepoint"]["remediation_friction"] == 1.0
+

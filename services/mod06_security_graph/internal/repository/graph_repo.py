@@ -167,3 +167,4 @@ class SecurityGraphRepository:
             query = query.where(SecurityGraphEdge.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
+

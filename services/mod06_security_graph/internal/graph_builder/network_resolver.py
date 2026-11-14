@@ -88,3 +88,4 @@ class NetworkExposureResolver:
             "open_ports": [],
             "reason": "Completely isolated host/workload",
         }
+

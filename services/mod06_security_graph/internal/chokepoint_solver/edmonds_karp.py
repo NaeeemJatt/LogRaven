@@ -187,3 +187,4 @@ class EdmondsKarpMinCut:
             "chokepoint": chokepoint,
             "reachable_nodes": list(visited),
         }
+

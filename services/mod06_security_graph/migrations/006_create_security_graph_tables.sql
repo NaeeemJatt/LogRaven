@@ -47,3 +47,4 @@ CREATE TABLE IF NOT EXISTS security_attack_paths (
 
 CREATE INDEX IF NOT EXISTS idx_attack_paths_truerisk ON security_attack_paths(truerisk_score DESC);
 CREATE INDEX IF NOT EXISTS idx_attack_paths_crown_jewel ON security_attack_paths(target_crown_jewel_id);
+

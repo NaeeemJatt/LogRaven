@@ -270,3 +270,4 @@ async def list_toxic_combinations(
         "toxic_combinations_count": len(toxic_findings),
         "findings": toxic_findings,
     }
+

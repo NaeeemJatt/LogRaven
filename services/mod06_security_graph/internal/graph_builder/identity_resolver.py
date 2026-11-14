@@ -103,3 +103,4 @@ class IdentityBlastResolver:
             "privesc_risk": False,
             "reason": "No attached IAM policies or permissions",
         }
+
