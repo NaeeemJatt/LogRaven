@@ -24,6 +24,7 @@ from services.mod07_ciem_jit.cmd.ciem_worker.main import router as ciem_router
 from services.mod08_dspm_classifier.cmd.dspm_scanner.main import router as dspm_router
 from services.mod09_ai_spm.cmd.ai_scanner.main import router as aispm_router
 from services.mod10_kspm_kac.cmd.kac_webhook.main import router as kspm_router
+from services.mod11_iac_gitops.cmd.iac_service.main import router as iac_router
 
 router = APIRouter()
 
@@ -43,6 +44,7 @@ router.include_router(ciem_router, prefix="/api/v1/ciem", tags=["ciem-jit-permis
 router.include_router(dspm_router, prefix="/api/v1/dspm", tags=["dspm-data-classifier"])
 router.include_router(aispm_router, prefix="/api/v1/aispm", tags=["aispm-mcp-governance"])
 router.include_router(kspm_router, prefix="/api/v1/kspm", tags=["kspm-admission-controller"])
+router.include_router(iac_router, prefix="/api/v1/iac", tags=["iac-gitops-autopr"])
 router.include_router(auditor_router, prefix="/api/v1", tags=["compliance-auditor"])
 router.include_router(graph_router, prefix="/api/v1", tags=["compliance-graph"])
 router.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])

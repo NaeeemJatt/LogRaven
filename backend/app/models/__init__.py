@@ -12,6 +12,7 @@ from app.models.audit import AuditLog
 from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException, CloudAccount, AuditorAccessToken
 from services.mod09_ai_spm.internal.repository.models import AIModelInventory, MCPServerInventory
 from services.mod10_kspm_kac.internal.repository.models import K8sCluster, K8sAdmissionEvent
+from services.mod11_iac_gitops.internal.repository.models import GitRepository, IaCLineageRecord, GitOpsRemediationPR
 
 __all__ = [
     "Base",
@@ -31,4 +32,7 @@ __all__ = [
     "MCPServerInventory",
     "K8sCluster",
     "K8sAdmissionEvent",
+    "GitRepository",
+    "IaCLineageRecord",
+    "GitOpsRemediationPR",
 ]
