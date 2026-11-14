@@ -1,77 +1,83 @@
 {
-  "version": 1,
+  "version": 2,
   "skills": {
     "backend-architect": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",
       "skillPath": "skills/backend-architect/SKILL.md",
-      "computedHash": "bf1bf91a14af6a45a97393a358e7e3cd6b78b818bb881a441669a49d86801648"
+      "computedHash": "ec515da630389430f1c36c904bf57e49979228c849346f94089a5c983a5f85d3"
     },
     "browser-use": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/browser-use/SKILL.md",
-      "computedHash": "6a1bfb5049a851c4c4dae9fc6b586d9801865c79d87595d8bddbec21c41c8b5d"
+      "computedHash": "6e9753e32ed7b6b6b9adea42bf003aefed4b6ebbf5c97ca3c09572e2c2e126a0"
     },
     "cloud": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/cloud/SKILL.md",
-      "computedHash": "b341b2a42146e6761d252326cd7eb4d79cc62bfbf4fd23b41154d346a41399e8"
+      "computedHash": "b34746173679484d04ff2b415852b2d7e3056b485458ed996cfa33545da07832"
     },
     "frontend-design": {
       "source": "anthropics/claude-code",
       "sourceType": "github",
       "skillPath": "plugins/frontend-design/skills/frontend-design/SKILL.md",
-      "computedHash": "e8118284a6365753790d44bb2758a6032b3af27fa84696428d9233f2be0f4e78"
+      "computedHash": "2bde940e6ad8fc9396cdaac0420bb48e5e4f711b52f631ac01b639fc62aaff3b"
     },
     "frontend-security": {
       "source": "schalkneethling/webdev-agent-skills",
       "sourceType": "github",
       "skillPath": "frontend-security/SKILL.md",
-      "computedHash": "e8d405042bb53c7b1a87523b01a6e7d219c31627679a4e92f8b32abbde4cbbc9"
+      "computedHash": "aaa76553e083dd05a9919136bc4bd8bb8de65756e7ca14b690584ad44ff59d1c"
     },
     "html-to-pdf": {
       "source": "aviz85/claude-skills-library",
       "sourceType": "github",
       "skillPath": "skills/html-to-pdf/SKILL.md",
-      "computedHash": "d99f90d6fe7aa5f624285c93ce920267bc1c2e5b899a1f0436e72fd5517c59a7"
+      "computedHash": "24cc316aaa651b538a2cf824ba3edf560532dd40f2d99f37c885a95d44ec4880"
+    },
+    "modern-web-guidance": {
+      "source": "GoogleChrome/modern-web-guidance",
+      "sourceType": "github",
+      "skillPath": "skills/modern-web-guidance/SKILL.md",
+      "computedHash": "9e69ce00dc314b64f6664031b70295ea46c7de93ac682c624808df6e48e08b66"
     },
     "open-source": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/open-source/SKILL.md",
-      "computedHash": "ac6b271e9e0be31157d7d19815ba055494cad6aa074b3b4d7be1b90a84aa42ad"
+      "computedHash": "30b6f20596f0bf88fe597281bb2aad75879117877393c36459689cc9ab1fd524"
     },
     "premium-frontend-ui": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
       "skillPath": "skills/premium-frontend-ui/SKILL.md",
-      "computedHash": "e7f3d02a0233beafdd6fe5335427388109b9699ebcdc6a8782a8bada2826d916"
+      "computedHash": "4f538622d5894bd3aac7218faeffe7f8bddd6bb6ca8f4c97632d5bc445d74f94"
     },
     "qa": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/qa/SKILL.md",
-      "computedHash": "18c5131086331391bd3986e8607f92bc2ff43c24458dd0c557c45dbde6621d1a"
+      "computedHash": "16759928cf4c7a7b65a0c47ac49baae204d9708f89b507162e70690eaebc320f"
     },
     "remote-browser": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/remote-browser/SKILL.md",
-      "computedHash": "61654ce8c238da96c0db1dda1e7517d1038bf69d0b2f8749d09af32ae110137c"
+      "computedHash": "03d150fd1a57541ec705b40df457d6bf305c79dc6386c9838ce8a10adcd23ee3"
     },
     "security-audit": {
       "source": "sickn33/antigravity-awesome-skills",
       "sourceType": "github",
       "skillPath": "skills/security-audit/SKILL.md",
-      "computedHash": "75c3d961f04992c2c7adcc453a3ecbf137d4756d914614d0a41a6a6126121991"
+      "computedHash": "04b6f4ad06b59f4827719686147676dc229070a179963619e0703e06302b425c"
     },
     "x402": {
       "source": "browser-use/browser-use",
       "sourceType": "github",
       "skillPath": "skills/x402/SKILL.md",
-      "computedHash": "c05a2f2aabb1eed295144ebeeda74f39a0a23ddb2f48b8728137ed7b0b70484c"
+      "computedHash": "be8c8421dde209fab42ed6b531b2334f1b8ada68ac4e4380448e06764f704a3c"
     }
   }
 }

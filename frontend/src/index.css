@@ -74,6 +74,11 @@ body::after {
 }
 
 /* ── Custom scrollbar ───────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(227, 181, 126, 0.3) var(--deep);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

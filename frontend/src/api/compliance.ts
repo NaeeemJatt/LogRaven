@@ -318,3 +318,68 @@ export async function getAccountAttackPathGraph(accountId: string): Promise<Atta
   const res = await client.get<AttackPathGraph>(`/api/v1/compliance/graph/accounts/${accountId}`)
   return res.data
 }
+
+// ── Module 01: Multi-Cloud Onboarding & Trust Broker API ───────────────────────
+
+export interface CloudConnectTemplates {
+  cloudformation_url: string
+  cloudformation_single_url?: string
+  terraform_hcl: string
+  bicep_template?: string | null
+}
+
+export interface RegisterCloudConnectResponse {
+  account_id: string
+  external_id: string
+  event_bus_arn: string
+  templates: CloudConnectTemplates
+}
+
+export interface ValidateCloudConnectResponse {
+  status: 'CONNECTED' | 'DEGRADED' | 'ERROR'
+  iom_ready: boolean
+  ioa_stream_ready: boolean
+  missing_permissions: string[]
+}
+
+export interface CloudGroup {
+  id: string
+  name: string
+  business_impact: 'critical' | 'high' | 'medium' | 'low'
+  environment: 'prod' | 'staging' | 'dev'
+  account_ids: string[]
+  tag_filters: Record<string, any>
+}
+
+export async function registerCloudConnect(body: {
+  provider: string
+  native_account_id: string
+  organization_id?: string
+  environment?: string
+  cloud_group_ids?: string[]
+  role_arn_or_sp?: string
+}): Promise<RegisterCloudConnectResponse> {
+  const res = await client.post<RegisterCloudConnectResponse>('/api/v1/cloud-connect/accounts', body)
+  return res.data
+}
+
+export async function validateCloudConnect(accountId: string): Promise<ValidateCloudConnectResponse> {
+  const res = await client.post<ValidateCloudConnectResponse>(`/api/v1/cloud-connect/accounts/${accountId}/validate`)
+  return res.data
+}
+
+export async function listCloudGroups(): Promise<CloudGroup[]> {
+  const res = await client.get<CloudGroup[]>('/api/v1/cloud-connect/groups')
+  return res.data
+}
+
+export async function createCloudGroup(body: {
+  name: string
+  business_impact: string
+  environment: string
+  account_ids?: string[]
+  tag_filters?: Record<string, any>
+}): Promise<CloudGroup> {
+  const res = await client.post<CloudGroup>('/api/v1/cloud-connect/groups', body)
+  return res.data
+}

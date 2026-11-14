@@ -25,6 +25,7 @@ from app.models.base import Base
 
 if TYPE_CHECKING:
     from app.models.investigation import Investigation
+    from app.schemas.enums import InvestigationFileStatus
 
 
 class InvestigationFile(Base):
@@ -47,3 +48,20 @@ class InvestigationFile(Base):
     parsed_at:        Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     investigation: Mapped["Investigation"] = relationship("Investigation", back_populates="files")
+
+    def can_transition_to(self, target: "str | InvestigationFileStatus") -> bool:
+        """Check if transitioning from current file status to target is valid."""
+        from app.utils.fsm import investigation_file_fsm
+        from app.schemas.enums import InvestigationFileStatus
+        target_enum = target if isinstance(target, InvestigationFileStatus) else InvestigationFileStatus(str(target))
+        current_enum = InvestigationFileStatus(str(self.status))
+        return investigation_file_fsm.can_transition(current_enum, target_enum)
+
+    def transition_to(self, target: "str | InvestigationFileStatus") -> None:
+        """Enforce valid transition through InvestigationFile FSM."""
+        from app.utils.fsm import investigation_file_fsm
+        from app.schemas.enums import InvestigationFileStatus
+        target_enum = target if isinstance(target, InvestigationFileStatus) else InvestigationFileStatus(str(target))
+        current_enum = InvestigationFileStatus(str(self.status))
+        investigation_file_fsm.validate_transition(current_enum, target_enum)
+        self.status = str(target_enum.value)

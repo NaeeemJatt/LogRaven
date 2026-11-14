@@ -3,6 +3,9 @@ import os
 import types
 from unittest.mock import MagicMock, patch
 
+# Prevent Windows Application Control DLL load failure for ujson
+sys.modules["ujson"] = None
+
 # Add backend root to path so `from app.xxx` works
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 

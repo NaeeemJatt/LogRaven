@@ -1,5 +1,18 @@
 // LogRaven — Investigation TypeScript Types
 
+export type InvestigationStatusType = 'draft' | 'queued' | 'processing' | 'complete' | 'failed'
+
+export type InvestigationStageType =
+  | 'queued'
+  | 'parsing'
+  | 'rule_engine'
+  | 'correlation'
+  | 'ai_analysis'
+  | 'building_report'
+  | 'complete'
+
+export type InvestigationFileStatusType = 'pending' | 'parsing' | 'parsed' | 'failed'
+
 export interface ParserSelectionDetail {
   chosen_log_type?: string
   detection_confidence?: number
@@ -20,7 +33,7 @@ export interface InvestigationFile {
   source_type: string
   ingestion_mode?: string
   log_type: string | null
-  status: 'pending' | 'parsing' | 'parsed' | 'failed'
+  status: InvestigationFileStatusType
   event_count: number | null
   parser_detection_confidence?: number | null
   parser_selection_detail?: ParserSelectionDetail | null
@@ -29,7 +42,7 @@ export interface InvestigationFile {
 export interface Investigation {
   id: string
   name: string
-  status: 'draft' | 'queued' | 'processing' | 'complete' | 'failed'
+  status: InvestigationStatusType
   correlation_enabled: boolean
   cloud_ai_enabled: boolean
   files: InvestigationFile[]
@@ -43,8 +56,8 @@ export interface Investigation {
 
 export interface InvestigationStatus {
   id: string
-  status: string
-  progress_stage: string | null
+  status: InvestigationStatusType | string
+  progress_stage: InvestigationStageType | string | null
   error_message?: string | null
   queued_at?: string | null
   files: InvestigationFile[]

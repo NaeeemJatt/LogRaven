@@ -145,7 +145,7 @@ export default function NewInvestigation() {
                     maxLength={200}
                     className="sovereign-input w-full px-4 py-4 rounded-xl text-lg"
                     autoFocus
-                    onKeyDown={(e) => { if (e.key === 'Enter') void handleSubmit() }}
+                    onKeyDown={(e) => { if (!e.nativeEvent.isComposing && e.key === 'Enter') void handleSubmit() }}
                   />
                   <div className="flex items-center justify-end mt-1.5">
                     <span className="font-mono text-[10px] text-text-ghost">{name.length}/200</span>

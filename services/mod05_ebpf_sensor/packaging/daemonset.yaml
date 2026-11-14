@@ -1,0 +1,70 @@
+# packaging/daemonset.yaml
+# LogRaven eBPF Runtime Sensor DaemonSet (PRD-MOD-05)
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: lograven-ebpf-sensor
+  namespace: lograven-system
+  labels:
+    app.kubernetes.io/name: lograven-ebpf-sensor
+    app.kubernetes.io/part-of: lograven
+spec:
+  selector:
+    matchLabels:
+      app: lograven-ebpf-sensor
+  template:
+    metadata:
+      labels:
+        app: lograven-ebpf-sensor
+    spec:
+      hostPID: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: sensor
+          image: lograven/ebpf-sensor:1.0.0
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: false
+            capabilities:
+              add:
+                - CAP_BPF
+                - CAP_PERFMON
+                - CAP_SYS_RESOURCE
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: "150m"       # Strict cap at 1.5% - 15% core limit
+              memory: "64Mi"    # Max 64 MB RAM
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+          volumeMounts:
+            - name: sys-kernel-debug
+              mountPath: /sys/kernel/debug
+              readOnly: true
+            - name: sys-fs-cgroup
+              mountPath: /sys/fs/cgroup
+              readOnly: true
+            - name: sys-fs-bpf
+              mountPath: /sys/fs/bpf
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+      volumes:
+        - name: sys-kernel-debug
+          hostPath:
+            path: /sys/kernel/debug
+        - name: sys-fs-cgroup
+          hostPath:
+            path: /sys/fs/cgroup
+        - name: sys-fs-bpf
+          hostPath:
+            path: /sys/fs/bpf
+

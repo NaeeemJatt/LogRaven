@@ -1,5 +1,21 @@
 # LogRaven — FastAPI Application Entry Point
 
+import sys
+from pathlib import Path
+
+# Ensure repo root and backend root are in sys.path so 'services' and 'app' packages resolve anywhere
+_backend_dir = Path(__file__).resolve().parent.parent
+_repo_dir = _backend_dir.parent
+for d in (str(_repo_dir), str(_backend_dir)):
+    if d not in sys.path:
+        sys.path.insert(0, d)
+
+if "ujson" not in sys.modules:
+    try:
+        import ujson  # noqa: F401
+    except (ImportError, OSError):
+        sys.modules["ujson"] = None
+
 import logging
 import os
 import time

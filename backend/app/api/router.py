@@ -14,6 +14,18 @@ from app.api.health.routes import router as health_router
 from app.api.investigations.routes import findings_router, router as inv_router
 from app.api.meta.routes import router as meta_router
 from app.api.play_parser.routes import router as play_parser_router
+from services.mod01_onboarding.cmd.server.main import router as cloud_connect_router
+from services.mod02_asset_crawler.cmd.crawler.main import router as assets_router
+from services.mod03_ioa_siem_engine.cmd.stream_worker.main import router as ioa_siem_router
+from services.mod04_disk_scanner.cmd.scanner_worker.main import router as workloads_router
+from services.mod05_ebpf_sensor.cmd.sensor_daemon.main import router as ebpf_sensor_router
+from services.mod06_security_graph.cmd.graph_engine.main import router as security_graph_router
+from services.mod07_ciem_jit.cmd.ciem_worker.main import router as ciem_router
+from services.mod08_dspm_classifier.cmd.dspm_scanner.main import router as dspm_router
+from services.mod09_ai_spm.cmd.ai_scanner.main import router as aispm_router
+from services.mod10_kspm_kac.cmd.kac_webhook.main import router as kspm_router
+from services.mod11_iac_gitops.cmd.iac_service.main import router as iac_router
+from services.mod12_policy_vault.cmd.policy_service.main import router as policy_vault_router
 
 router = APIRouter()
 
@@ -23,6 +35,18 @@ router.include_router(auth_router, prefix="/auth", tags=["auth"])
 router.include_router(auth_router, prefix="/api/v1/auth", tags=["auth-v1"])
 router.include_router(compliance_router, prefix="/api/v1", tags=["compliance"])
 router.include_router(accounts_router, prefix="/api/v1", tags=["compliance-accounts"])
+router.include_router(cloud_connect_router, prefix="/api/v1", tags=["cloud-connect-onboarding"])
+router.include_router(assets_router, prefix="/api/v1", tags=["asset-inventory-caasm"])
+router.include_router(ioa_siem_router, prefix="/api/v1/ioa", tags=["ioa-siem-engine"])
+router.include_router(workloads_router, prefix="/api/v1/workloads", tags=["workloads-disk-scanner"])
+router.include_router(ebpf_sensor_router, prefix="/api/v1/sensor", tags=["ebpf-sensor-reachability"])
+router.include_router(security_graph_router, prefix="/api/v1/security-graph", tags=["security-graph-truerisk"])
+router.include_router(ciem_router, prefix="/api/v1/ciem", tags=["ciem-jit-permissions"])
+router.include_router(dspm_router, prefix="/api/v1/dspm", tags=["dspm-data-classifier"])
+router.include_router(aispm_router, prefix="/api/v1/aispm", tags=["aispm-mcp-governance"])
+router.include_router(kspm_router, prefix="/api/v1/kspm", tags=["kspm-admission-controller"])
+router.include_router(iac_router, prefix="/api/v1/iac", tags=["iac-gitops-autopr"])
+router.include_router(policy_vault_router, prefix="/api/v1/policies", tags=["policy-studio-audit-vault"])
 router.include_router(auditor_router, prefix="/api/v1", tags=["compliance-auditor"])
 router.include_router(graph_router, prefix="/api/v1", tags=["compliance-graph"])
 router.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])
