@@ -52,3 +52,4 @@ int tracepoint__syscalls__sys_enter_execve(struct trace_event_raw_sys_enter *ctx
     bpf_ringbuf_submit(event, 0);
     return 0;
 }
+

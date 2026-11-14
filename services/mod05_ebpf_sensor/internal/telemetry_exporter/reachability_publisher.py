@@ -47,3 +47,4 @@ class ReachabilityPublisher:
                 logger.warning(f"Failed to publish reachability telemetry: {e}")
 
         return payload
+

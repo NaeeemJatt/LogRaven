@@ -29,3 +29,4 @@ CREATE TABLE IF NOT EXISTS container_drift_alerts (
 
 CREATE INDEX IF NOT EXISTS idx_runtime_reach_pkg ON workload_runtime_reachability(asset_urn, package_name);
 CREATE INDEX IF NOT EXISTS idx_container_drift_urn ON container_drift_alerts(asset_urn);
+

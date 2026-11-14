@@ -41,3 +41,4 @@ def test_elf_header_validation():
 
     assert ELFReader.is_elf_binary(valid_elf) is True
     assert ELFReader.is_elf_binary(non_elf) is False
+

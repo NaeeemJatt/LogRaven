@@ -53,3 +53,4 @@ async def test_tc_mod5_003_sensor_overhead_under_5000_events_per_sec():
 
     # 4. Processing throughput: 5,000 events processed in under 1 second in user space
     assert elapsed_time < 1.0, f"Benchmark took {elapsed_time:.3f}s for 5,000 events (target < 1.0s)"
+

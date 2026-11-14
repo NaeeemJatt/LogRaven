@@ -67,3 +67,4 @@ spec:
         - name: sys-fs-bpf
           hostPath:
             path: /sys/fs/bpf
+

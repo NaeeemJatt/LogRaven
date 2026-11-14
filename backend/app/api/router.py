@@ -19,6 +19,7 @@ from services.mod02_asset_crawler.cmd.crawler.main import router as assets_route
 from services.mod03_ioa_siem_engine.cmd.stream_worker.main import router as ioa_siem_router
 from services.mod04_disk_scanner.cmd.scanner_worker.main import router as workloads_router
 from services.mod05_ebpf_sensor.cmd.sensor_daemon.main import router as ebpf_sensor_router
+from services.mod06_security_graph.cmd.graph_engine.main import router as security_graph_router
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ router.include_router(assets_router, prefix="/api/v1", tags=["asset-inventory-ca
 router.include_router(ioa_siem_router, prefix="/api/v1/ioa", tags=["ioa-siem-engine"])
 router.include_router(workloads_router, prefix="/api/v1/workloads", tags=["workloads-disk-scanner"])
 router.include_router(ebpf_sensor_router, prefix="/api/v1/sensor", tags=["ebpf-sensor-reachability"])
+router.include_router(security_graph_router, prefix="/api/v1/security-graph", tags=["security-graph-truerisk"])
 router.include_router(auditor_router, prefix="/api/v1", tags=["compliance-auditor"])
 router.include_router(graph_router, prefix="/api/v1", tags=["compliance-graph"])
 router.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])

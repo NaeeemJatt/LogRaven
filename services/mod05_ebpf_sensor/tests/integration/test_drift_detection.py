@@ -117,3 +117,4 @@ async def test_full_pipeline_drift_and_telemetry_emission():
     assert response.telemetry_emitted["is_loaded_in_memory"] is True
     assert response.telemetry_emitted["is_container_drift"] is True
     assert len(publisher.published_events) == 1
+

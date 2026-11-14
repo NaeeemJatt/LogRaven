@@ -113,3 +113,4 @@ class ReachabilityRepository:
         query = query.order_by(desc(ContainerDriftAlert.detected_at)).limit(limit).offset(offset)
         result = await session.execute(query)
         return list(result.scalars().all())
+

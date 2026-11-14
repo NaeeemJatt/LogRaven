@@ -19,3 +19,4 @@ class ELFReader:
             "needed_libraries": needed or [],
             "format": "ELF64",
         }
+

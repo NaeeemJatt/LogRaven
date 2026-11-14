@@ -35,3 +35,4 @@ EOF
 
 systemctl daemon-reload
 echo "LogRaven eBPF Sensor service installed successfully."
+

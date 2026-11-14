@@ -48,3 +48,4 @@ class RingBufferConsumer:
             self.governor.record_event_processed()
             processed.append(evt)
         return processed
+
