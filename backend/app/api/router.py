@@ -22,6 +22,7 @@ from services.mod05_ebpf_sensor.cmd.sensor_daemon.main import router as ebpf_sen
 from services.mod06_security_graph.cmd.graph_engine.main import router as security_graph_router
 from services.mod07_ciem_jit.cmd.ciem_worker.main import router as ciem_router
 from services.mod08_dspm_classifier.cmd.dspm_scanner.main import router as dspm_router
+from services.mod09_ai_spm.cmd.ai_scanner.main import router as aispm_router
 
 router = APIRouter()
 
@@ -39,6 +40,7 @@ router.include_router(ebpf_sensor_router, prefix="/api/v1/sensor", tags=["ebpf-s
 router.include_router(security_graph_router, prefix="/api/v1/security-graph", tags=["security-graph-truerisk"])
 router.include_router(ciem_router, prefix="/api/v1/ciem", tags=["ciem-jit-permissions"])
 router.include_router(dspm_router, prefix="/api/v1/dspm", tags=["dspm-data-classifier"])
+router.include_router(aispm_router, prefix="/api/v1/aispm", tags=["aispm-mcp-governance"])
 router.include_router(auditor_router, prefix="/api/v1", tags=["compliance-auditor"])
 router.include_router(graph_router, prefix="/api/v1", tags=["compliance-graph"])
 router.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])

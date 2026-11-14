@@ -10,6 +10,7 @@ from app.models.report import Report
 from app.models.finding import Finding
 from app.models.audit import AuditLog
 from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException, CloudAccount, AuditorAccessToken
+from services.mod09_ai_spm.internal.repository.models import AIModelInventory, MCPServerInventory
 
 __all__ = [
     "Base",
@@ -25,5 +26,6 @@ __all__ = [
     "ComplianceException",
     "CloudAccount",
     "AuditorAccessToken",
+    "AIModelInventory",
+    "MCPServerInventory",
 ]
-
