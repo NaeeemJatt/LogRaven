@@ -1,0 +1,32 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: lograven-kac-validating-webhook
+  labels:
+    app.kubernetes.io/name: lograven-kac
+    app.kubernetes.io/part-of: lograven
+webhooks:
+  - name: validate.kspm.lograven.io
+    rules:
+      - apiGroups: ["", "apps", "batch"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods", "deployments", "daemonsets", "statefulsets", "jobs", "cronjobs"]
+        scope: "Namespaced"
+    clientConfig:
+      service:
+        name: lograven-kac-webhook
+        namespace: lograven-system
+        path: "/api/v1/kspm/validate"
+        port: 443
+      caBundle: "" # Injected by cert-manager or LogRaven auto-tls
+    admissionReviewVersions: ["v1"]
+    sideEffects: None
+    timeoutSeconds: 3
+    failurePolicy: Fail
+    namespaceSelector:
+      matchExpressions:
+        - key: control-plane
+          operator: DoesNotExist
+        - key: lograven.io/kac-ignore
+          operator: DoesNotExist
