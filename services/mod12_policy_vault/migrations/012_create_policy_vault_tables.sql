@@ -48,3 +48,4 @@ CREATE TABLE IF NOT EXISTS vault_packages (
 );
 
 CREATE INDEX IF NOT EXISTS idx_vault_packages_tenant ON vault_packages(tenant_id);
+

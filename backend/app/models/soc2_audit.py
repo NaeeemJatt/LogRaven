@@ -73,11 +73,27 @@ class AuditJob(Base):
         back_populates="audit_job",
         cascade="all, delete-orphan",
     )
+    heartbeat_at:     Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     snapshots: Mapped[list["ComplianceSnapshot"]] = relationship(
         "ComplianceSnapshot",
         back_populates="audit_job",
         cascade="all, delete-orphan",
     )
+
+    def can_transition_to(self, target) -> bool:
+        from app.utils.fsm import audit_job_fsm
+        from app.schemas.enums import AuditJobStatus
+        target_enum = target if isinstance(target, AuditJobStatus) else AuditJobStatus(str(target))
+        current_enum = AuditJobStatus(str(self.status))
+        return audit_job_fsm.can_transition(current_enum, target_enum)
+
+    def transition_to(self, target) -> None:
+        from app.utils.fsm import audit_job_fsm
+        from app.schemas.enums import AuditJobStatus
+        target_enum = target if isinstance(target, AuditJobStatus) else AuditJobStatus(str(target))
+        current_enum = AuditJobStatus(str(self.status))
+        audit_job_fsm.validate_transition(current_enum, target_enum)
+        self.status = str(target_enum.value)
 
 
 class AuditResult(Base):
@@ -163,6 +179,21 @@ class ComplianceException(Base):
         default=_utc_now,
         onupdate=_utc_now,
     )
+
+    def can_transition_to(self, target) -> bool:
+        from app.utils.fsm import exception_fsm
+        from app.schemas.enums import ExceptionStatus
+        target_enum = target if isinstance(target, ExceptionStatus) else ExceptionStatus(str(target))
+        current_enum = ExceptionStatus(str(self.status))
+        return exception_fsm.can_transition(current_enum, target_enum)
+
+    def transition_to(self, target) -> None:
+        from app.utils.fsm import exception_fsm
+        from app.schemas.enums import ExceptionStatus
+        target_enum = target if isinstance(target, ExceptionStatus) else ExceptionStatus(str(target))
+        current_enum = ExceptionStatus(str(self.status))
+        exception_fsm.validate_transition(current_enum, target_enum)
+        self.status = str(target_enum.value)
 
 
 class CloudAccount(Base):

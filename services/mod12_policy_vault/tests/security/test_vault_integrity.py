@@ -54,3 +54,4 @@ def test_tc_mod12_004_single_byte_tampering_detected():
     assert tamper_check["status"] == "TAMPERED_OR_CORRUPT"
     assert len(tamper_check["errors"]) > 0
     assert any("Checksum mismatch for 'evidence.json'" in err for err in tamper_check["errors"])
+

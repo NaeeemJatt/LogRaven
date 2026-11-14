@@ -53,3 +53,4 @@ def test_compile_multiple_conditions():
     assert 'input.instance_type == "t2.micro"' in rego
     assert "input.ebs_optimized == false" in rego
     assert "input.volume_size >= 100" in rego
+

@@ -2,6 +2,14 @@
 //
 // Mirrors the Pydantic models from backend/app/api/compliance/routes.py
 
+export type AuditJobStatusType = 'pending' | 'running' | 'complete' | 'failed' | 'retried'
+export type AuditStepType = 'connecting' | 'collecting' | 'sanitizing' | 'grading' | 'packaging' | 'complete'
+export type ControlStatusType = 'PASS' | 'FAIL' | 'PARTIAL' | 'SUPPRESSED'
+export type ExceptionStatusType = 'active' | 'expired' | 'revoked'
+export type CloudAccountStatusType = 'PENDING_VALIDATION' | 'CONNECTED' | 'DEGRADED' | 'ERROR'
+export type CloudAccountHealthStatusType = 'unverified' | 'healthy' | 'degraded' | 'error' | 'unreachable'
+
+
 export interface ControlException {
   id: string
   business_justification: string
@@ -54,9 +62,9 @@ export interface FrameworkResult {
 
 export interface AuditStatusResponse {
   audit_id: string
-  status: string
+  status: AuditJobStatusType | string
   percent?: number | null
-  step?: string | null
+  step?: AuditStepType | string | null
   company_name?: string | null
   frameworks?: string[] | null
   // Legacy/primary-framework flat fields:
@@ -82,7 +90,7 @@ export interface ExceptionResponse {
   compensating_controls?: string | null
   risk_level: string
   suppressed_by: string
-  status: string
+  status: ExceptionStatusType | string
   expires_at?: string | null
   created_at: string
 }

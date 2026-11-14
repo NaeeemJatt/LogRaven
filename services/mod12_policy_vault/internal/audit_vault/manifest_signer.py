@@ -134,3 +134,4 @@ class ManifestSigner:
                 "status": "TAMPERED_OR_CORRUPT",
                 "errors": [f"Failed to inspect zip package: {str(err)}"],
             }
+

@@ -59,3 +59,4 @@ def test_tc_mod12_003_suppression_expiration_and_reopen():
     # Finding is NO LONGER suppressed -> re-opened for audit remediation!
     assert is_suppressed is False
     assert matched_rule is None
+

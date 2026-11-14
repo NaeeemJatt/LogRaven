@@ -60,3 +60,15 @@ class AIEngineError(LogRavenError):
     status_code = 503
     def __init__(self, message: str = "AI analysis engine unavailable"):
         super().__init__(message, "AI_ENGINE_ERROR")
+
+
+class IllegalStateTransitionError(LogRavenError):
+    status_code = 409
+    def __init__(self, entity: str, current_state: str, target_state: str):
+        super().__init__(
+            f"Illegal state transition for {entity}: cannot move from '{current_state}' to '{target_state}'",
+            "ILLEGAL_STATE_TRANSITION",
+        )
+        self.entity = entity
+        self.current_state = current_state
+        self.target_state = target_state

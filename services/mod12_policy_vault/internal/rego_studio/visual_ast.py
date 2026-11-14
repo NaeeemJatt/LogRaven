@@ -18,3 +18,4 @@ class VisualRuleAST(BaseModel):
     message: Optional[str] = None
     severity: str = "HIGH"
     package_name: str = "lograven.rules.custom"
+

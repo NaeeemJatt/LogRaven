@@ -84,3 +84,4 @@ class RegoCompiler:
             return f'"{val}"'
         else:
             return json.dumps(val)
+

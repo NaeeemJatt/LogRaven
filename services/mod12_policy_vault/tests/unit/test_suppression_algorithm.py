@@ -77,3 +77,4 @@ def test_matching_finding_is_suppressed():
     assert is_suppressed is True
     assert matched_rule is not None
     assert matched_rule.rule_id == "suppress-east-rule"
+

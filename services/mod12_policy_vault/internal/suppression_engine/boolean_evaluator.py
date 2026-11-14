@@ -95,3 +95,4 @@ class BooleanSuppressionEvaluator:
             return True, rule
 
         return False, None
+

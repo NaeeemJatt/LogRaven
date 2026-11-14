@@ -141,3 +141,4 @@ async def test_vault_package_and_verify_endpoints(test_user, mock_db):
         verify_data = verify_resp.json()
         assert verify_data["is_valid"] is True
         assert verify_data["status"] == "VERIFIED"
+

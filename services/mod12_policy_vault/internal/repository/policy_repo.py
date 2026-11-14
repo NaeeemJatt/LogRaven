@@ -144,3 +144,4 @@ class PolicyVaultRepository:
         query = select(CustomRegoRule).order_by(desc(CustomRegoRule.created_at)).limit(limit).offset(offset)
         res = await session.execute(query)
         return list(res.scalars().all())
+
