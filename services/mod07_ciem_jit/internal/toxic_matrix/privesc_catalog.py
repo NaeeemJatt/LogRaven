@@ -211,3 +211,4 @@ PRIVESC_CATALOG: List[PrivEscVector] = [
         mitigation="Enforce permission boundaries on created policies.",
     ),
 ]
+

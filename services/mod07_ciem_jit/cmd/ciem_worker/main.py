@@ -258,3 +258,4 @@ async def list_privilege_escalation_vectors(
         }
         for v in PRIVESC_CATALOG
     ]
+

@@ -84,3 +84,4 @@ class SetEvaluator:
                 effective_allowed.add(action)
 
         return effective_allowed
+

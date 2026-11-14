@@ -36,3 +36,4 @@ class UsageDiffAnalyzer:
             "unused_actions": sorted(list(unused_set)),
             "is_overprivileged": unused_pct >= 50.0 or unused_count >= 10,
         }
+

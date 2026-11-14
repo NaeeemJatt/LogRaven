@@ -131,3 +131,4 @@ class CIEMRepository:
         query = query.order_by(desc(CloudJITLease.created_at)).limit(limit).offset(offset)
         res = await session.execute(query)
         return list(res.scalars().all())
+

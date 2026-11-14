@@ -175,3 +175,4 @@ async def test_list_toxic_vectors_api(test_user):
         assert "AWS-PRIVESC-002" in vector_ids
 
     app.dependency_overrides.clear()
+

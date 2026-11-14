@@ -109,3 +109,4 @@ class JITLeaseScheduler:
             self.invalidated_tokens.append(token)
 
         return record
+

@@ -93,3 +93,4 @@ def test_immediate_manual_revocation():
     revoked = scheduler.revoke_lease_immediately(lease_id=lease_id, reason="Security alert detected anomalous action")
     assert revoked["status"] == "REVOKED"
     assert token in scheduler.invalidated_tokens
+

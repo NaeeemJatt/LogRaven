@@ -90,3 +90,4 @@ def test_permission_boundary_acts_as_ceiling():
     assert "s3:GetObject" in effective
     assert "s3:ListBucket" in effective
     assert not any("ec2:" in a.lower() for a in effective)
+

@@ -35,3 +35,4 @@ CREATE TABLE IF NOT EXISTS cloud_jit_leases (
 
 CREATE INDEX IF NOT EXISTS idx_jit_leases_status ON cloud_jit_leases(status, expires_at);
 CREATE INDEX IF NOT EXISTS idx_jit_leases_target_role ON cloud_jit_leases(target_role_arn);
+

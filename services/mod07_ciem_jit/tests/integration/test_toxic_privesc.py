@@ -86,3 +86,4 @@ def test_tc_mod7_003_90day_usage_least_privilege_pruning():
     # Valid JSON serialization
     serialized = json.loads(policy_output["policy_json"])
     assert serialized == policy_doc
+

@@ -83,3 +83,4 @@ class PolicyASTParser:
     def matches_action(pattern: str, action: str) -> bool:
         """Checks if an IAM action matches a wildcard pattern (e.g. 's3:*' matches 's3:GetObject')."""
         return fnmatch.fnmatchcase(action.lower(), pattern.lower())
+

@@ -37,3 +37,4 @@ class JITAuditLogger:
 
         logger.info(f"CIEM JIT Audit: {event_type} for {target_role_arn} by {actor_email} [sig: {signature[:12]}]")
         return payload
+

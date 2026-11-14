@@ -39,3 +39,4 @@ class LeastPrivilegeBuilder:
             "policy_document": policy_doc,
             "policy_json": json.dumps(policy_doc, indent=2),
         }
+

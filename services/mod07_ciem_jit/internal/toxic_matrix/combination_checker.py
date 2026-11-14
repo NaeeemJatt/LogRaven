@@ -69,3 +69,4 @@ class ToxicCombinationChecker:
         if pattern in ("*", "*:*"):
             return True
         return fnmatch.fnmatchcase(action, pattern)
+
