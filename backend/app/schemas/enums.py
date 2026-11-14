@@ -104,3 +104,4 @@ class SuppressionStatus(StrEnum):
     ACTIVE = "ACTIVE"
     EXPIRED = "EXPIRED"
     REVOKED = "REVOKED"
+

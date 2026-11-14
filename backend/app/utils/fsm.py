@@ -127,3 +127,4 @@ exception_fsm = FSM("ComplianceException", EXCEPTION_TRANSITIONS)
 suppression_fsm = FSM("CrowdstrikeSuppressionRule", SUPPRESSION_TRANSITIONS)
 remediation_pr_fsm = FSM("GitOpsRemediationPR", REMEDIATION_PR_TRANSITIONS)
 cloud_account_fsm = FSM("CloudAccountV2", CLOUD_ACCOUNT_TRANSITIONS)
+

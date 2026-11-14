@@ -105,3 +105,4 @@ async def test_sweep_expired_compliance_exceptions():
     assert swept[0] == str(expired_exc.id)
     assert expired_exc.status == ExceptionStatus.EXPIRED
     mock_db.commit.assert_awaited_once()
+

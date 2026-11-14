@@ -99,3 +99,4 @@ def test_cloud_account_fsm():
     assert cloud_account_fsm.can_transition(CloudAccountStatus.PENDING_VALIDATION, CloudAccountStatus.ERROR)
     assert cloud_account_fsm.can_transition(CloudAccountStatus.CONNECTED, CloudAccountStatus.DEGRADED)
     assert cloud_account_fsm.can_transition(CloudAccountStatus.DEGRADED, CloudAccountStatus.CONNECTED)
+
