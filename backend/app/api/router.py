@@ -18,6 +18,7 @@ from services.mod01_onboarding.cmd.server.main import router as cloud_connect_ro
 from services.mod02_asset_crawler.cmd.crawler.main import router as assets_router
 from services.mod03_ioa_siem_engine.cmd.stream_worker.main import router as ioa_siem_router
 from services.mod04_disk_scanner.cmd.scanner_worker.main import router as workloads_router
+from services.mod05_ebpf_sensor.cmd.sensor_daemon.main import router as ebpf_sensor_router
 
 router = APIRouter()
 
@@ -31,6 +32,7 @@ router.include_router(cloud_connect_router, prefix="/api/v1", tags=["cloud-conne
 router.include_router(assets_router, prefix="/api/v1", tags=["asset-inventory-caasm"])
 router.include_router(ioa_siem_router, prefix="/api/v1/ioa", tags=["ioa-siem-engine"])
 router.include_router(workloads_router, prefix="/api/v1/workloads", tags=["workloads-disk-scanner"])
+router.include_router(ebpf_sensor_router, prefix="/api/v1/sensor", tags=["ebpf-sensor-reachability"])
 router.include_router(auditor_router, prefix="/api/v1", tags=["compliance-auditor"])
 router.include_router(graph_router, prefix="/api/v1", tags=["compliance-graph"])
 router.include_router(dashboard_router, prefix="/api/v1/dashboard", tags=["dashboard"])
