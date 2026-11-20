@@ -38,6 +38,8 @@ export interface ControlResult {
   ai_description: string
   gaps: string[]
   evidence_references: string[]
+  failing_resources?: string[]
+  passed_resources?: string[]
   framework?: string | null
   category?: string | null
   automatable?: boolean | null
@@ -304,6 +306,83 @@ export interface AttackPathGraph {
   critical_paths: CriticalPath[]
   assessed_at?: string | null
 }
+
+// ── Native Cloud Compliance & Rules Catalog Types ───────────────────────────
+
+export interface CatalogRuleItem {
+  rule_id: string
+  cid: string
+  title: string
+  provider: 'AWS' | 'AZURE' | 'GCP' | 'OCI' | string
+  service: string
+  criticality: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | string
+  execution_type: string
+  target_source: string
+  policies: string[]
+  mandates: string[]
+  conditions_count: number
+}
+
+export interface CatalogSummaryResponse {
+  status: string
+  deterministic_engine: string
+  total_rules: number
+  total_cids: number
+  providers: string[]
+  rules_by_provider: Record<string, number>
+  policies_count: number
+  mandates_count: number
+  supported_operators: string[]
+}
+
+export interface CatalogControlsResponse {
+  items: CatalogRuleItem[]
+  total: number
+  page: number
+  total_pages: number
+  limit: number
+}
+
+export interface NativeScanResponse {
+  status: string
+  session_id: string
+  account_id: string
+  provider: string
+  execution_summary: {
+    total_controls_evaluated: number
+    controls_passed: number
+    controls_failed: number
+    drift_alerts_detected: number
+    log_alerts_detected: number
+    latency_ms: number
+  }
+  policies: Record<string, {
+    passed: number
+    failed: number
+    score_pct: number
+    failing_cids: string[]
+  }>
+  mandates: Record<string, {
+    passed: number
+    failed: number
+    score_pct: number
+    failing_cids: string[]
+  }>
+  controls: Record<string, {
+    cid: string
+    title: string
+    provider: string
+    service: string
+    criticality: string
+    status: 'PASS' | 'FAIL'
+    passed_resources: string[]
+    failing_resources: string[]
+    log_alerts: any[]
+  }>
+  drift_alerts: any[]
+  log_alerts: any[]
+}
+
 
 
 

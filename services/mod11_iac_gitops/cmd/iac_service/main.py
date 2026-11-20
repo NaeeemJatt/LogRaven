@@ -157,9 +157,9 @@ async def create_gitops_pr(
     )
 
     # Persist in DB if repo is registered
-    repo = await IaCRepository.get_repo_by_name(db, req.repo_full_name)
+    repo = await IaCRepository.get_repo_by_name(db, req.repo_full_name, tenant_id=current_user.id)
     if not repo:
-        tenant_id = getattr(current_user, "tenant_id", None)
+        tenant_id = current_user.id
         repo = await IaCRepository.register_repository(
             session=db,
             provider="github",
@@ -169,8 +169,8 @@ async def create_gitops_pr(
             tenant_id=tenant_id,
         )
 
-    user_id = getattr(current_user, "id", None)
-    tenant_id = getattr(current_user, "tenant_id", None)
+    user_id = current_user.id
+    tenant_id = current_user.id
     await IaCRepository.record_remediation_pr(
         session=db,
         repo_id=repo.id,
@@ -193,7 +193,7 @@ async def register_repository(
     db: AsyncSession = Depends(get_db),
 ):
     """Registers a connected Git repository for automated Pull Requests."""
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     repo = await IaCRepository.register_repository(
         session=db,
         provider=req.provider,
@@ -220,7 +220,7 @@ async def list_repositories(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists connected Git repositories."""
-    repos = await IaCRepository.list_repositories(db, limit=limit, offset=offset)
+    repos = await IaCRepository.list_repositories(db, tenant_id=current_user.id, limit=limit, offset=offset)
     return {
         "total": len(repos),
         "repositories": [
@@ -245,7 +245,7 @@ async def list_remediation_prs(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists submitted GitOps Pull Requests."""
-    prs = await IaCRepository.list_prs(db, limit=limit, offset=offset)
+    prs = await IaCRepository.list_prs(db, tenant_id=current_user.id, limit=limit, offset=offset)
     return {
         "total": len(prs),
         "prs": [

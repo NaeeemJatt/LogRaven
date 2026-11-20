@@ -14,7 +14,7 @@ import {
   CalendarRange, ShieldCheck,
   Loader2, Copy, Check, Terminal, Layers,
   ChevronDown, ChevronRight, X, Sparkles, BellRing, Cloud, Info,
-  ArrowLeft, ArrowRight, AlertCircle, CheckCircle2,
+  ArrowLeft, ArrowRight, AlertCircle, CheckCircle2, Zap,
 } from 'lucide-react'
 import { listFrameworks, listCloudAccounts } from '../../api/compliance'
 import type { FrameworkInfo, CloudAccount } from '../../types/audit'
@@ -25,6 +25,7 @@ const STORAGE_KEY = 'lograven_new_audit_form_v2'
 interface AuditFormProps {
   onSubmit: (formData: AuditFormData) => void
   isLoading: boolean
+  onRunNativeScan?: () => void
 }
 
 export interface AuditFormData {
@@ -96,7 +97,7 @@ const defaultFormData: AuditFormData = {
   recurrence: 'none',
 }
 
-export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
+export default function AuditForm({ onSubmit, isLoading, onRunNativeScan }: AuditFormProps) {
   const [searchParams, setSearchParams] = useSearchParams()
 
   // Step state synced with URL search param '?step=X'
@@ -490,7 +491,35 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
           PAGE 1: Frameworks & Standards Scope (Wide 2-Column Layout)
          ═════════════════════════════════════════════════════════════════════ */}
       {currentStep === 1 && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        <div className="space-y-5">
+          {/* Native Scanner Option Banner */}
+          {onRunNativeScan && (
+            <div className="rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-400/[0.08] via-surface/40 to-surface/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300 flex-shrink-0" />
+                  <span className="font-semibold text-sm text-text-primary">LogRaven Native Cloud Compliance Scanner</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/40">
+                    Instant Verification · 1,565 Controls
+                  </span>
+                </div>
+                <p className="text-xs text-text-secondary leading-relaxed">
+                  Run an instant deterministic audit directly against your cloud assets with zero queue wait times. Identifies non-compliant assets and provides exact resource ARNs and configuration telemetry.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={onRunNativeScan}
+                disabled={isLoading}
+                className="btn-sovereign px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2 text-white shadow-sm flex-shrink-0 cursor-pointer disabled:opacity-50"
+              >
+                <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+                <span>Run Native Cloud Scan</span>
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Left Column: Category Selector & Framework Cards (8 cols) */}
           <div className="lg:col-span-8 rounded-2xl border border-white/[0.08] bg-deep/80 backdrop-blur-sm p-6 space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -646,6 +675,7 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* ═════════════════════════════════════════════════════════════════════
@@ -1078,6 +1108,18 @@ export default function AuditForm({ onSubmit, isLoading }: AuditFormProps) {
                 </>
               )}
             </button>
+
+            {onRunNativeScan && (
+              <button
+                type="button"
+                onClick={onRunNativeScan}
+                disabled={isLoading}
+                className="w-full py-3 px-3.5 rounded-xl border border-amber-400/30 bg-amber-400/[0.06] hover:bg-amber-400/10 text-amber-300 hover:text-amber-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
+                <span>Run via LogRaven Native Cloud Scanner (Instant · 1,565 Controls)</span>
+              </button>
+            )}
           </div>
         </div>
       )}

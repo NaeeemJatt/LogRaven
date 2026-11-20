@@ -24,7 +24,7 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error'
 const FRAMEWORK_OPTIONS = [
   { id: 'soc2', label: 'SOC 2 Type II' },
   { id: 'iso27001', label: 'ISO / IEC 27001' },
-  { id: 'cis_aws', label: 'CIS AWS Foundations', provider: 'aws' },
+  { id: 'cis_aws', label: 'CIS AWS', provider: 'aws' },
   { id: 'cis_gcp', label: 'CIS GCP Benchmark', provider: 'gcp' },
   { id: 'cis_azure', label: 'CIS Azure Benchmark', provider: 'azure' },
   { id: 'hipaa', label: 'HIPAA Security' },
@@ -401,16 +401,7 @@ aws iam attach-role-policy \\
   --policy-arn arn:aws:iam::aws:policy/SecurityAudit`
 
   return (
-    <div className="pb-12 min-h-screen grid-bg relative">
-      {/* Ambient header glow */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-64"
-        aria-hidden
-        style={{
-          background: 'radial-gradient(ellipse 70% 100% at 50% 0%, rgba(227,181,126,0.06), transparent 70%)',
-        }}
-      />
-
+    <div className="pb-12 min-h-screen relative">
       <div className="relative px-4 sm:px-6 lg:px-8 pt-4 pb-8 w-full space-y-5">
         {/* Top Breadcrumb & Back Link */}
         <div className="flex items-center justify-between gap-4">

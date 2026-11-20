@@ -226,7 +226,7 @@ export default function Report() {
   ]
 
   return (
-    <div className="min-h-screen grid-bg">
+    <div className="min-h-screen">
       <div className="px-4 sm:px-6 lg:px-8 py-6 w-full">
 
         {/* Header */}

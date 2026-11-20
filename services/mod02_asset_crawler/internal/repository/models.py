@@ -4,8 +4,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any
 
-from sqlalchemy import String, Boolean, DateTime, Index
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import String, Boolean, DateTime, Index, Integer, ForeignKey
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.types import TypeDecorator, Text as SA_Text
 import json
@@ -55,6 +55,11 @@ class CSPMAsset(Base):
     resource_name: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
     config_json: Mapped[dict] = mapped_column(JSONB().with_variant(JSONCompatibleDict, "sqlite"), default=dict)
     config_sha256: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    cloud_account_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("cloud_accounts.id", ondelete="SET NULL"), nullable=True)
+    tags: Mapped[dict] = mapped_column(JSONB().with_variant(JSONCompatibleDict, "sqlite"), default=dict)
+    compliance_status: Mapped[str] = mapped_column(String(32), default="UNASSESSED", index=True)
+    failing_rule_count: Mapped[int] = mapped_column(Integer, default=0)
+    passing_rule_count: Mapped[int] = mapped_column(Integer, default=0)
     is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now)

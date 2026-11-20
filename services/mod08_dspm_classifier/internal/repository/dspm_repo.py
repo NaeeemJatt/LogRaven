@@ -100,20 +100,26 @@ class DSPMRepository:
     async def get_asset_by_urn(
         session: AsyncSession,
         asset_urn: str,
+        tenant_id: Optional[uuid.UUID] = None,
     ) -> Optional[DSPMDataAsset]:
-        """Retrieves asset record by URN."""
+        """Retrieves asset record by URN scoped to tenant."""
         query = select(DSPMDataAsset).where(DSPMDataAsset.asset_urn == asset_urn)
+        if tenant_id:
+            query = query.where(DSPMDataAsset.tenant_id == tenant_id)
         res = await session.execute(query)
         return res.scalar_one_or_none()
 
     @staticmethod
     async def list_assets(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[DSPMDataAsset]:
-        """Lists scanned data assets."""
+        """Lists scanned data assets scoped to tenant."""
         query = select(DSPMDataAsset).order_by(desc(DSPMDataAsset.scanned_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(DSPMDataAsset.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
 

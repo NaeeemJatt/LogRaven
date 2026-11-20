@@ -3,6 +3,7 @@
 FastAPI Router and Security Graph Engine Coordinator (PRD-MOD-06).
 """
 
+from collections import defaultdict
 from datetime import datetime, timezone
 import logging
 from typing import Any, Dict, List, Optional
@@ -80,8 +81,10 @@ class ChokepointQueryRequest(BaseModel):
 
 
 # ── In-Memory Fast Cache for Topology SLA (< 5s for 50k nodes) ───────────
-_active_nodes: Dict[str, Dict[str, Any]] = {}
-_active_edges: List[Dict[str, Any]] = []
+# Segregated by tenant UUID to enforce multi-tenant isolation
+_DEFAULT_TENANT = uuid.UUID("00000000-0000-0000-0000-000000000000")
+_active_nodes: Dict[uuid.UUID, Dict[str, Dict[str, Any]]] = defaultdict(dict)
+_active_edges: Dict[uuid.UUID, List[Dict[str, Any]]] = defaultdict(list)
 
 
 # ── REST API Endpoints ───────────────────────────────────────────────────
@@ -95,8 +98,12 @@ async def ingest_graph_topology(
     """Ingests or updates graph topology (nodes and edges across 6 domains)."""
     global _active_nodes, _active_edges
 
+    tenant_id = current_user.id if current_user else _DEFAULT_TENANT
+    tenant_nodes = _active_nodes[tenant_id]
+    tenant_edges = _active_edges[tenant_id]
+
     for n in req.nodes:
-        _active_nodes[n.id] = n.model_dump()
+        tenant_nodes[n.id] = n.model_dump()
         try:
             await SecurityGraphRepository.upsert_node(
                 session=db,
@@ -114,7 +121,7 @@ async def ingest_graph_topology(
 
     for e in req.edges:
         e_dict = e.model_dump()
-        _active_edges.append(e_dict)
+        tenant_edges.append(e_dict)
         try:
             await SecurityGraphRepository.upsert_edge(
                 session=db,
@@ -136,8 +143,8 @@ async def ingest_graph_topology(
 
     return {
         "status": "INGESTED",
-        "nodes_count": len(_active_nodes),
-        "edges_count": len(_active_edges),
+        "nodes_count": len(tenant_nodes),
+        "edges_count": len(tenant_edges),
     }
 
 
@@ -150,10 +157,15 @@ async def get_attack_paths(
     """Discovers all exploitable multi-hop attack paths (depth <= 6) with TrueRisk and Chokepoint."""
     global _active_nodes, _active_edges
 
-    finder = BFSPathFinder(max_depth=max_depth)
+    tenant_id = current_user.id if current_user else _DEFAULT_TENANT
+    tenant_nodes = _active_nodes[tenant_id]
+    tenant_edges = _active_edges[tenant_id]
+
+    depth_val = max_depth if isinstance(max_depth, int) else getattr(max_depth, "default", 6)
+    finder = BFSPathFinder(max_depth=depth_val)
     paths = finder.find_attack_paths(
-        nodes=_active_nodes,
-        edges=_active_edges,
+        nodes=tenant_nodes,
+        edges=tenant_edges,
     )
 
     results = []
@@ -227,7 +239,9 @@ async def compute_chokepoint(
 ):
     """Calculates Edmonds-Karp Minimum Cut and lowest-friction breaking point."""
     global _active_edges
-    edges_to_use = [e.model_dump() for e in req.edges] if req.edges else _active_edges
+    tenant_id = current_user.id if current_user else _DEFAULT_TENANT
+    tenant_edges = _active_edges[tenant_id]
+    edges_to_use = [e.model_dump() for e in req.edges] if req.edges else tenant_edges
 
     solver = EdmondsKarpMinCut()
     for e in edges_to_use:
@@ -249,19 +263,22 @@ async def list_toxic_combinations(
 ):
     """Discovers toxic combinations across all active nodes."""
     global _active_nodes, _active_edges
+    tenant_id = current_user.id if current_user else _DEFAULT_TENANT
+    tenant_nodes = _active_nodes[tenant_id]
+    tenant_edges = _active_edges[tenant_id]
 
-    adj: Dict[str, List[Dict[str, Any]]] = {n: [] for n in _active_nodes}
-    for e in _active_edges:
+    adj: Dict[str, List[Dict[str, Any]]] = {n: [] for n in tenant_nodes}
+    for e in tenant_edges:
         if e["source_id"] in adj:
             adj[e["source_id"]].append(e)
 
     toxic_findings = []
-    for node_id, node_data in _active_nodes.items():
+    for node_id, node_data in tenant_nodes.items():
         finding = _toxic_detector.inspect_node_toxic_state(
             node_id=node_id,
             node_data=node_data,
             connected_edges=adj.get(node_id, []),
-            neighbor_nodes=_active_nodes,
+            neighbor_nodes=tenant_nodes,
         )
         if finding:
             toxic_findings.append(finding)

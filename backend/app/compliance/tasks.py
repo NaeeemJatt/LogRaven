@@ -119,7 +119,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
         AWSConnectionError,
     )
     from app.compliance.collectors import collect_extended_evidence
-    from app.compliance.sanitizer import sanitize_for_ai
+    from app.compliance.sanitizer import sanitize_evidence
     from app.compliance.signals import build_evidence_signals
     from app.compliance.frameworks import get_framework
     from app.compliance import ai_grader
@@ -245,7 +245,7 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
             # ── Step 4: Sanitize + build signals ────────────────────────────
             logger.info("Step 4: Sanitizing evidence and building signals...")
             try:
-                sanitized_evidence = sanitize_for_ai(
+                sanitized_evidence = sanitize_evidence(
                     cloudtrail_events, iam_summary, guardduty_findings, extended=extended_evidence
                 )
                 signals = build_evidence_signals(sanitized_evidence)
@@ -322,6 +322,8 @@ async def _run_audit_pipeline(task_self, audit_job_id: str) -> dict:
                         "category": control.get("category", ""),
                         "automatable": control.get("automatable", True),
                         "remediation": control.get("remediation", ""),
+                        "failing_resources": control.get("failing_resources", []),
+                        "passed_resources": control.get("passed_resources", []),
                     }
                     if control.get("exception"):
                         raw_summary["exception"] = control["exception"]

@@ -7,6 +7,7 @@ import uuid
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from services.mod02_asset_crawler.internal.repository.models import CSPMAsset
 from services.mod05_ebpf_sensor.internal.repository.models import ContainerDriftAlert, WorkloadRuntimeReachability
 
 
@@ -102,12 +103,17 @@ class ReachabilityRepository:
     @staticmethod
     async def list_drift_alerts(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         asset_urn: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[ContainerDriftAlert]:
-        """Lists container drift detection alerts."""
+        """Lists container drift detection alerts, scoped to tenant via CSPMAsset."""
         query = select(ContainerDriftAlert)
+        if tenant_id:
+            query = query.join(CSPMAsset, ContainerDriftAlert.asset_urn == CSPMAsset.urn).where(
+                CSPMAsset.tenant_id == tenant_id
+            )
         if asset_urn:
             query = query.where(ContainerDriftAlert.asset_urn == asset_urn)
         query = query.order_by(desc(ContainerDriftAlert.detected_at)).limit(limit).offset(offset)

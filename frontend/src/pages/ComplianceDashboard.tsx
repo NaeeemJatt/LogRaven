@@ -57,7 +57,7 @@ export default function ComplianceDashboard() {
   const frameworks = posture?.frameworks ?? [
     {
       framework_id: 'cis_aws',
-      framework_name: 'CIS AWS Foundations Benchmark',
+      framework_name: 'CIS AWS',
       score_percent: 14.29,
       pass_count: 3,
       fail_count: 12,
@@ -230,7 +230,7 @@ export default function ComplianceDashboard() {
               <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs">
                 <span className="text-text-muted">Remediation status</span>
                 <Link
-                  to="/compliance?tab=posture"
+                  to="/compliance?tab=results"
                   className="inline-flex items-center gap-1 text-amber-300 hover:text-amber-200 font-medium transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
                 >
                   <span>1-click remediation</span>
@@ -301,7 +301,7 @@ export default function ComplianceDashboard() {
 
                   <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between">
                     <Link
-                      to={`/compliance?tab=posture&fw=${f.framework_id}`}
+                      to={`/compliance?tab=results&fw=${f.framework_id}`}
                       className="text-[11px] font-medium text-text-muted hover:text-amber-300 transition-colors duration-150 inline-flex items-center gap-1 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none rounded"
                     >
                       <span>Inspect controls</span>

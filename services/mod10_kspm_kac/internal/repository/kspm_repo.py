@@ -92,23 +92,29 @@ class KSPMRepository:
     @staticmethod
     async def list_clusters(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[K8sCluster]:
-        """Lists cataloged Kubernetes clusters."""
+        """Lists cataloged Kubernetes clusters scoped to tenant."""
         query = select(K8sCluster).order_by(desc(K8sCluster.last_crawled_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(K8sCluster.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
 
     @staticmethod
     async def list_admission_events(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         cluster_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[K8sAdmissionEvent]:
-        """Lists evaluated admission events."""
+        """Lists evaluated admission events scoped to tenant."""
         query = select(K8sAdmissionEvent).order_by(desc(K8sAdmissionEvent.evaluated_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(K8sAdmissionEvent.tenant_id == tenant_id)
         if cluster_id:
             query = query.where(K8sAdmissionEvent.cluster_id == cluster_id)
         res = await session.execute(query)

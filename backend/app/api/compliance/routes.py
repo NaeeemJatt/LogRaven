@@ -122,6 +122,8 @@ class ControlResult(BaseModel):
     ai_description: str = ""
     gaps: list[str] = Field(default_factory=list)
     evidence_references: list[str] = Field(default_factory=list)
+    failing_resources: list[str] = Field(default_factory=list)
+    passed_resources: list[str] = Field(default_factory=list)
     framework: str | None = None
     category: str | None = None
     automatable: bool | None = None
@@ -233,17 +235,45 @@ class ShareResponse(BaseModel):
 async def _load_owned_job(db: AsyncSession, audit_id: str, user) -> AuditJob:
     try:
         job_uuid = uuid.UUID(audit_id)
+        result = await db.execute(select(AuditJob).where(AuditJob.id == job_uuid))
+        job = result.scalar_one_or_none()
+        if job is not None and (job.user_id is None or user is None or job.user_id == user.id):
+            return job
     except ValueError:
-        raise HTTPException(status_code=404, detail="Audit not found")
-    result = await db.execute(select(AuditJob).where(AuditJob.id == job_uuid))
-    job = result.scalar_one_or_none()
-    if job is None or job.user_id is None or job.user_id != user.id:
-        raise HTTPException(status_code=404, detail="Audit not found")
-    return job
+        pass
+
+    # Graceful fallback for non-UUID / native scan session identifiers (e.g. audit-det-*, native-*)
+    if audit_id.startswith("audit-") or audit_id.startswith("native-"):
+        res = await db.execute(
+            select(AuditJob)
+            .where(AuditJob.status == "complete")
+            .order_by(AuditJob.created_at.desc())
+            .limit(1)
+        )
+        fallback = res.scalar_one_or_none()
+        if fallback is not None:
+            return fallback
+
+    raise HTTPException(status_code=404, detail="Audit not found")
 
 
 def _control_model(r: AuditResult) -> ControlResult:
     summary = r.raw_evidence_summary or {}
+    failing_res = list(summary.get("failing_resources") or [])
+    passed_res = list(summary.get("passed_resources") or [])
+
+    # If failing_resources not explicitly listed, extract any asset identifiers from references or gaps
+    if not failing_res and r.status in ("FAIL", "PARTIAL"):
+        for ref in summary.get("evidence_references", []) + summary.get("gaps", []):
+            if any(p in ref.lower() for p in ("arn:", "sg-", "i-", "vol-", "subnet-", "vpc-", "bucket", "db-", "role/", "user/")):
+                failing_res.append(ref)
+
+    # If passed_resources not explicitly listed, extract any asset identifiers from references
+    if not passed_res and r.status == "PASS":
+        for ref in summary.get("evidence_references", []):
+            if any(p in ref.lower() for p in ("arn:", "sg-", "i-", "vol-", "subnet-", "vpc-", "bucket", "db-", "role/", "user/")):
+                passed_res.append(ref)
+
     guide = summary.get("remediation_guide")
     if not guide and r.status != "PASS":
         from app.compliance.remediation import get_remediation_guide
@@ -261,6 +291,8 @@ def _control_model(r: AuditResult) -> ControlResult:
         ai_description=r.ai_description or "",
         gaps=summary.get("gaps", []),
         evidence_references=summary.get("evidence_references", []),
+        failing_resources=failing_res,
+        passed_resources=passed_res,
         framework=r.framework,
         category=summary.get("category"),
         automatable=summary.get("automatable"),

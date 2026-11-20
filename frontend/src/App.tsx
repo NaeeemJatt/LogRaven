@@ -26,6 +26,7 @@ const JobStatus             = lazy(() => import('./pages/JobStatus'))
 const Report                = lazy(() => import('./pages/Report'))
 const PlayParser            = lazy(() => import('./pages/PlayParser'))
 const AuditPage             = lazy(() => import('./pages/AuditPage'))
+const AssetInventoryPage    = lazy(() => import('./pages/AssetInventoryPage'))
 const ConnectAccountPage    = lazy(() => import('./pages/ConnectAccountPage'))
 const ProfilePage           = lazy(() => import('./pages/Profile'))
 const AlertFeed             = lazy(() => import('./pages/AlertFeed'))
@@ -72,6 +73,7 @@ export default function App() {
                           {/* Compliance is now the premier landing dashboard */}
                           <Route path="/"                               element={<ComplianceDashboard />} />
                           <Route path="/dashboard"                      element={<ComplianceDashboard />} />
+                          <Route path="/assets"                         element={<AssetInventoryPage />} />
                           <Route path="/compliance"                     element={<AuditPage />} />
                           <Route path="/compliance/connect"             element={<ConnectAccountPage />} />
                           <Route path="/compliance/connect/:step"       element={<ConnectAccountPage />} />

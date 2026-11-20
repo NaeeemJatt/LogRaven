@@ -14,11 +14,24 @@
 
 from __future__ import annotations
 
+import ipaddress
+import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import unquote
 
-from app.rules.schema import RuleDefinition, SimpleCondition, SimpleMatch, ThresholdMatch
+from app.rules.schema import (
+    ConditionRule,
+    DeterministicRuleSpec,
+    OperatorType,
+    RuleDefinition,
+    SimpleCondition,
+    SimpleMatch,
+    ThresholdMatch,
+)
 from app.utils.logger import get_logger
 
 logger = get_logger("lograven.rules")
@@ -271,3 +284,258 @@ def run_yaml_rules_with_matches(
 def run_yaml_rules(events: list, rules: list[RuleDefinition]) -> list:
     """Compatibility entry point returning only the mutated events."""
     return run_yaml_rules_with_matches(events, rules)[0]
+
+
+# ── Deterministic (100% Non-AI) Condition & AST Evaluator ─────────────────────
+
+def extract_path(data: Dict[str, Any], path: str) -> Any:
+    """
+    Extracts a nested value or list of values from data using dot-notation.
+    Supports root '$', dot notation ('$.a.b'), and wildcard arrays ('$.items.*').
+    """
+    if path == "$" or not path:
+        return data
+    parts = path.lstrip("$.").split(".")
+
+    def _walk(curr: Any, idx: int) -> Any:
+        if idx == len(parts):
+            return curr
+        key = parts[idx]
+
+        if key == "*":
+            if isinstance(curr, list):
+                out = []
+                for item in curr:
+                    res = _walk(item, idx + 1)
+                    if isinstance(res, list):
+                        out.extend(res)
+                    elif res is not None:
+                        out.append(res)
+                return out
+            elif isinstance(curr, dict):
+                out = []
+                for item in curr.values():
+                    res = _walk(item, idx + 1)
+                    if isinstance(res, list):
+                        out.extend(res)
+                    elif res is not None:
+                        out.append(res)
+                return out
+            return None
+
+        if isinstance(curr, dict):
+            val = curr.get(key)
+            if val is None:
+                # Common AWS resource plural/singular fallbacks
+                if key == "PolicyDocuments":
+                    val = curr.get("PolicyDocument") or curr.get("Policies")
+                    if isinstance(val, dict):
+                        val = [val]
+                elif key == "PolicyDocument":
+                    val = curr.get("PolicyDocuments")
+            return _walk(val, idx + 1)
+
+        return None
+
+    return _walk(data, 0)
+
+
+def check_iam_ast_wildcard(policy_doc: Any, check_mode: str = "service_or_full_wildcard") -> bool:
+    """
+    Inspects IAM policy document AST for wildcard administrative privileges.
+    Returns True if an Allow statement includes wildcard Action and Resource.
+    """
+    if isinstance(policy_doc, str):
+        try:
+            policy_doc = json.loads(unquote(policy_doc))
+        except Exception:
+            try:
+                policy_doc = json.loads(policy_doc)
+            except Exception:
+                return False
+
+    if not isinstance(policy_doc, dict):
+        return False
+
+    stmts = policy_doc.get("Statement", [])
+    if isinstance(stmts, dict):
+        stmts = [stmts]
+    elif not isinstance(stmts, list):
+        return False
+
+    for st in stmts:
+        if not isinstance(st, dict) or st.get("Effect") != "Allow":
+            continue
+
+        actions = st.get("Action", [])
+        if isinstance(actions, str):
+            actions = [actions]
+        elif not isinstance(actions, list):
+            actions = []
+
+        resources = st.get("Resource", [])
+        if isinstance(resources, str):
+            resources = [resources]
+        elif not isinstance(resources, list):
+            resources = []
+
+        has_wild_res = any(r == "*" or (isinstance(r, str) and r.endswith(":*")) for r in resources)
+
+        if check_mode == "full_admin":
+            if "*" in actions and "*" in resources:
+                return True
+        else:
+            if has_wild_res and any(a == "*" or (isinstance(a, str) and a.endswith(":*")) for a in actions):
+                return True
+
+    return False
+
+
+def check_cidr_open_world(permissions: Any, target_port: Optional[int] = None) -> bool:
+    """
+    Inspects EC2/VPC security group IpPermissions for unrestricted ingress (0.0.0.0/0 or ::/0).
+    Optionally matches against a specific target port (e.g. 22 for SSH, 3389 for RDP).
+    """
+    if not isinstance(permissions, list):
+        return False
+
+    for perm in permissions:
+        if not isinstance(perm, dict):
+            continue
+
+        from_p = perm.get("FromPort")
+        to_p = perm.get("ToPort")
+        ip_proto = str(perm.get("IpProtocol", ""))
+
+        port_ok = (
+            target_port is None
+            or ip_proto == "-1"
+            or (from_p is not None and to_p is not None and int(from_p) <= int(target_port) <= int(to_p))
+        )
+        if not port_ok:
+            continue
+
+        # Check IPv4 0.0.0.0/0
+        for rng in perm.get("IpRanges", []):
+            if not isinstance(rng, dict):
+                continue
+            cidr = rng.get("CidrIp", "")
+            if cidr == "0.0.0.0/0":
+                return True
+            if cidr:
+                try:
+                    if ipaddress.ip_network(cidr, strict=False).prefixlen == 0:
+                        return True
+                except ValueError:
+                    pass
+
+        # Check IPv6 ::/0
+        for rng6 in perm.get("Ipv6Ranges", []):
+            if not isinstance(rng6, dict):
+                continue
+            cidr6 = rng6.get("CidrIpv6", "")
+            if cidr6 == "::/0":
+                return True
+            if cidr6:
+                try:
+                    if ipaddress.ip_network(cidr6, strict=False).prefixlen == 0:
+                        return True
+                except ValueError:
+                    pass
+
+    return False
+
+
+def evaluate_condition(payload: Dict[str, Any], cond: ConditionRule) -> bool:
+    """
+    Evaluates a single field-level ConditionRule against a payload dictionary.
+    Implements all 12 deterministic operators without any LLM calls.
+    """
+    val = extract_path(payload, cond.field_path)
+    op = cond.operator
+
+    if op == OperatorType.EXISTS:
+        return (val is not None and val != "") == bool(cond.value)
+
+    if op == OperatorType.EQ:
+        return val == cond.value
+
+    if op == OperatorType.NEQ:
+        return val != cond.value
+
+    if op == OperatorType.IN:
+        if isinstance(val, list):
+            return any(x in cond.value for x in val)
+        return val in cond.value if cond.value is not None else False
+
+    if op == OperatorType.NOT_IN:
+        if isinstance(val, list):
+            return all(x not in cond.value for x in val)
+        return val not in cond.value if cond.value is not None else True
+
+    if op == OperatorType.GTE:
+        return val is not None and float(val) >= float(cond.value)
+
+    if op == OperatorType.LTE:
+        return val is not None and float(val) <= float(cond.value)
+
+    if op == OperatorType.REGEX:
+        return val is not None and bool(re.search(str(cond.value), str(val), re.IGNORECASE))
+
+    if op == OperatorType.CIDR_OPEN_WORLD:
+        return check_cidr_open_world(val, cond.value)
+
+    if op == OperatorType.IAM_AST_WILDCARD:
+        if isinstance(val, list):
+            return any(check_iam_ast_wildcard(d, str(cond.value)) for d in val)
+        return check_iam_ast_wildcard(val, str(cond.value))
+
+    if op == OperatorType.KMS_CMK_ENCRYPTED:
+        if not isinstance(val, dict):
+            return False
+        enc = bool(
+            val.get("Encrypted")
+            or val.get("StorageEncrypted")
+            or val.get("KmsKeyId")
+            or val.get("KMSMasterKeyId")
+        )
+        arn = str(val.get("KmsKeyId") or val.get("KMSMasterKeyId") or "")
+        is_cmk = enc and arn.startswith("arn:aws:kms:") and ":alias/aws/" not in arn
+        return is_cmk == bool(cond.value)
+
+    if op == OperatorType.AGE_DAYS_GTE:
+        if not val:
+            return False
+        try:
+            dt = datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            now_utc = datetime.now(timezone.utc)
+            return ((now_utc - dt).total_seconds() / 86400.0) >= float(cond.value)
+        except Exception:
+            return False
+
+    return False
+
+
+def evaluate_rule(payload: Dict[str, Any], rule: DeterministicRuleSpec) -> bool:
+    """
+    Evaluates all conditions of a DeterministicRuleSpec against a resource or event payload.
+    Supports match_logic: ALL (AND), ANY (OR), NONE (NOR).
+    Returns True if matching conditions represent a VIOLATION (FAIL state).
+    """
+    if not rule.conditions:
+        return False
+
+    results = [evaluate_condition(payload, c) for c in rule.conditions]
+    logic = str(rule.match_logic).upper()
+
+    if logic == "ALL":
+        return all(results)
+    if logic == "ANY":
+        return any(results)
+    if logic == "NONE":
+        return not any(results)
+
+    return False
+

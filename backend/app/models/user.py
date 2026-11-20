@@ -39,3 +39,8 @@ class User(Base):
 
     investigations: Mapped[list["Investigation"]] = relationship("Investigation", back_populates="user", lazy="select")
     audit_logs:     Mapped[list["AuditLog"]]      = relationship("AuditLog",      back_populates="user", lazy="select")
+
+    @property
+    def tenant_id(self) -> uuid.UUID:
+        """Alias property providing backwards-compatible tenant_id access pointing to user.id."""
+        return self.id

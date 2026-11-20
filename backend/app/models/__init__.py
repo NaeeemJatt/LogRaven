@@ -10,6 +10,8 @@ from app.models.report import Report
 from app.models.finding import Finding
 from app.models.audit import AuditLog
 from app.models.soc2_audit import AuditJob, AuditResult, ComplianceSnapshot, ComplianceException, CloudAccount, AuditorAccessToken
+from app.models.cspm import CSPMControlCatalog, CSPMPolicyCatalog, CSPMMandateCatalog, CSPMEvaluationFinding
+from app.models.asset import CspmAsset
 from services.mod09_ai_spm.internal.repository.models import AIModelInventory, MCPServerInventory
 from services.mod10_kspm_kac.internal.repository.models import K8sCluster, K8sAdmissionEvent
 from services.mod11_iac_gitops.internal.repository.models import GitRepository, IaCLineageRecord, GitOpsRemediationPR
@@ -29,6 +31,11 @@ __all__ = [
     "ComplianceException",
     "CloudAccount",
     "AuditorAccessToken",
+    "CSPMControlCatalog",
+    "CSPMPolicyCatalog",
+    "CSPMMandateCatalog",
+    "CSPMEvaluationFinding",
+    "CspmAsset",
     "AIModelInventory",
     "MCPServerInventory",
     "K8sCluster",

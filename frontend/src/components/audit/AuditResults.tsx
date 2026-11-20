@@ -4,13 +4,15 @@
 // top, then either a filterable control browser (list + detail with evidence &
 // remediation) or a shared-signal crosswalk view.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import {
-  Download, Loader2, RotateCcw, FileText, ListChecks, AlertOctagon,
-  Network, FileSpreadsheet, TrendingUp, TrendingDown, Share2,
-  ShieldAlert, Undo2, Flame,
+  Loader2, FileText, ListChecks,
+  Network,
+  ShieldAlert, ChevronDown,
+  Download, FileSpreadsheet, Share2,
 } from 'lucide-react'
+import { useAuditNavStore } from '../../store/auditNavStore'
 import type {
   AuditStatusResponse, ControlResult, CrosswalkResponse, FrameworkResult, ExceptionResponse,
 } from '../../types/audit'
@@ -20,13 +22,17 @@ import {
   type SuppressControlBody,
 } from '../../api/compliance'
 import SuppressFindingModal from './SuppressFindingModal'
-import RemediationStudio from './RemediationStudio'
 import AttackPathCanvas from './AttackPathCanvas'
+
+export type ViewMode = 'controls' | 'attack_path' | 'crosswalk' | 'exceptions'
 
 interface AuditResultsProps {
   results: AuditStatusResponse
   auditId: string
   initialFrameworkId?: string
+  initialView?: ViewMode
+  onFrameworkChange?: (frameworkId: string) => void
+  onViewChange?: (view: ViewMode) => void
   onStartNew?: () => void
   /** When set, shows a Share button in the actions column. */
   onShare?: () => void
@@ -42,19 +48,35 @@ const STATUS_COLOR: Record<string, string> = {
   SUPPRESSED: '#A371F7',
 }
 type StatusFilter = 'ALL' | 'FAIL' | 'PARTIAL' | 'SUPPRESSED' | 'PASS'
-type ViewMode = 'controls' | 'crosswalk' | 'exceptions' | 'attack_path'
 
-function sortedResults(results: ControlResult[]): ControlResult[] {
+export type EnrichedControlResult = ControlResult & {
+  framework_id?: string
+  framework_name?: string
+}
+
+export function formatFrameworkName(name?: string): string {
+  if (!name) return '—'
+  if (/^CIS[\s_-]*AWS/i.test(name)) return 'CIS AWS'
+  return name
+}
+
+function sortedResults<T extends ControlResult>(results: T[]): T[] {
   return [...results].sort((a, b) => (STATUS_ORDER[a.status] ?? 3) - (STATUS_ORDER[b.status] ?? 3))
 }
 
 function deriveFrameworks(results: AuditStatusResponse): FrameworkResult[] {
-  if (results.framework_results?.length) return results.framework_results
+  const normalize = (fws: FrameworkResult[]) =>
+    fws.map((fw) => ({
+      ...fw,
+      framework_name: formatFrameworkName(fw.framework_name),
+    }))
+
+  if (results.framework_results?.length) return normalize(results.framework_results)
   // Fall back to the legacy flat shape (single framework).
   const controls = results.results ?? []
   return [{
     framework_id: results.frameworks?.[0] ?? 'soc2',
-    framework_name: results.frameworks?.[0] ?? 'SOC 2',
+    framework_name: formatFrameworkName(results.frameworks?.[0] ?? 'SOC 2'),
     controls_assessed: controls.length,
     pass_count: results.pass_count ?? 0,
     fail_count: results.fail_count ?? 0,
@@ -64,6 +86,30 @@ function deriveFrameworks(results: AuditStatusResponse): FrameworkResult[] {
     raw_score_percent: results.raw_score_percent ?? results.score_percent ?? 0,
     results: controls,
   }]
+}
+
+function findMatchingFramework(frameworks: FrameworkResult[], targetId?: string): string | null {
+  if (!targetId || !frameworks.length) return null
+  const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const targetClean = clean(targetId)
+
+  // 1. Exact match
+  const exact = frameworks.find((f) => f.framework_id.toLowerCase() === targetId.toLowerCase())
+  if (exact) return exact.framework_id
+
+  // 2. Normalized alphanumeric match (e.g. cis_aws == cis-aws == cisaws)
+  const norm = frameworks.find((f) => clean(f.framework_id) === targetClean)
+  if (norm) return norm.framework_id
+
+  // 3. Substring match on framework_id or framework_name
+  const partial = frameworks.find(
+    (f) => clean(f.framework_id).includes(targetClean) ||
+           targetClean.includes(clean(f.framework_id)) ||
+           clean(f.framework_name).includes(targetClean)
+  )
+  if (partial) return partial.framework_id
+
+  return null
 }
 
 
@@ -78,82 +124,380 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-// ── Radial score gauge ────────────────────────────────────
-function ScoreGauge({ score, color }: { score: number; color: string }) {
-  const r = 48
-  const c = 2 * Math.PI * r
-  const offset = c - (Math.min(100, Math.max(0, score)) / 100) * c
-  return (
-    <div className="relative w-[120px] h-[120px] flex-shrink-0">
-      <svg viewBox="0 0 130 130" className="w-full h-full -rotate-90">
-        <circle cx="65" cy="65" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="9" />
-        <motion.circle
-          cx="65" cy="65" r={r} fill="none" stroke={color} strokeWidth="9" strokeLinecap="round"
-          strokeDasharray={c}
-          initial={{ strokeDashoffset: c }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1, ease: 'easeOut', delay: 0.15 }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="stat-value text-3xl font-semibold leading-none" style={{ color }}>
-          {score.toFixed(0)}<span className="text-base">%</span>
-        </span>
-        <span className="text-[9px] font-mono uppercase tracking-[0.18em] text-text-muted mt-1">Score</span>
-      </div>
-    </div>
-  )
+type ColumnKey = 'name' | 'status' | 'controlId' | 'assets' | 'framework'
+
+interface ColumnDef {
+  key: ColumnKey
+  label: string
+  defaultWeight: number
+  minWeight: number
 }
 
-export default function AuditResults({ results, auditId, initialFrameworkId, onStartNew, onShare, readOnly = false }: AuditResultsProps) {
+const COLUMN_DEFS: Record<ColumnKey, ColumnDef> = {
+  name: { key: 'name', label: 'Name', defaultWeight: 44, minWeight: 20 },
+  status: { key: 'status', label: 'Status', defaultWeight: 11, minWeight: 7 },
+  controlId: { key: 'controlId', label: 'Control Number', defaultWeight: 14, minWeight: 9 },
+  assets: { key: 'assets', label: 'Assets', defaultWeight: 9, minWeight: 6 },
+  framework: { key: 'framework', label: 'Framework', defaultWeight: 22, minWeight: 14 },
+}
+
+const COLUMNS: ColumnKey[] = ['name', 'status', 'controlId', 'assets', 'framework']
+const PAGE_SIZE_OPTIONS = [20, 30, 40, 50, 100] as const
+
+export default function AuditResults({
+  results,
+  auditId,
+  initialFrameworkId,
+  initialView,
+  onFrameworkChange,
+  onViewChange,
+  onShare,
+  readOnly = false,
+}: AuditResultsProps) {
   const [localResults, setLocalResults] = useState<AuditStatusResponse>(results)
   useEffect(() => { setLocalResults(results) }, [results])
 
   const frameworks = useMemo(() => deriveFrameworks(localResults), [localResults])
-  const [activeFwId, setActiveFwId] = useState(() => {
-    if (initialFrameworkId && frameworks.some((f) => f.framework_id === initialFrameworkId)) {
-      return initialFrameworkId
-    }
-    return frameworks[0]?.framework_id ?? 'soc2'
-  })
+  const [activeFwId, setActiveFwId] = useState<string>('ALL')
+  const [pageSize, setPageSize] = useState<number>(20)
+  const [currentPage, setCurrentPage] = useState<number>(1)
 
   useEffect(() => {
-    if (initialFrameworkId && frameworks.some((f) => f.framework_id === initialFrameworkId)) {
-      setActiveFwId(initialFrameworkId)
+    if (initialFrameworkId && initialFrameworkId.toLowerCase() !== 'all') {
+      const matched = findMatchingFramework(frameworks, initialFrameworkId)
+      if (matched) setActiveFwId(matched)
     }
   }, [initialFrameworkId, frameworks])
-  const [view, setView] = useState<ViewMode>('controls')
+
+  const handleSelectFramework = (fwId: string) => {
+    setActiveFwId(fwId)
+    setSelectedCategory(null)
+    setSelectedControlName(null)
+    setControlSearch('')
+    setExpandedId(null)
+    onFrameworkChange?.(fwId === 'ALL' ? 'all' : fwId)
+  }
+
+  const [view, setView] = useState<ViewMode>(initialView || 'controls')
+
+  useEffect(() => {
+    if (initialView && initialView !== view) {
+      setView(initialView)
+    }
+  }, [initialView])
+
+  const handleViewChange = (newView: ViewMode) => {
+    setView(newView)
+    onViewChange?.(newView)
+  }
+
   const [downloading, setDownloading] = useState<string | null>(null)
   const [downloadError, setDownloadError] = useState<string | null>(null)
   const [filter, setFilter] = useState<StatusFilter>('ALL')
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedControlName, setSelectedControlName] = useState<string | null>(null)
+  const [controlSearch, setControlSearch] = useState('')
+  const [activeDropdown, setActiveDropdown] = useState<'framework' | 'status' | 'category' | 'name' | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [selectedControlForModal, setSelectedControlForModal] = useState<(ControlResult & { framework_id?: string }) | null>(null)
+  const filterBarRef = useRef<HTMLDivElement>(null)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
+  const [exportOpen, setExportOpen] = useState(false)
+
   const [crosswalk, setCrosswalk] = useState<CrosswalkResponse | null>(null)
   const [suppressionModalOpen, setSuppressionModalOpen] = useState(false)
-  const [actionLoading, setActionLoading] = useState(false)
+  const [_actionLoading, setActionLoading] = useState(false)
 
-  const active = frameworks.find((f) => f.framework_id === activeFwId) ?? frameworks[0]
-  const controls = useMemo(() => active?.results ?? [], [active])
-  const sorted = useMemo(() => sortedResults(controls), [controls])
+  // Table container ref for calculating real-time drag ratios bounded to container
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+
+  // Slider column weight adjustment state (proportional fr units bounded strictly to table width)
+  const [colWidths, setColWidths] = useState<Record<ColumnKey, number>>({
+    name: 44,
+    status: 11,
+    controlId: 14,
+    assets: 9,
+    framework: 22,
+  })
+  const [activeResizing, setActiveResizing] = useState<ColumnKey | null>(null)
+  const resizingRef = useRef<{
+    colKey: ColumnKey
+    colIndex: number
+    startX: number
+    startWidths: Record<ColumnKey, number>
+    containerWidth: number
+  } | null>(null)
+
+  const handleResizeStart = (key: ColumnKey, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const colIndex = COLUMNS.indexOf(key)
+    if (colIndex < 0 || colIndex >= COLUMNS.length - 1) return
+
+    const containerWidth = tableContainerRef.current?.getBoundingClientRect().width || 1000
+    const startWidths = { ...colWidths }
+
+    setActiveResizing(key)
+    resizingRef.current = {
+      colKey: key,
+      colIndex,
+      startX: e.clientX,
+      startWidths,
+      containerWidth,
+    }
+
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!resizingRef.current) return
+      const { colKey: activeKey, colIndex: idx, startX, startWidths: baseWidths, containerWidth: cWidth } = resizingRef.current
+      const deltaPx = moveEvent.clientX - startX
+      const deltaWeight = (deltaPx / cWidth) * 100
+
+      const newWidths = { ...baseWidths }
+
+      if (deltaWeight > 0) {
+        // Dragging right: expanding left column by moving into and absorbing from columns to the right
+        const rightCols = COLUMNS.slice(idx + 1)
+        const maxAbsorbable = rightCols.reduce(
+          (acc, c) => acc + Math.max(0, baseWidths[c] - COLUMN_DEFS[c].minWeight),
+          0
+        )
+        const appliedDelta = Math.min(deltaWeight, maxAbsorbable)
+        newWidths[activeKey] = baseWidths[activeKey] + appliedDelta
+
+        let remaining = appliedDelta
+        for (const c of rightCols) {
+          if (remaining <= 0) break
+          const canTake = Math.max(0, baseWidths[c] - COLUMN_DEFS[c].minWeight)
+          const take = Math.min(canTake, remaining)
+          newWidths[c] = Number((baseWidths[c] - take).toFixed(2))
+          remaining -= take
+        }
+        newWidths[activeKey] = Number(newWidths[activeKey].toFixed(2))
+      } else if (deltaWeight < 0) {
+        // Dragging left: shrinking left column, expanding immediate right neighbor
+        const maxShrink = Math.max(0, baseWidths[activeKey] - COLUMN_DEFS[activeKey].minWeight)
+        const actualShrink = Math.min(-deltaWeight, maxShrink)
+        newWidths[activeKey] = Number((baseWidths[activeKey] - actualShrink).toFixed(2))
+
+        const rightCol = COLUMNS[idx + 1]
+        newWidths[rightCol] = Number((baseWidths[rightCol] + actualShrink).toFixed(2))
+      }
+
+      setColWidths(newWidths)
+    }
+
+    const onMouseUp = () => {
+      resizingRef.current = null
+      setActiveResizing(null)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }
+
+  const getGridTemplate = () => {
+    return `${colWidths.name}fr ${colWidths.status}fr ${colWidths.controlId}fr ${colWidths.assets}fr ${colWidths.framework}fr`
+  }
+
+  const renderCell = (key: ColumnKey, control: EnrichedControlResult) => {
+    const color = STATUS_COLOR[control.status] ?? '#93A4B5'
+    const ruleName = control.control_name || control.category || `Control ${control.control_id}`
+    const isFailing = control.status === 'FAIL' || control.status === 'PARTIAL'
+    const isPassing = control.status === 'PASS'
+    const rawFailingAssets = control.failing_resources ?? []
+    const rawPassedAssets = control.passed_resources ?? []
+    const failingAssetCount = rawFailingAssets.length > 0 ? rawFailingAssets.length : (isFailing ? 1 : 0)
+    const passedAssetCount = rawPassedAssets.length > 0 ? rawPassedAssets.length : (isPassing ? 1 : 0)
+
+    switch (key) {
+      case 'name':
+        return (
+          <div className="min-w-0 pr-2">
+            <span className="text-sm font-medium text-text-primary truncate block" title={ruleName}>
+              {ruleName}
+            </span>
+          </div>
+        )
+      case 'status':
+        return (
+          <div className="flex items-center">
+            <span
+              className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border inline-block font-mono"
+              style={{ color, backgroundColor: color + '18', borderColor: color + '3a' }}
+            >
+              {control.status}
+            </span>
+          </div>
+        )
+      case 'controlId':
+        return (
+          <div className="font-mono text-xs text-text-muted font-medium truncate">
+            {control.control_id}
+          </div>
+        )
+      case 'assets': {
+        const count = isFailing
+          ? failingAssetCount
+          : isPassing
+          ? passedAssetCount
+          : control.status === 'SUPPRESSED'
+          ? 1
+          : 0
+
+        return (
+          <div className="flex items-center">
+            <span className="font-mono text-xs text-text-secondary tabular-nums" title={`${count} asset(s)`}>
+              {count}
+            </span>
+          </div>
+        )
+      }
+      case 'framework':
+        return (
+          <div className="truncate">
+            <span
+              className="text-xs font-medium text-text-secondary truncate block"
+              title={formatFrameworkName(control.framework_name)}
+            >
+              {formatFrameworkName(control.framework_name)}
+            </span>
+          </div>
+        )
+    }
+  }
+
   const company = localResults.company_name ?? ''
-  const score = active?.score_percent ?? 0
-  const scoreColor = score >= 80 ? '#8FBDAD' : score >= 50 ? '#D9C27E' : '#DB8585'
+
+  const allControls: EnrichedControlResult[] = useMemo(() => {
+    if (activeFwId !== 'ALL') {
+      const fw = frameworks.find((f) => f.framework_id === activeFwId) ?? frameworks[0]
+      return sortedResults(fw?.results ?? []).map((c) => ({
+        ...c,
+        framework_id: fw?.framework_id,
+        framework_name: fw?.framework_name,
+      }))
+    }
+    const list: EnrichedControlResult[] = []
+    frameworks.forEach((fw) => {
+      (fw.results ?? []).forEach((c) => {
+        list.push({
+          ...c,
+          framework_id: fw.framework_id,
+          framework_name: fw.framework_name,
+        })
+      })
+    })
+    return sortedResults(list)
+  }, [frameworks, activeFwId])
+
+  const categories = useMemo(() => {
+    const set = new Set<string>()
+    allControls.forEach((c) => {
+      if (c.category) set.add(c.category)
+    })
+    return Array.from(set).sort()
+  }, [allControls])
+
+  const controlNames = useMemo(() => {
+    const set = new Set<string>()
+    allControls.forEach((c) => {
+      const name = c.control_name || c.category || c.control_id
+      if (name) set.add(name)
+    })
+    return Array.from(set).sort()
+  }, [allControls])
 
   const totalExceptions = useMemo(
     () => frameworks.reduce((acc, f) => acc + (f.suppressed_count ?? 0), 0),
     [frameworks],
   )
 
-  const visible = useMemo(
-    () => (filter === 'ALL' ? sorted : sorted.filter((r) => r.status === filter)),
-    [sorted, filter],
-  )
+  const visible: EnrichedControlResult[] = useMemo(() => {
+    let list: EnrichedControlResult[] = allControls
+    if (filter !== 'ALL') {
+      list = list.filter((r) => r.status === filter)
+    }
+    if (selectedCategory) {
+      list = list.filter((r) => r.category === selectedCategory)
+    }
+    if (selectedControlName) {
+      list = list.filter((r) => (r.control_name || r.category || r.control_id) === selectedControlName)
+    }
+    return list
+  }, [allControls, filter, selectedCategory, selectedControlName])
 
   useEffect(() => {
-    if (visible.length === 0) { setSelectedId(null); return }
-    if (!selectedId || !visible.some((r) => r.control_id === selectedId)) {
-      setSelectedId(visible[0].control_id)
+    setCurrentPage(1)
+  }, [activeFwId, filter, selectedCategory, selectedControlName, pageSize])
+
+  const totalControls = visible.length
+  const totalPages = Math.max(1, Math.ceil(totalControls / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, totalControls)
+  const paginatedControls = useMemo(() => {
+    return visible.slice(startIndex, endIndex)
+  }, [visible, startIndex, endIndex])
+
+  const dropdownControlNames = useMemo(() => {
+    let list = controlNames
+    if (controlSearch.trim()) {
+      const q = controlSearch.toLowerCase().trim()
+      list = list.filter((name) => name.toLowerCase().includes(q))
     }
-  }, [visible, selectedId])
+    return list
+  }, [controlNames, controlSearch])
+
+  // Close dropdown on outside click or escape
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (filterBarRef.current && !filterBarRef.current.contains(e.target as Node)) {
+        setActiveDropdown(null)
+      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportOpen(false)
+      }
+    }
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setActiveDropdown(null)
+        setExportOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
+
+  const setAuditNav = useAuditNavStore((s) => s.setAuditNav)
+  const resetAuditNav = useAuditNavStore((s) => s.resetAuditNav)
+
+  useEffect(() => {
+    setAuditNav({
+      isAuditActive: true,
+      auditId,
+      activeFrameworkId: activeFwId,
+      companyName: company,
+      totalExceptions,
+      downloading,
+      onDownloadPdf: !readOnly ? handleDownloadPdf : null,
+      onDownloadCsv: !readOnly ? handleDownloadCsv : null,
+      onDownloadZip: !readOnly ? handleDownloadZip : null,
+      onShare: (!readOnly && onShare) ? onShare : null,
+    })
+    return () => {
+      resetAuditNav()
+    }
+  }, [auditId, activeFwId, company, totalExceptions, downloading, onShare, readOnly, setAuditNav, resetAuditNav])
 
   useEffect(() => {
     if (view !== 'crosswalk' || crosswalk) return
@@ -161,17 +505,17 @@ export default function AuditResults({ results, auditId, initialFrameworkId, onS
     getCrosswalk(ids).then(setCrosswalk).catch(() => setCrosswalk({ crosswalk: [], reuse_factor: null }))
   }, [view, crosswalk, frameworks])
 
-  const selected = visible.find((r) => r.control_id === selectedId) ?? null
-
   const handleSuppress = async (data: SuppressControlBody) => {
-    if (!selected) return
-    const updated = await suppressControl(auditId, selected.control_id, active.framework_id, data)
+    if (!selectedControlForModal) return
+    const fwId = selectedControlForModal.framework_id || (activeFwId !== 'ALL' ? activeFwId : frameworks[0]?.framework_id)
+    if (!fwId) return
+    const updated = await suppressControl(auditId, selectedControlForModal.control_id, fwId, data)
     setLocalResults((prev) => {
       const copy = { ...prev }
       if (copy.framework_results) {
         copy.framework_results = copy.framework_results.map((fw) => {
-          if (fw.framework_id !== active.framework_id) return fw
-          const updatedControls = fw.results.map((c) => (c.control_id === selected.control_id ? updated : c))
+          if (fw.framework_id !== fwId) return fw
+          const updatedControls = fw.results.map((c) => (c.control_id === selectedControlForModal.control_id ? updated : c))
           const pass = updatedControls.filter((c) => c.status === 'PASS').length
           const supp = updatedControls.filter((c) => c.status === 'SUPPRESSED').length
           const fail = updatedControls.filter((c) => c.status === 'FAIL').length
@@ -191,6 +535,8 @@ export default function AuditResults({ results, auditId, initialFrameworkId, onS
       }
       return copy
     })
+    setSuppressionModalOpen(false)
+    setSelectedControlForModal(null)
   }
 
   const handleUnsuppress = async (controlId: string, frameworkId: string) => {
@@ -238,157 +584,32 @@ export default function AuditResults({ results, auditId, initialFrameworkId, onS
   }
 
   const handleDownloadPdf = () => runDownload('pdf', async () => {
-    const blob = await downloadAuditReport(auditId, active?.framework_id, 'pdf')
-    downloadBlob(blob, `${company.replace(/\s+/g, '_')}_${active?.framework_id}_evidence.pdf`)
+    const targetFw = activeFwId !== 'ALL' ? activeFwId : undefined
+    const blob = await downloadAuditReport(auditId, targetFw, 'pdf')
+    downloadBlob(blob, `${company.replace(/\s+/g, '_')}_${targetFw || 'all'}_evidence.pdf`)
   })
   const handleDownloadCsv = () => runDownload('csv', async () => {
-    const blob = await downloadAuditReport(auditId, active?.framework_id, 'csv')
-    downloadBlob(blob, `${company.replace(/\s+/g, '_')}_${active?.framework_id}_results.csv`)
+    const targetFw = activeFwId !== 'ALL' ? activeFwId : undefined
+    const blob = await downloadAuditReport(auditId, targetFw, 'csv')
+    downloadBlob(blob, `${company.replace(/\s+/g, '_')}_${targetFw || 'all'}_results.csv`)
   })
   const handleDownloadZip = () => runDownload('zip', async () => {
     const blob = await downloadEvidencePack(auditId)
     downloadBlob(blob, `${company.replace(/\s+/g, '_')}_evidence_pack.zip`)
   })
 
-  const filters: { key: StatusFilter; label: string; count: number; color?: string }[] = [
-    { key: 'ALL',        label: 'All',        count: controls.length },
-    { key: 'FAIL',       label: 'Fail',       count: active?.fail_count ?? 0,       color: STATUS_COLOR.FAIL },
-    { key: 'PARTIAL',    label: 'Partial',    count: active?.partial_count ?? 0,    color: STATUS_COLOR.PARTIAL },
-    { key: 'SUPPRESSED', label: 'Exceptions', count: active?.suppressed_count ?? 0, color: STATUS_COLOR.SUPPRESSED },
-    { key: 'PASS',       label: 'Pass',       count: active?.pass_count ?? 0,       color: STATUS_COLOR.PASS },
-  ]
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
       className="space-y-4"
     >
-      {/* ── Framework tabs (only when multiple) ──────────────────────────── */}
-      {frameworks.length > 1 && (
-        <div className="ops-panel p-2 flex flex-wrap gap-1.5">
-          {frameworks.map((fw) => {
-            const isActive = fw.framework_id === activeFwId
-            const c = fw.score_percent >= 80 ? '#8FBDAD' : fw.score_percent >= 50 ? '#D9C27E' : '#DB8585'
-            return (
-              <button
-                key={fw.framework_id}
-                onClick={() => { setActiveFwId(fw.framework_id); setView('controls') }}
-                className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors border ${
-                  isActive ? 'border-indigo-500/50 bg-indigo-500/12 text-text-primary'
-                           : 'border-white/[0.07] bg-white/[0.02] text-text-muted hover:text-text-secondary'
-                }`}
-              >
-                <span className="font-semibold">{fw.framework_name}</span>
-                <span className="font-mono tabular-nums" style={{ color: c }}>{fw.score_percent.toFixed(0)}%</span>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── Summary strip + actions ──────────────────────────────────────── */}
-      <div className="ops-panel p-5 flex flex-col sm:flex-row sm:items-center gap-5">
-        <ScoreGauge score={score} color={scoreColor} />
-
-        <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          {[
-            { label: 'Pass', count: active?.pass_count ?? 0, color: STATUS_COLOR.PASS },
-            { label: 'Exceptions', count: active?.suppressed_count ?? 0, color: STATUS_COLOR.SUPPRESSED },
-            { label: 'Partial', count: active?.partial_count ?? 0, color: STATUS_COLOR.PARTIAL },
-            { label: 'Fail', count: active?.fail_count ?? 0, color: STATUS_COLOR.FAIL },
-          ].map(({ label, count, color }) => (
-            <div key={label} className="rounded-xl p-3 border bg-deep/50" style={{ borderColor: color + '2E' }}>
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                <p className="text-[10px] font-mono uppercase tracking-wider text-text-muted">{label}</p>
-              </div>
-              <p className="stat-value text-2xl mt-1.5" style={{ color }}>{count}</p>
-            </div>
-          ))}
-          {active?.score_delta != null && active.score_delta !== 0 && (
-            <div className="col-span-2 sm:col-span-4 flex items-center gap-1.5 text-[11px] font-mono"
-              style={{ color: active.score_delta > 0 ? '#8FBDAD' : '#DB8585' }}>
-              {active.score_delta > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-              {active.score_delta > 0 ? '+' : ''}{active.score_delta.toFixed(1)} pts since last scan
-            </div>
-          )}
-        </div>
-
-        {!readOnly && (
-          <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:w-48">
-            <button
-              onClick={() => { void handleDownloadPdf() }}
-              disabled={downloading !== null}
-              className="btn-sovereign py-2.5 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {downloading === 'pdf' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              PDF
-            </button>
-            <button
-              onClick={() => { void handleDownloadCsv() }}
-              disabled={downloading !== null}
-              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-            >
-              {downloading === 'csv' ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
-              CSV
-            </button>
-            <button
-              onClick={() => { void handleDownloadZip() }}
-              disabled={downloading !== null}
-              className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-            >
-              {downloading === 'zip' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-              Evidence ZIP
-            </button>
-            {onShare && (
-              <button
-                onClick={onShare}
-                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-              >
-                <Share2 className="w-3.5 h-3.5" /> Share
-              </button>
-            )}
-            {onStartNew && (
-              <button
-                onClick={onStartNew}
-                className="btn-ghost py-2.5 rounded-lg text-sm font-medium text-text-secondary hover:text-text-primary inline-flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="w-3.5 h-3.5" /> New audit
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
       {downloadError && (
         <p className="text-xs px-3 py-2.5 rounded-lg border border-threat-critical/30 bg-threat-critical/[0.06] text-threat-critical">
           {downloadError}
         </p>
       )}
 
-      {/* ── View switch ────────── */}
-      {!readOnly && (
-      <div className="flex gap-1.5 flex-wrap">
-        {([
-          { key: 'controls' as ViewMode, label: 'Control browser', icon: ListChecks },
-          { key: 'attack_path' as ViewMode, label: 'Attack Path Graph', icon: Flame },
-          { key: 'crosswalk' as ViewMode, label: 'Crosswalk', icon: Network },
-          { key: 'exceptions' as ViewMode, label: `Exceptions (${totalExceptions})`, icon: ShieldAlert },
-        ]).map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setView(key)}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              view === key ? 'border-indigo-500/50 bg-indigo-500/12 text-indigo-300'
-                           : 'border-white/[0.08] bg-white/[0.02] text-text-muted hover:text-text-secondary'
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" /> {label}
-          </button>
-        ))}
-      </div>
-      )}
-
+      {/* ── View Content ── */}
       {view === 'crosswalk' ? (
         <CrosswalkView data={crosswalk} />
       ) : view === 'exceptions' ? (
@@ -401,200 +622,648 @@ export default function AuditResults({ results, auditId, initialFrameworkId, onS
         <AttackPathCanvas
           auditId={auditId}
           onRemediateControl={(controlId) => {
-            setSelectedId(controlId)
-            setView('controls')
+            setExpandedId(controlId)
+            handleViewChange('controls')
           }}
         />
       ) : (
-        /* ── Master-detail control navigator ──────────────────────────────── */
-        <div className="grid grid-cols-1 md:grid-cols-[300px_minmax(0,1fr)] gap-4 md:h-[calc(100vh-22rem)] min-h-[460px]">
-          {/* List */}
-          <div className="ops-panel flex flex-col overflow-hidden">
-            <div className="px-3 py-2.5 border-b border-white/[0.07] flex flex-wrap items-center gap-1.5">
-              <ListChecks className="w-3.5 h-3.5 text-text-muted mr-0.5" />
-              {filters.map((f) => {
-                const fActive = filter === f.key
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setFilter(f.key)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                      fActive ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-300'
-                              : 'border-white/[0.08] bg-white/[0.02] text-text-muted hover:text-text-secondary'
-                    }`}
-                  >
-                    {f.color && <span className="w-1.5 h-1.5 rounded-full" style={{ background: f.color }} />}
-                    {f.label}<span className="font-mono tabular-nums opacity-70">{f.count}</span>
-                  </button>
-                )
-              })}
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {visible.length === 0 ? (
-                <div className="px-4 py-10 text-center text-sm text-text-muted">No controls match this filter.</div>
-              ) : (
-                visible.map((r) => {
-                  const color = STATUS_COLOR[r.status] ?? '#93A4B5'
-                  const sel = r.control_id === selectedId
-                  return (
+        <div className="space-y-4">
+          {/* ── Modern SOC Dropdown Filter Toolbar ── */}
+          <div
+            ref={filterBarRef}
+            className="ops-panel p-2.5 flex items-center gap-2 flex-wrap text-xs select-none relative z-20"
+          >
+            {/* 1. Framework Dropdown Pill */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActiveDropdown(activeDropdown === 'framework' ? null : 'framework')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                  activeDropdown === 'framework'
+                    ? 'border-amber-400/50 bg-amber-400/10 text-amber-300 shadow-sm ring-1 ring-amber-400/30'
+                    : 'border-white/[0.1] bg-[#1a1d24] text-text-secondary hover:text-text-primary hover:bg-[#222630] hover:border-white/[0.16]'
+                }`}
+              >
+                <span>Framework</span>
+                <span className="text-white/40 font-mono">=</span>
+                <span className="text-text-primary font-semibold max-w-[200px] truncate">
+                  {activeFwId === 'ALL' ? 'All' : formatFrameworkName(frameworks.find((f) => f.framework_id === activeFwId)?.framework_name || activeFwId)}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform duration-150 ${activeDropdown === 'framework' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {activeDropdown === 'framework' && (
+                <div className="absolute left-0 top-full mt-1.5 w-72 rounded-xl border border-white/[0.12] bg-[#16181f]/95 shadow-2xl p-1.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                  <div className="max-h-60 overflow-y-auto space-y-0.5">
                     <button
-                      key={r.control_id}
-                      onClick={() => setSelectedId(r.control_id)}
-                      className={`relative w-full text-left pl-4 pr-3 py-3 border-b border-white/[0.04] transition-colors ${sel ? 'bg-white/[0.05]' : 'hover:bg-white/[0.025]'}`}
+                      type="button"
+                      onClick={() => {
+                        handleSelectFramework('ALL')
+                        setActiveDropdown(null)
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left truncate ${
+                        activeFwId === 'ALL'
+                          ? 'bg-amber-400/15 text-amber-300 font-semibold'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                      }`}
                     >
-                      <span className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: color, opacity: sel ? 1 : 0.5 }} />
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-semibold text-indigo-300">{r.control_id}</span>
-                        <span className="text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full border"
-                          style={{ color, backgroundColor: color + '1f', borderColor: color + '3a' }}>
-                          {r.status}
-                        </span>
-                      </div>
-                      <div className={`text-xs mt-1 leading-snug ${sel ? 'text-text-primary' : 'text-text-secondary'}`}>{r.control_name}</div>
+                      All
                     </button>
-                  )
-                })
+                    {frameworks.map((fw) => {
+                      const isCurrent = fw.framework_id === activeFwId
+                      return (
+                        <button
+                          key={fw.framework_id}
+                          type="button"
+                          onClick={() => {
+                            handleSelectFramework(fw.framework_id)
+                            setActiveDropdown(null)
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left truncate ${
+                            isCurrent
+                              ? 'bg-amber-400/15 text-amber-300 font-semibold'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          {formatFrameworkName(fw.framework_name)}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
               )}
+            </div>
+
+            {/* 2. Status Dropdown Pill */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                  filter !== 'ALL' || activeDropdown === 'status'
+                    ? 'border-indigo-400/50 bg-indigo-400/10 text-indigo-300 shadow-sm ring-1 ring-indigo-400/30'
+                    : 'border-white/[0.1] bg-[#1a1d24] text-text-secondary hover:text-text-primary hover:bg-[#222630] hover:border-white/[0.16]'
+                }`}
+              >
+                <span>Status</span>
+                <span className="text-white/40 font-mono">=</span>
+                <span className="text-text-primary font-semibold">{filter === 'ALL' ? 'All' : filter}</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform duration-150 ${activeDropdown === 'status' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {activeDropdown === 'status' && (
+                <div className="absolute left-0 top-full mt-1.5 w-48 rounded-xl border border-white/[0.12] bg-[#16181f]/95 shadow-2xl p-1.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                  <div className="space-y-0.5">
+                    {[
+                      { key: 'ALL', label: 'All' },
+                      { key: 'FAIL', label: 'Fail' },
+                      { key: 'PARTIAL', label: 'Partial' },
+                      { key: 'SUPPRESSED', label: 'Exceptions' },
+                      { key: 'PASS', label: 'Pass' },
+                    ].map((opt) => {
+                      const isCurrent = filter === opt.key
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          onClick={() => {
+                            setFilter(opt.key as StatusFilter)
+                            setActiveDropdown(null)
+                          }}
+                          className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                            isCurrent
+                              ? 'bg-indigo-400/15 text-indigo-300 font-semibold'
+                              : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Category Dropdown Pill */}
+            {categories.length > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActiveDropdown(activeDropdown === 'category' ? null : 'category')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                    selectedCategory || activeDropdown === 'category'
+                      ? 'border-sky-400/50 bg-sky-400/10 text-sky-300 shadow-sm ring-1 ring-sky-400/30'
+                      : 'border-white/[0.1] bg-[#1a1d24] text-text-secondary hover:text-text-primary hover:bg-[#222630] hover:border-white/[0.16]'
+                  }`}
+                >
+                  <span>Category</span>
+                  <span className="text-white/40 font-mono">=</span>
+                  <span className="text-text-primary font-semibold max-w-[140px] truncate">{selectedCategory || 'All'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-text-muted transition-transform duration-150 ${activeDropdown === 'category' ? 'rotate-180' : ''}`} />
+                </button>
+
+                {activeDropdown === 'category' && (
+                  <div className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-white/[0.12] bg-[#16181f]/95 shadow-2xl p-1.5 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                    <div className="max-h-60 overflow-y-auto space-y-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(null)
+                          setActiveDropdown(null)
+                        }}
+                        className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                          !selectedCategory
+                            ? 'bg-sky-400/15 text-sky-300 font-semibold'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        All
+                      </button>
+                      {categories.map((cat) => {
+                        const isCurrent = selectedCategory === cat
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCategory(cat)
+                              setActiveDropdown(null)
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left truncate ${
+                              isCurrent
+                                ? 'bg-sky-400/15 text-sky-300 font-semibold'
+                                : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 4. Name Dropdown Pill */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActiveDropdown(activeDropdown === 'name' ? null : 'name')}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer max-w-[320px] sm:max-w-[420px] ${
+                  selectedControlName || activeDropdown === 'name'
+                    ? 'border-amber-400/50 bg-amber-400/10 text-amber-300 shadow-sm ring-1 ring-amber-400/30'
+                    : 'border-white/[0.1] bg-[#1a1d24] text-text-secondary hover:text-text-primary hover:bg-[#222630] hover:border-white/[0.16]'
+                }`}
+              >
+                <span className="flex-shrink-0">Name</span>
+                <span className="text-white/40 font-mono flex-shrink-0">=</span>
+                <span className="truncate text-text-primary font-semibold">
+                  {selectedControlName || 'All'}
+                </span>
+                <ChevronDown className={`w-3.5 h-3.5 text-text-muted flex-shrink-0 transition-transform duration-150 ${activeDropdown === 'name' ? 'rotate-180' : ''}`} />
+              </button>
+
+              {activeDropdown === 'name' && (
+                <div className="absolute left-0 top-full mt-1.5 w-80 sm:w-96 rounded-xl border border-white/[0.12] bg-[#16181f]/95 shadow-2xl p-2 z-50 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-100">
+                  <div className="relative mb-2">
+                    <input
+                      type="text"
+                      value={controlSearch}
+                      onChange={(e) => setControlSearch(e.target.value)}
+                      placeholder="Filter by control name..."
+                      className="w-full h-8 px-3 rounded-lg border border-white/[0.1] bg-[#101116] text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-amber-400/50"
+                      autoFocus
+                    />
+                  </div>
+                  <div className="max-h-64 overflow-y-auto space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedControlName(null)
+                        setActiveDropdown(null)
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                        !selectedControlName
+                          ? 'bg-amber-400/15 text-amber-300 font-semibold'
+                          : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      All
+                    </button>
+                    {dropdownControlNames.length === 0 ? (
+                      <div className="p-3 text-center text-xs text-text-muted">No controls match</div>
+                    ) : (
+                      dropdownControlNames.map((name) => {
+                        const isCurrent = name === selectedControlName
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedControlName(name)
+                              setActiveDropdown(null)
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg text-xs transition-colors cursor-pointer text-left ${
+                              isCurrent
+                                ? 'bg-amber-400/15 text-amber-300 font-semibold'
+                                : 'text-text-secondary hover:text-text-primary hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            <div className="line-clamp-2 leading-relaxed">{name}</div>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 5. Reset Filters Button */}
+            {(activeFwId !== 'ALL' || filter !== 'ALL' || selectedCategory !== null || selectedControlName !== null) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveFwId('ALL')
+                  setFilter('ALL')
+                  setSelectedCategory(null)
+                  setSelectedControlName(null)
+                  onFrameworkChange?.('all')
+                }}
+                className="inline-flex items-center px-2.5 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 text-xs font-medium cursor-pointer transition-colors"
+                title="Reset all filters"
+              >
+                <span>Reset</span>
+              </button>
+            )}
+
+            {/* 6. Controls Count & Export Button at the end of the second menu */}
+            <div className="flex items-center gap-3 ml-auto flex-shrink-0">
+              <span className="font-mono text-[11px] text-text-muted font-normal tabular-nums px-1">
+                {visible.length} controls
+              </span>
+
+              {/* Export Dropdown at the end of the second menu */}
+              <div className="relative" ref={exportMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setExportOpen((prev) => !prev)}
+                  disabled={downloading !== null}
+                  className="btn-sovereign h-7 py-1 px-3 rounded-lg font-semibold text-xs flex items-center justify-between gap-1.5 cursor-pointer shadow-sm transition-all"
+                  title="Export or share compliance assessment"
+                >
+                  <div className="flex items-center gap-1.5">
+                    {downloading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Download className="w-3.5 h-3.5" />
+                    )}
+                    <span>{downloading ? `${downloading.toUpperCase()}…` : 'Export'}</span>
+                  </div>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${exportOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {exportOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-white/[0.12] bg-[#121316]/95 backdrop-blur-xl shadow-2xl p-1.5 z-50 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-text-muted border-b border-white/[0.06]">
+                      Export Formats
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); handleDownloadPdf(); }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-white/[0.06] rounded-lg transition-colors text-left group cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-amber-400/10 text-amber-300 group-hover:bg-amber-400/20 flex-shrink-0">
+                        <FileText className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-text-primary leading-tight">PDF Report</span>
+                        <span className="text-[10px] text-text-muted leading-tight">Audit findings & evidence</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); handleDownloadCsv(); }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-white/[0.06] rounded-lg transition-colors text-left group cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-emerald-400/10 text-emerald-300 group-hover:bg-emerald-400/20 flex-shrink-0">
+                        <FileSpreadsheet className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-text-primary leading-tight">CSV Spreadsheet</span>
+                        <span className="text-[10px] text-text-muted leading-tight">Control table & gap status</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); handleDownloadZip(); }}
+                      className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-white/[0.06] rounded-lg transition-colors text-left group cursor-pointer"
+                    >
+                      <div className="w-6 h-6 rounded flex items-center justify-center bg-indigo-400/10 text-indigo-300 group-hover:bg-indigo-400/20 flex-shrink-0">
+                        <Download className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-semibold text-text-primary leading-tight">Evidence ZIP</span>
+                        <span className="text-[10px] text-text-muted leading-tight">Complete raw telemetry pack</span>
+                      </div>
+                    </button>
+                    {onShare && (
+                      <>
+                        <div className="my-1 border-t border-white/[0.08]" />
+                        <button
+                          type="button"
+                          onClick={() => { setExportOpen(false); onShare(); }}
+                          className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs text-text-secondary hover:text-text-primary hover:bg-white/[0.06] rounded-lg transition-colors text-left group cursor-pointer"
+                        >
+                          <div className="w-6 h-6 rounded flex items-center justify-center bg-sky-400/10 text-sky-300 group-hover:bg-sky-400/20 flex-shrink-0">
+                            <Share2 className="w-3.5 h-3.5" />
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-text-primary leading-tight">Share Audit</span>
+                            <span className="text-[10px] text-text-muted leading-tight">Generate secure link</span>
+                          </div>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Detail */}
-          <div className="ops-panel flex flex-col overflow-hidden">
-            {!selected ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-                <ListChecks className="w-8 h-8 text-text-ghost mb-3" strokeWidth={1.25} />
-                <div className="text-sm text-text-secondary">Select a control to inspect its assessment.</div>
+          {/* ── Controls List: All Controls according to applied filters (Shows only Rule Name) ── */}
+          <div className="ops-panel overflow-hidden min-h-[480px]">
+            {visible.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center p-12 space-y-3">
+                <ListChecks className="w-10 h-10 text-text-ghost" strokeWidth={1.25} />
+                <div className="text-sm font-semibold text-text-primary">No controls match the applied filters.</div>
+                <p className="text-xs text-text-muted max-w-sm">
+                  Try selecting "All" from the filters above to view the full inventory.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveFwId('ALL')
+                    setFilter('ALL')
+                    setSelectedCategory(null)
+                    setSelectedControlName(null)
+                    onFrameworkChange?.('all')
+                  }}
+                  className="btn-sovereign px-3.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Reset Filters
+                </button>
               </div>
             ) : (
               <>
-                <div className="px-5 pt-5 pb-4 border-b border-white/[0.07]">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span className="font-mono text-xs font-semibold text-indigo-300">{selected.control_id}</span>
-                    {(() => { const color = STATUS_COLOR[selected.status] ?? '#93A4B5'; return (
-                      <span className="text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border"
-                        style={{ color, backgroundColor: color + '1f', borderColor: color + '3a' }}>
-                        {selected.status}
-                      </span>
-                    )})()}
-                    {selected.automatable === false && (
-                      <span className="text-[9px] font-mono uppercase tracking-wide px-2 py-0.5 rounded-full border border-white/15 text-text-muted">
-                        manual evidence
-                      </span>
-                    )}
-                    <span className="ml-auto font-mono text-[10px] text-text-muted">confidence: {selected.confidence}</span>
+                <div ref={tableContainerRef} className="w-full overflow-x-auto">
+                {/* ── Table Columns Header: Slider adjustable widths ── */}
+                <div className="border-b border-white/[0.08] bg-white/[0.02] w-full min-w-[650px]">
+                  <div
+                    className="px-5 py-2.5 items-center text-[10px] font-mono uppercase tracking-wider text-text-muted select-none"
+                    style={{ display: 'grid', gridTemplateColumns: getGridTemplate(), gap: '12px' }}
+                  >
+                    {COLUMNS.map((colKey, idx) => {
+                      const def = COLUMN_DEFS[colKey]
+                      const isLast = idx === COLUMNS.length - 1
+                      return (
+                        <div
+                          key={colKey}
+                          className={`relative flex items-center justify-between py-1 font-semibold text-text-secondary select-none ${
+                            isLast ? 'pr-1' : 'pr-3'
+                          }`}
+                        >
+                          <span className="truncate">{def.label}</span>
+
+                          {/* Slider handle on the right edge */}
+                          {!isLast && (
+                            <div
+                              onMouseDown={(e) => handleResizeStart(colKey, e)}
+                              onDoubleClick={() => setColWidths({
+                                name: 44,
+                                status: 11,
+                                controlId: 14,
+                                assets: 9,
+                                framework: 22,
+                              })}
+                              className="absolute right-0 top-0 bottom-0 w-3 -mr-1.5 cursor-col-resize z-20 flex items-center justify-center group"
+                              title="Slide left or right to adjust column width within table (Double-click to reset)"
+                            >
+                              <div
+                                className={`w-[2px] rounded transition-all ${
+                                  activeResizing === colKey
+                                    ? 'bg-amber-400 h-full'
+                                    : 'bg-white/20 group-hover:bg-amber-400 h-3.5 group-hover:h-full'
+                                }`}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                  <h2 className="text-base font-semibold text-text-primary leading-snug">{selected.control_name}</h2>
-                  {selected.category && <div className="text-[11px] text-text-muted mt-1">{selected.category}</div>}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                  {/* Authorized Exception Callout (if suppressed) */}
-                  {selected.status === 'SUPPRESSED' && selected.exception && (
-                    <div className="rounded-lg border border-purple-500/30 bg-purple-500/[0.06] p-4 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="font-mono text-[10px] uppercase tracking-wider text-purple-300 flex items-center gap-1.5 font-semibold">
-                          <ShieldAlert className="w-3.5 h-3.5 text-purple-400" /> Authorized Business Exception
+                <div className="divide-y divide-white/[0.06] w-full min-w-[650px]">
+                  {paginatedControls.map((control) => {
+                    const rowKey = `${control.framework_id || 'fw'}_${control.control_id}`
+                    const isExpanded = expandedId === rowKey
+                    const isFailing = control.status === 'FAIL' || control.status === 'PARTIAL'
+                    const isPassing = control.status === 'PASS'
+                    const rawFailingAssets = control.failing_resources ?? []
+                    const rawPassedAssets = control.passed_resources ?? []
+
+                    return (
+                      <div
+                        key={rowKey}
+                        className="hover:bg-white/[0.02] transition-colors"
+                      >
+                        {/* Control Row: Dynamic columns based on colWidths */}
+                        <div
+                          onClick={() => setExpandedId(isExpanded ? null : rowKey)}
+                          className="px-5 py-3.5 items-center cursor-pointer select-none hover:bg-white/[0.02] transition-colors"
+                          style={{ display: 'grid', gridTemplateColumns: getGridTemplate(), gap: '12px' }}
+                        >
+                          {COLUMNS.map((colKey) => (
+                            <div key={colKey} className="min-w-0">
+                              {renderCell(colKey, control)}
+                            </div>
+                          ))}
                         </div>
-                        <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-200 border border-purple-500/40 uppercase">
-                          {selected.exception.risk_level ?? 'medium'} Risk
-                        </span>
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-mono uppercase text-text-muted">Business Justification</div>
-                        <p className="text-xs text-text-primary mt-0.5 leading-relaxed">{selected.exception.business_justification}</p>
-                      </div>
-                      {selected.exception.compensating_controls && (
-                        <div>
-                          <div className="text-[10px] font-mono uppercase text-text-muted">Compensating Controls</div>
-                          <p className="text-xs text-text-secondary mt-0.5 leading-relaxed">{selected.exception.compensating_controls}</p>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between pt-1 border-t border-white/[0.08] text-[10px] text-text-muted">
-                        <span>Authorized by: <strong className="text-text-primary">{selected.exception.suppressed_by}</strong></span>
-                        {selected.exception.expires_at && (
-                          <span>Review: {selected.exception.expires_at.split('T')[0]}</span>
+
+                        {/* Optional Expandable drawer: only shown when user explicitly clicks a row */}
+                        {isExpanded && (
+                          <div className="px-5 pb-5 pt-3 border-t border-white/[0.04] bg-void/40 space-y-4 text-xs animate-in fade-in duration-150">
+                            <div className="flex items-center justify-between gap-4 pt-1">
+                              <div className="text-xs text-text-muted">
+                                <span className="font-semibold text-text-primary">{control.control_id}</span> — {control.category || formatFrameworkName(control.framework_name)}
+                              </div>
+                              {!readOnly && control.status !== 'PASS' && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedControlForModal(control)
+                                    setSuppressionModalOpen(true)
+                                  }}
+                                  className="px-2.5 py-1 rounded-md border border-purple-500/30 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 text-xs font-medium cursor-pointer transition-colors"
+                                >
+                                  Suppress / Add Exception
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Failing cloud assets breakdown (if control failed) */}
+                            {rawFailingAssets.length > 0 ? (
+                              <div className="space-y-1.5 p-3 rounded-lg border border-rose-500/20 bg-rose-500/[0.04]">
+                                <span className="font-semibold text-rose-300 block mb-1">
+                                  Failing Cloud Assets ({rawFailingAssets.length}):
+                                </span>
+                                <div className="space-y-1">
+                                  {rawFailingAssets.map((asset, i) => (
+                                    <div
+                                      key={i}
+                                      className="px-2.5 py-1 rounded bg-[#101217] border border-rose-500/20 font-mono text-[11px] text-rose-200 truncate select-all"
+                                    >
+                                      {asset}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : isFailing ? (
+                              <div className="p-3 rounded-lg border border-rose-500/20 bg-rose-500/[0.04] text-rose-200">
+                                <span className="font-semibold text-rose-300 block mb-1">Tenant / Cloud Account Policy Failure</span>
+                                This control failed at the cloud provider boundary (e.g. root account MFA, IAM password complexity, or organization-level audit logging). All workloads under this cloud account are impacted until the account baseline is remediated.
+                              </div>
+                            ) : null}
+
+                            {/* Passing cloud assets breakdown (if control passed) */}
+                            {rawPassedAssets.length > 0 ? (
+                              <div className="space-y-1.5 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04]">
+                                <span className="font-semibold text-emerald-300 block mb-1">
+                                  Passing Cloud Assets ({rawPassedAssets.length}):
+                                </span>
+                                <div className="space-y-1">
+                                  {rawPassedAssets.map((asset, i) => (
+                                    <div
+                                      key={i}
+                                      className="px-2.5 py-1 rounded bg-[#101217] border border-emerald-500/20 font-mono text-[11px] text-emerald-200 truncate select-all"
+                                    >
+                                      {asset}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : isPassing ? (
+                              <div className="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/[0.04] text-emerald-200">
+                                <span className="font-semibold text-emerald-300 block mb-1">Tenant / Cloud Baseline Compliant</span>
+                                This control is verified operating effectively against live cloud infrastructure telemetry.
+                              </div>
+                            ) : null}
+
+                            {control.ai_description && (
+                              <div className="p-3 rounded-lg border border-white/[0.06] bg-[#12141a] text-text-secondary leading-relaxed">
+                                {control.ai_description}
+                              </div>
+                            )}
+
+                            {control.remediation && (
+                              <div className="p-3 rounded-lg border border-amber-400/20 bg-amber-400/[0.03] text-text-secondary leading-relaxed">
+                                <span className="font-semibold text-amber-300 block mb-1">Remediation Guidance:</span>
+                                {control.remediation}
+                              </div>
+                            )}
+                          </div>
                         )}
                       </div>
-                      {!readOnly && (
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* ── Table Footer Pagination & Controls-per-page Counter ── */}
+              <div className="border-t border-white/[0.08] bg-white/[0.02] px-5 py-3 flex items-center justify-between gap-4 flex-wrap text-xs select-none">
+                {/* Left: Showing range */}
+                <div className="text-text-muted font-mono text-[11px] tabular-nums">
+                  Showing <span className="font-semibold text-text-primary">{totalControls === 0 ? 0 : startIndex + 1}</span>–<span className="font-semibold text-text-primary">{endIndex}</span> of <span className="font-semibold text-text-primary">{totalControls}</span> controls
+                </div>
+
+                {/* Center / Right: Counter and Page Navigation */}
+                <div className="flex items-center gap-4 ml-auto">
+                  {/* Rows per page selector counter */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-text-secondary text-[11px]">Show:</span>
+                    <div className="inline-flex items-center rounded-lg border border-white/[0.1] bg-[#16181f] p-0.5">
+                      {PAGE_SIZE_OPTIONS.map((size) => (
                         <button
+                          key={size}
                           type="button"
-                          onClick={() => handleUnsuppress(selected.control_id, active.framework_id)}
-                          disabled={actionLoading}
-                          className="w-full mt-2 py-1.5 px-3 rounded-lg border border-purple-500/30 hover:border-purple-500/60 bg-purple-500/10 text-purple-300 hover:text-purple-100 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
+                          onClick={() => {
+                            setPageSize(size)
+                            setCurrentPage(1)
+                          }}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors cursor-pointer ${
+                            pageSize === size
+                              ? 'bg-amber-400/20 text-amber-300 font-semibold shadow-sm'
+                              : 'text-text-muted hover:text-text-primary hover:bg-white/[0.04]'
+                          }`}
                         >
-                          <Undo2 className="w-3.5 h-3.5" /> Revoke Business Exception
+                          {size}
                         </button>
-                      )}
+                      ))}
                     </div>
-                  )}
-
-                  {!readOnly && selected.status !== 'PASS' && selected.status !== 'SUPPRESSED' && (
-                    <button
-                      type="button"
-                      onClick={() => setSuppressionModalOpen(true)}
-                      className="w-full py-2 px-3 rounded-lg border border-purple-500/30 bg-purple-500/[0.04] hover:bg-purple-500/10 text-purple-300 hover:text-purple-200 text-xs font-semibold flex items-center justify-center gap-2 transition-colors shadow-sm"
-                    >
-                      <ShieldAlert className="w-3.5 h-3.5 text-purple-400" /> Suppress / Add Business Exception
-                    </button>
-                  )}
-
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Assessment</div>
-                    <p className="text-sm text-text-secondary leading-relaxed">{selected.ai_description}</p>
                   </div>
 
-                  {selected.evidence_references.length > 0 && (
-                    <div>
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Evidence references</div>
-                      <ul className="space-y-1">
-                        {selected.evidence_references.map((ref, i) => (
-                          <li key={i} className="font-mono text-[11px] text-text-muted flex gap-2"><span className="text-indigo-400/60">·</span>{ref}</li>
-                        ))}
-                      </ul>
+                  {/* Pagination Previous / Next buttons */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5 border-l border-white/[0.08] pl-4">
+                      <button
+                        type="button"
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className="px-2.5 py-1 rounded-md border border-white/[0.1] bg-[#16181f] text-text-secondary hover:text-text-primary hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer text-[11px]"
+                      >
+                        Prev
+                      </button>
+                      <span className="text-[11px] font-mono text-text-muted px-1.5 tabular-nums">
+                        {currentPage} / {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        className="px-2.5 py-1 rounded-md border border-white/[0.1] bg-[#16181f] text-text-secondary hover:text-text-primary hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer text-[11px]"
+                      >
+                        Next
+                      </button>
                     </div>
-                  )}
-
-                  <div>
-                    <div className="font-mono text-[10px] uppercase tracking-wider text-text-muted mb-1.5">Gaps identified</div>
-                    {selected.gaps.length > 0 ? (
-                      <ul className="space-y-1.5">
-                        {selected.gaps.map((g, i) => (
-                          <li key={i} className="text-xs flex gap-2 text-threat-critical/90"><AlertOctagon className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />{g}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p className="text-xs text-[#8FBDAD]">None identified.</p>
-                    )}
-                  </div>
-
-                  {(selected.remediation_guide || selected.remediation) && (
-                    <RemediationStudio
-                      guide={selected.remediation_guide}
-                      fallbackText={selected.remediation}
-                      controlId={selected.control_id}
-                    />
                   )}
                 </div>
-              </>
-            )}
+              </div>
+            </>
+          )}
           </div>
         </div>
       )}
 
-      {selected && (
+      {selectedControlForModal && (
         <SuppressFindingModal
           isOpen={suppressionModalOpen}
-          onClose={() => setSuppressionModalOpen(false)}
-          controlId={selected.control_id}
-          controlName={selected.control_name}
-          frameworkId={active.framework_id}
+          onClose={() => {
+            setSuppressionModalOpen(false)
+            setSelectedControlForModal(null)
+          }}
+          controlId={selectedControlForModal.control_id}
+          controlName={selectedControlForModal.control_name}
+          frameworkId={selectedControlForModal.framework_id || (activeFwId !== 'ALL' ? activeFwId : frameworks[0]?.framework_id)}
           onConfirm={handleSuppress}
         />
       )}
 
       <p className="flex items-center justify-center gap-1.5 text-xs text-center text-text-muted">
         <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-        AI-assisted report. Review by a qualified security professional before submission.
+        Deterministic compliance audit report. Review by a qualified security professional before submission.
       </p>
     </motion.div>
   )

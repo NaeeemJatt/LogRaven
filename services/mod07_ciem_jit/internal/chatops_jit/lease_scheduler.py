@@ -56,6 +56,12 @@ class JITLeaseScheduler:
         if not record:
             raise ValueError(f"Lease {lease_id} not found")
 
+        # Enforce dual-control: separation of duties between requester and approver
+        requester = str(record.get("requester_email", "")).strip().lower()
+        approver = str(approver_email).strip().lower()
+        if requester and approver and requester == approver:
+            raise ValueError("Self-approval forbidden: lease requester cannot approve their own JIT access request")
+
         now = simulated_now or datetime.now(timezone.utc)
         duration = timedelta(minutes=record["duration_minutes"])
         expires_at = now + duration

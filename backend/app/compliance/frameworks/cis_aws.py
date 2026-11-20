@@ -80,7 +80,7 @@ CONTROLS = (
 
 FRAMEWORK = Framework(
     id="cis_aws",
-    name="CIS AWS Foundations Benchmark",
+    name="CIS AWS",
     version="v3.0",
     description="Center for Internet Security AWS Foundations Benchmark — prescriptive AWS hardening checks.",
     controls=CONTROLS,

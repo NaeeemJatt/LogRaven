@@ -348,7 +348,7 @@ export default function AlertFeed() {
   }
 
   return (
-    <div className="min-h-screen grid-bg pb-12">
+    <div className="min-h-screen pb-12">
       <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-5 w-full space-y-4">
 
         {/* SIEM Detections Toolbar & MITRE Matrix Strip */}

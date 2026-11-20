@@ -1,8 +1,17 @@
 # LogRaven — Alembic Environment Configuration
 import asyncio
 import os
+import sys
 from logging.config import fileConfig
 from pathlib import Path
+
+# Ensure repo root and backend root are in sys.path so 'services' and 'app' packages resolve
+_backend_dir = Path(__file__).resolve().parent.parent
+_repo_dir = _backend_dir.parent
+for d in (str(_repo_dir), str(_backend_dir)):
+    if d not in sys.path:
+        sys.path.insert(0, d)
+
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config

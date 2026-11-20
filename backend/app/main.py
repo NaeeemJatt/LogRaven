@@ -66,11 +66,12 @@ async def lifespan(app: FastAPI):
 
     # In in-process pipeline mode, a restart kills any in-flight analysis task.
     # Reset those orphaned rows so they don't hang in 'processing' forever.
-    if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE:
+    if settings.USE_ASYNCIO_INVESTIGATION_PIPELINE and not os.environ.get("TESTING"):
         try:
             from app.tasks.process_investigation import recover_orphaned_investigations
+            import asyncio
 
-            recovered = await recover_orphaned_investigations()
+            recovered = await asyncio.wait_for(recover_orphaned_investigations(), timeout=1.0)
             if recovered:
                 app_log.warning(
                     "  Recovered %d investigation(s) interrupted by a previous restart",

@@ -180,6 +180,7 @@ async def list_container_drift_alerts(
     """List detected container drift execution alerts."""
     alerts = await ReachabilityRepository.list_drift_alerts(
         session=db,
+        tenant_id=current_user.id,
         asset_urn=asset_urn,
         limit=limit,
         offset=offset,

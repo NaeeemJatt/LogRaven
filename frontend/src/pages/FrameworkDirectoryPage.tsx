@@ -5,6 +5,7 @@ import {
   Search,
   Play,
   Info,
+  FileSearch,
 } from 'lucide-react'
 
 export interface FrameworkDossier {
@@ -305,24 +306,33 @@ export default function FrameworkDirectoryPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-400/25 bg-amber-400/10 mb-3">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 motion-safe:animate-pulse motion-reduce:animate-none" />
             <span className="text-xs text-amber-300 font-medium">
-              Supported Compliance Catalog (14 Standards, 176 Cloud Controls, 94% Automated)
+              Supported Compliance Catalog (1,565 Cloud Controls, 38 Mandates, 4 Hyperscalers)
             </span>
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-text-primary">
             Security &amp; Regulatory <span className="gradient-text">Frameworks Directory</span>
           </h1>
           <p className="text-text-secondary text-sm max-w-2xl mt-2 leading-relaxed">
-            LogRaven continuously audits 176 cloud infrastructure controls across 14 leading security standards. Collect telemetry in 60s across AWS, Azure, and GCP, then satisfy multiple audits simultaneously with a 3.8x evidence crosswalk.
+            LogRaven continuously audits 1,565 cloud infrastructure controls across 38 industry mandates and 4 cloud providers (AWS, Azure, GCP, OCI). Collect telemetry in seconds or browse our full native rule catalog.
           </p>
         </div>
 
-        <Link
-          to="/compliance?tab=audit"
-          className="btn-sovereign inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none self-start md:self-auto flex-shrink-0"
-        >
-          <Play className="w-3.5 h-3.5 fill-current" />
-          <span>Launch Multi-Framework Audit</span>
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link
+            to="/compliance?tab=catalog"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-text-secondary hover:text-text-primary border border-white/[0.08] bg-surface/70 hover:bg-surface transition-colors"
+          >
+            <FileSearch className="w-3.5 h-3.5 text-amber-400" />
+            <span>Rule Catalog (1,565)</span>
+          </Link>
+          <Link
+            to="/compliance?tab=audit"
+            className="btn-sovereign inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none self-start md:self-auto flex-shrink-0"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Launch Multi-Framework Audit</span>
+          </Link>
+        </div>
       </div>
 
       {/* Search & Category Filter Bar */}

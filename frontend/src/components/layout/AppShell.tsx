@@ -73,14 +73,8 @@ export default function AppShell({ children }: AppShellProps) {
 
         {/* Scrollable Working Canvas */}
         <main className="flex-1 overflow-y-auto bg-void relative">
-          {/* Subtle Cybernetic Grid Texture & Ambient Wash */}
-          <div className="pointer-events-none fixed inset-0 grid-bg opacity-30" />
-          <div
-            className="pointer-events-none fixed -top-32 right-1/4 w-[600px] h-[600px] rounded-full blur-[140px] opacity-10"
-            style={{
-              background: 'radial-gradient(circle, rgba(227,181,126,0.15) 0%, transparent 70%)',
-            }}
-          />
+          {/* Subtle Clean Grid Texture */}
+          <div className="pointer-events-none fixed inset-0 grid-bg opacity-25" />
 
           <div className="relative w-full">{children}</div>
         </main>

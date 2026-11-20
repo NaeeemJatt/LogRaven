@@ -23,6 +23,9 @@ import type {
   AuditorPortalOverview,
   AuditorPortalException,
   AttackPathGraph,
+  CatalogSummaryResponse,
+  CatalogControlsResponse,
+  NativeScanResponse,
 } from '../types/audit'
 
 
@@ -381,5 +384,41 @@ export async function createCloudGroup(body: {
   tag_filters?: Record<string, any>
 }): Promise<CloudGroup> {
   const res = await client.post<CloudGroup>('/api/v1/cloud-connect/groups', body)
+  return res.data
+}
+
+// ── Native Cloud Compliance & Rules Catalog Endpoints ───────────────────────
+
+export async function getCatalogSummary(): Promise<CatalogSummaryResponse> {
+  const res = await client.get<CatalogSummaryResponse>('/api/v1/cspm/catalogs/summary')
+  return res.data
+}
+
+export interface ListCatalogControlsParams {
+  provider?: string
+  service?: string
+  criticality?: string
+  mandate?: string
+  policy?: string
+  query?: string
+  page?: number
+  limit?: number
+}
+
+export async function listCatalogControls(params?: ListCatalogControlsParams): Promise<CatalogControlsResponse> {
+  const res = await client.get<CatalogControlsResponse>('/api/v1/cspm/catalogs/controls', { params })
+  return res.data
+}
+
+export interface RunNativeScanBody {
+  provider?: string
+  account_id?: string
+  session_id?: string
+  resources_by_service?: Record<string, any[]>
+  cloudtrail_events?: any[]
+}
+
+export async function runNativeCloudScan(body?: RunNativeScanBody): Promise<NativeScanResponse> {
+  const res = await client.post<NativeScanResponse>('/api/v1/cspm/evaluate/native', body || {})
   return res.data
 }

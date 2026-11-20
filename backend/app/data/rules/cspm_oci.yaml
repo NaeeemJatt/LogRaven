@@ -1,0 +1,1625 @@
+rules:
+- rule_id: QUALYS-OCI-CID-40001
+  cid: '40001'
+  title: Ensure Secure Boot is enabled on Compute Instance
+  provider: OCI
+  service: COMPUTE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.instanceOptions.isSecureBootEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: &id001
+  - Federal Risk and Authorization Management Program (FedRAMP LI-SaaS) - LI-SaaS
+    Security Baseline
+  - The Network and Information Systems (NIS 2 Directive) (EU) 2022/2555
+  - Payment Card Industry Data Security Standard (PCI-DSS) v4.0
+  - NESA UAE Information Assurance Standards (IAS)
+  - Criminal Justice Information Services (CJIS) Security Policy
+  - New Zealand Information Security Manual (NZISM)
+  - 'Sarbanes-Oxley Act: IT Security'
+  - Federal Risk and Authorization Management Program (FedRAMP H) - High Security
+    Baseline
+  - 'APRA Prudential Practice Guide (PPG): CPG 234 - Management of Security Risk in
+    Information and Information Technology'
+  - Technology Risk Management (TRM) Guidelines
+  - Federal Risk and Authorization Management Program (FedRAMP M) - Moderate Security
+    Baseline
+  - Federal Risk and Authorization Management Program (FedRAMP L) - Low Security Baseline
+  - Microsoft Cloud Security Benchmark
+  - IRS Publication 1075
+  - SWIFT Customer Security Controls Framework - Customer Security Programme v2024
+  - Cloud Controls Matrix (CCM)
+  - IRDAI Guidelines On Information and Cyber Security for Insurers
+  - General Data Protection Regulation (GDPR)
+  - CIS Controls Version 8
+  - US Gramm Leach Bliley Act (GLBA)
+  - NERC Critical Infrastructure Protection (CIP)
+  - NCSC Basic Cyber Security Controls (BCSC)
+  - CIS Controls Version 8.1
+  - The NIST Cybersecurity Framework (CSF)
+  - 'Monetary Authority of Singapore (MAS) - Notice 834: Cyber Hygiene Practices'
+  - ANSSI 40 Essential Measures for a Healthy Network
+  - NIST 800-53 (Special Publication)
+  - Australian Signals Directorate Information Security Manual (ISM)
+  - NIST Special Publication 800-171
+  - 2017 Trust Services Criteria for Security, Availability, Processing Integrity,
+    Confidentiality, and Privacy (SOC 2)
+  - US Cybersecurity Maturity Model Certification (CMMC) 2.0 Level 2
+  - Minimum Acceptable Risk Standards for Exchanges (MARS-E)
+  - Reserve Bank of India (RBI) - Baseline Cyber Security and Resilience Requirements
+    (Annex 1)
+  - The Australian Signals Directorate - The Essential 8 Strategies (ASD 8)
+  - Health Insurance Portability and Accountability (HIPAA) Security Rule 45 CFR Parts
+    160/164, Subparts A/C:1996
+  - ISO/IEC 27001:2022
+  - US Cybersecurity Maturity Model Certification (CMMC) 2.0 Level 1
+  - California Consumer Privacy Act of 2018 (SB-1121)
+- rule_id: QUALYS-OCI-CID-40002
+  cid: '40002'
+  title: Ensure Compute Instance boot volume has in-transit data encryption is Enabled
+  provider: OCI
+  service: COMPUTE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40003
+  cid: '40003'
+  title: Ensure no Object Storage buckets are publicly visible
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.publicAccessType
+    operator: neq
+    value: NoPublicAccess
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40004
+  cid: '40004'
+  title: Ensure Versioning is Enabled for Object Storage Buckets
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.versioning
+    operator: neq
+    value: Enabled
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40005
+  cid: '40005'
+  title: Ensure Emit Object Events is Enabled for Object Storage Buckets
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.objectEventsEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40006
+  cid: '40006'
+  title: Ensure Bucket Pre-Authenticated Request allows Read Only Access
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.accessType
+    operator: neq
+    value: ObjectRead
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40007
+  cid: '40007'
+  title: Ensure Bucket does not persists Expired Pre-Authenticated Request
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.accessType
+    operator: neq
+    value: ObjectRead
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40008
+  cid: '40008'
+  title: Ensure Object Storage Buckets are encrypted with a Customer Managed Key CMK
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40009
+  cid: '40009'
+  title: Ensure no Object Storage buckets are left Untagged
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.tags
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40010
+  cid: '40010'
+  title: '[Legacy]Ensures password policy requires at least one lowercase letter'
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isLowercaseCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40011
+  cid: '40011'
+  title: '[Legacy]Ensures password policy requires at least one uppercase letter'
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isUppercaseCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40012
+  cid: '40012'
+  title: '[Legacy]Ensures password policy requires at least one numeric'
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isNumericCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40013
+  cid: '40013'
+  title: '[Legacy]Ensures password policy requires at least one Special Character'
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isSpecialCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40014
+  cid: '40014'
+  title: Ensure no security lists allow ingress from 0.0.0.0/0 or ::/0 to port 22
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.ingressSecurityRules
+    operator: cidr_open_world
+    value: 22
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40015
+  cid: '40015'
+  title: Ensure no security lists allow ingress from 0.0.0.0/0 or ::/0 to port 3389
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.ingressSecurityRules
+    operator: cidr_open_world
+    value: 3389
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40016
+  cid: '40016'
+  title: Ensure the default security list of every VCN restricts all traffic except
+    ICMP
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.isDefaultRestricted
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40017
+  cid: '40017'
+  title: Ensure MFA is enabled for all users with a console password
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.isMfaActivated
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40018
+  cid: '40018'
+  title: Ensure user API keys rotate within 90 days or less
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40018_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40019
+  cid: '40019'
+  title: Ensure user Customer Secret keys rotate within 90 days or less
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40019_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40020
+  cid: '40020'
+  title: Ensure user Auth Tokens rotate within 90 days or less
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40020_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40021
+  cid: '40021'
+  title: Ensure no network security groups allow ingress from 0.0.0.0/0 or ::/0 to
+    port 22
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.ingressSecurityRules
+    operator: cidr_open_world
+    value: 22
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40022
+  cid: '40022'
+  title: Ensure no network security groups allow ingress from 0.0.0.0/0 or ::/0 to
+    port 3389
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.ingressSecurityRules
+    operator: cidr_open_world
+    value: 3389
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40023
+  cid: '40023'
+  title: Ensure API keys are not created for tenancy administrator users
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40023_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40024
+  cid: '40024'
+  title: Ensure permissions on all resources are given only to the tenancy administrator
+    group
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40024_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40025
+  cid: '40025'
+  title: Ensure IAM administrators cannot update tenancy Administrators group
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40025_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40026
+  cid: '40026'
+  title: '[Legacy]Ensure IAM password policy requires minimum length of 14 or greater'
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.minimumPasswordLength
+    operator: lte
+    value: 14
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40027
+  cid: '40027'
+  title: Ensure default tags are used on resources
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.tags
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40028
+  cid: '40028'
+  title: Ensure at least one notification topic and subscription exists to receive
+    monitoring alerts
+  provider: OCI
+  service: NOTIFICATION
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40029
+  cid: '40029'
+  title: Ensure a Event Rule is configured for Identity Provider changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40030
+  cid: '40030'
+  title: Ensure a Event Rule is configured for IdP group mapping changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40031
+  cid: '40031'
+  title: Ensure a Event Rule is configured for IAM group changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40032
+  cid: '40032'
+  title: Ensure a Event Rule is configured for IAM policy changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40033
+  cid: '40033'
+  title: Ensure a Event Rule is configured for user changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40034
+  cid: '40034'
+  title: Ensure a Event Rule is configured for VCN changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40035
+  cid: '40035'
+  title: Ensure a Event Rule is configured for changes to route tables
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40036
+  cid: '40036'
+  title: Ensure a Event Rule is configured for security list changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40037
+  cid: '40037'
+  title: Ensure a Event Rule is configured for network security group changes
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40038
+  cid: '40038'
+  title: Ensure a Event Rule is configured for changes to network gateways
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40040
+  cid: '40040'
+  title: Ensure Cloud Guard is enabled in the root compartment of the tenancy
+  provider: OCI
+  service: CLOUD_GUARD
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ENABLED
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40041
+  cid: '40041'
+  title: Ensure a Event Rule is configured for Oracle Cloud Guard problems detected
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40042
+  cid: '40042'
+  title: Ensure customer created Customer Managed Key (CMK) is rotated at least annually
+  provider: OCI
+  service: VAULT
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40044
+  cid: '40044'
+  title: Ensure Block Volumes are encrypted with Customer Managed Keys (CMK)
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40045
+  cid: '40045'
+  title: Ensure boot volumes are encrypted with Customer Managed Key (CMK)
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40046
+  cid: '40046'
+  title: Ensure File Storage Systems are encrypted with Customer Managed Keys (CMK)
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40047
+  cid: '40047'
+  title: Ensure at least one compartment exists in your tenancy to store cloud resources
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40047_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40049
+  cid: '40049'
+  title: Ensure Compute Instance Legacy Metadata service endpoint is disabled
+  provider: OCI
+  service: COMPUTE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.instanceOptions.isLegacyImdsEndpointsDisabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40051
+  cid: '40051'
+  title: Ensure that the Block Volume Backup is encrypted using customer-managed key
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40052
+  cid: '40052'
+  title: Ensure that the NSG is attached to Mount Targets to prevent unauthorized
+    access to File Systems
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40052_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40053
+  cid: '40053'
+  title: Ensure that Functions Application maintains secure access through configuration
+    of Network Security Groups (NSGs)
+  provider: OCI
+  service: FUNCTIONS
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40053_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40054
+  cid: '40054'
+  title: Ensure that Network Security Groups (NSGs) are enabled for API Gateway
+  provider: OCI
+  service: API_GATEWAY
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40054_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40055
+  cid: '40055'
+  title: Ensure Delete Protection is enabled for Loadbalancers
+  provider: OCI
+  service: LOAD_BALANCER
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40055_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40057
+  cid: '40057'
+  title: Ensure Autonomous Database is encrypted using customer-managed key
+  provider: OCI
+  service: DATABASE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40058
+  cid: '40058'
+  title: Ensure Autonomous Database does not allow secure access from everywhere
+  provider: OCI
+  service: DATABASE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40058_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40059
+  cid: '40059'
+  title: Ensure Autonomous Database has Mutual TLS authentication as Required
+  provider: OCI
+  service: DATABASE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.instanceOptions.isInTransitDataEncryptionEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40060
+  cid: '40060'
+  title: Ensure DB Systems Network Security Groups are configured to restrict access
+    to and from the database
+  provider: OCI
+  service: DATABASE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40060_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40061
+  cid: '40061'
+  title: Ensure DB Systems Database is encrypted using customer-managed key
+  provider: OCI
+  service: DATABASE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40062
+  cid: '40062'
+  title: Ensure Big Data Service cluster is encrypted using customer-managed key
+  provider: OCI
+  service: DATA_LAKE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.kmsKeyId
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40063
+  cid: '40063'
+  title: Ensure Data Flow application is configured to capture application logs
+  provider: OCI
+  service: DATA_FLOW
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40063_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40064
+  cid: '40064'
+  title: Ensure Load balancer should not have Public IP
+  provider: OCI
+  service: LOAD_BALANCER
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.publicAccessType
+    operator: neq
+    value: NoPublicAccess
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40065
+  cid: '40065'
+  title: Ensure Load balancer has reserved Public IP
+  provider: OCI
+  service: LOAD_BALANCER
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.publicAccessType
+    operator: neq
+    value: NoPublicAccess
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40066
+  cid: '40066'
+  title: Ensure secret auto rotation should be enabled
+  provider: OCI
+  service: VAULT
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40067
+  cid: '40067'
+  title: Ensure secret reuse rule should be configured
+  provider: OCI
+  service: VAULT
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40067_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40068
+  cid: '40068'
+  title: Ensure secret expiry rule should be configured
+  provider: OCI
+  service: VAULT
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40068_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40069
+  cid: '40069'
+  title: Ensure secret expiry rule should block use of content retrieval after the
+    reuse
+  provider: OCI
+  service: VAULT
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40069_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40070
+  cid: '40070'
+  title: Ensure Network security group is used for controlling traffic in load balancer
+  provider: OCI
+  service: LOAD_BALANCER
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40070_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40073
+  cid: '40073'
+  title: Ensure OCI Block Storage Block Volume backup policy is enabled
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40073_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40074
+  cid: '40074'
+  title: Ensure block volume cross region replication is enabled
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40074_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40075
+  cid: '40075'
+  title: Ensure snapshot policy is attached to the file system
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40075_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40078
+  cid: '40078'
+  title: Ensure Kubernetes Engine Cluster endpoint is configured with Network Security
+    Group
+  provider: OCI
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40078_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40080
+  cid: '40080'
+  title: Ensure Kubernetes API endpoint should be private
+  provider: OCI
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40080_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40081
+  cid: '40081'
+  title: Ensure Kubernetes version should be latest
+  provider: OCI
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40081_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40082
+  cid: '40082'
+  title: Ensure Container Repository is private
+  provider: OCI
+  service: CONTAINER
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40082_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40083
+  cid: '40083'
+  title: Ensure Container Registry Readme should not be blank
+  provider: OCI
+  service: CONTAINER
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40083_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40084
+  cid: '40084'
+  title: Ensure Cloud Advisor is enabled in the root compartment of the tenancy
+  provider: OCI
+  service: CLOUD_ADVISOR
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40084_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40085
+  cid: '40085'
+  title: Ensure Run Log should be enabled for the Connector
+  provider: OCI
+  service: CONNECTOR_HUB
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40085_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40086
+  cid: '40086'
+  title: Ensure Run log retention period should be more than 90 days
+  provider: OCI
+  service: CONNECTOR_HUB
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40086_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40087
+  cid: '40087'
+  title: Ensure network security groups is stateless
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: LOW
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40087_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40088
+  cid: '40088'
+  title: Ensure no policies have manage-all resources permission in a compartment
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40088_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40089
+  cid: '40089'
+  title: Ensure Compute Instances are configured with required tags
+  provider: OCI
+  service: COMPUTE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.tags
+    operator: exists
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40090
+  cid: '40090'
+  title: Ensure only required Compute Instances have been assigned with Public IP
+  provider: OCI
+  service: COMPUTE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.publicAccessType
+    operator: neq
+    value: NoPublicAccess
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40091
+  cid: '40091'
+  title: Ensure a notification is configured for Local OCI User Authentication
+  provider: OCI
+  service: EVENTS_SERVICE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40091_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40092
+  cid: '40092'
+  title: Ensure there is only one active API Key for any single OCI IAM user
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40092_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40094
+  cid: '40094'
+  title: Ensure write level Object Storage logging is enabled for all buckets
+  provider: OCI
+  service: STORAGE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40096
+  cid: '40096'
+  title: Encrypting Kubernetes Secrets at Rest in Etcd
+  provider: OCI
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40096_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40097
+  cid: '40097'
+  title: Ensure password policy in Identity Domains requires at least one lowercase
+    letter
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isLowercaseCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40098
+  cid: '40098'
+  title: Ensure password policy in Identity Domains requires at least one uppercase
+    letter
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isUppercaseCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40099
+  cid: '40099'
+  title: Ensure password policy in Identity Domains requires at least one numeric
+    character
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isNumericCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40100
+  cid: '40100'
+  title: Ensure password policy in Identity Domains requires at least one special
+    character
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.isSpecialCharactersRequired
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40101
+  cid: '40101'
+  title: Ensure password policy in Identity Domains enforces minimum password length
+    of 14 characters or greater
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.passwordPolicy.minimumPasswordLength
+    operator: lte
+    value: 14
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40102
+  cid: '40102'
+  title: Ensure no resources are created in the root compartment
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_40102_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40103
+  cid: '40103'
+  title: Ensure OCI IAM credentials unused for 45 days or more are disabled
+  provider: OCI
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 45
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-OCI-CID-40104
+  cid: '40104'
+  title: Ensure VCN flow logging is enabled for all subnets
+  provider: OCI
+  service: VCN
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: oci_cloud_guard
+  match_logic: ALL
+  conditions:
+  - field_path: $.FlowLogsEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Oracle Cloud Infrastructure Foundation Benchmark
+  - OCI Best Practices Policy
+  mandates: *id001

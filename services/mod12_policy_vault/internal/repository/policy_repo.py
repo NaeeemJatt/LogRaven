@@ -138,10 +138,13 @@ class PolicyVaultRepository:
     @staticmethod
     async def list_custom_rules(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[CustomRegoRule]:
         query = select(CustomRegoRule).order_by(desc(CustomRegoRule.created_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(CustomRegoRule.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
 

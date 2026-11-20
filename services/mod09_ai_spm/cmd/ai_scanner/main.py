@@ -119,7 +119,7 @@ async def audit_mcp_server(
     )
 
     # Persist in inventory
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     await AISPMRepository.record_mcp_server(
         session=db,
         server_urn=req.server_urn,
@@ -150,7 +150,7 @@ async def audit_bedrock_posture(
     )
 
     # Persist in AI inventory
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     await AISPMRepository.record_ai_model(
         session=db,
         asset_urn=req.endpoint_urn,

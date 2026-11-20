@@ -15,7 +15,8 @@ import {
   KeyRound,
   Settings,
   ChevronLeft,
-  Gauge,
+  Server,
+  Menu,
 } from 'lucide-react'
 
 interface SidebarNavProps {
@@ -74,7 +75,7 @@ export default function AppSidebar({
         },
         {
           id: 'scan-results',
-          label: 'Scan Result',
+          label: 'Posture and Gaps',
           href: '/compliance?tab=results',
           icon: ShieldCheck,
         },
@@ -85,18 +86,26 @@ export default function AppSidebar({
           icon: FileCheck2,
         },
         {
-          id: 'posture',
-          label: 'Posture & Gaps',
-          href: '/compliance?tab=posture',
-          icon: Gauge,
-        },
-        {
           id: 'frameworks',
           label: 'Frameworks Catalog',
           href: '/compliance/frameworks',
           icon: Library,
           badge: '14',
           badgeColor: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        },
+        {
+          id: 'rule-catalog',
+          label: 'Rule Catalog',
+          href: '/compliance?tab=catalog',
+          icon: FileSearch,
+          badge: '1,565',
+          badgeColor: 'bg-amber-400/15 text-amber-300 border-amber-400/30',
+        },
+        {
+          id: 'assets',
+          label: 'Asset Inventory',
+          href: '/assets',
+          icon: Server,
         },
       ],
     },
@@ -177,9 +186,16 @@ export default function AppSidebar({
             onClick={onToggle}
             aria-label="Expand sidebar"
             title="Expand sidebar"
-            className="w-10 h-10 rounded-xl border border-white/[0.08] hover:border-amber-400/40 bg-white/[0.03] hover:bg-amber-400/10 flex items-center justify-center text-text-muted hover:text-amber-300 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed group cursor-pointer"
+            className="relative w-10 h-10 rounded-xl border border-white/[0.08] hover:border-amber-400/40 bg-white/[0.03] hover:bg-amber-400/10 flex items-center justify-center text-text-muted hover:text-amber-300 transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:outline-none active:scale-[0.98] group cursor-pointer"
           >
-            <LogoIcon size={26} className="group-hover:scale-110 transition-transform duration-150" />
+            {/* Default state: LogRaven Logo */}
+            <span className="flex items-center justify-center transition-all duration-150 group-hover:opacity-0 group-hover:scale-90">
+              <LogoIcon size={26} />
+            </span>
+            {/* Hover state: 3 horizontal lines (Menu) to uncollapse */}
+            <span className="absolute inset-0 flex items-center justify-center opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition-all duration-150 text-amber-300">
+              <Menu className="w-5 h-5" />
+            </span>
           </button>
         ) : (
           <>

@@ -425,74 +425,11 @@ async def _call_model(client: Any, system_prompt: str, user_prompt: str) -> str:
 
 async def grade_framework(framework: Framework, all_signals: dict[str, Any]) -> list[dict[str, Any]]:
     """
-    Grade a single framework against the normalized signals.
-
-    Returns one normalized result dict per control, annotated with category and
-    remediation guidance (used by the PDF, the UI, and the remediation workflow).
+    Grade a single framework against normalized signals using 100% deterministic rule logic.
+    Compliance audit evaluations are strictly rule-based to guarantee deterministic, reproducible results (0% AI).
     """
-    client = None
-    try:
-        client = _get_client()
-    except Exception as exc:
-        logger.warning(
-            "AI client initialization failed for %s (%s). Using deterministic signal evaluation.",
-            framework.id,
-            exc,
-        )
-
-    results: list[dict[str, Any]] | None = None
-    if client is not None:
-        system_prompt = _system_prompt(framework)
-        user_prompt = _build_user_prompt(framework, all_signals)
-        controls = [c.as_prompt_dict() for c in framework.controls]
-
-        for attempt in range(2):
-            try:
-                text = await _call_model(client, system_prompt, user_prompt)
-                results = parse_and_validate(text, controls)
-                break
-            except asyncio.TimeoutError as exc:
-                if attempt == 0:
-                    logger.warning("AI grading timed out for %s — retrying in %ds", framework.id, RETRY_DELAY_SECONDS)
-                    await asyncio.sleep(RETRY_DELAY_SECONDS)
-                    continue
-                logger.error(
-                    "AI grading for %s timed out after retry; falling back to deterministic evaluation: %s",
-                    framework.id,
-                    exc,
-                )
-                break
-            except MappingError as exc:
-                if attempt == 0:
-                    logger.warning(
-                        "AI grading returned invalid data for %s (attempt 0): %s — retrying in %ds",
-                        framework.id,
-                        exc,
-                        RETRY_DELAY_SECONDS,
-                    )
-                    await asyncio.sleep(RETRY_DELAY_SECONDS)
-                    continue
-                logger.error(
-                    "AI grading for %s failed to parse after retry: %s; falling back to deterministic evaluation.",
-                    framework.id,
-                    exc,
-                )
-                break
-            except Exception as exc:  # noqa: BLE001
-                if attempt == 0 and "timeout" in str(exc).lower():
-                    logger.warning("AI grading error for %s — retrying: %s", framework.id, exc)
-                    await asyncio.sleep(RETRY_DELAY_SECONDS)
-                    continue
-                logger.error(
-                    "AI grading error for %s: %s; falling back to deterministic evaluation.",
-                    framework.id,
-                    exc,
-                )
-                break
-
-    if results is None:
-        logger.info("Evaluating framework %s using deterministic signal engine", framework.id)
-        results = evaluate_framework_deterministically(framework, all_signals)
+    logger.info("Evaluating framework %s using deterministic rule engine (100% rule-based)", framework.id)
+    results = evaluate_framework_deterministically(framework, all_signals)
 
     # Annotate with category + remediation guidance + actionable guide from catalog.
     from app.compliance.remediation import get_remediation_guide

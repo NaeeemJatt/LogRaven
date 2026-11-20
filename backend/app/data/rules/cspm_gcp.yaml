@@ -1,0 +1,3925 @@
+rules:
+- rule_id: QUALYS-GCP-CID-52000
+  cid: '52000'
+  title: Ensure that corporate login credentials are used instead of Gmail accounts
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52000_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: &id001
+  - Federal Risk and Authorization Management Program (FedRAMP LI-SaaS) - LI-SaaS
+    Security Baseline
+  - The Network and Information Systems (NIS 2 Directive) (EU) 2022/2555
+  - Payment Card Industry Data Security Standard (PCI-DSS) v4.0
+  - NESA UAE Information Assurance Standards (IAS)
+  - Criminal Justice Information Services (CJIS) Security Policy
+  - New Zealand Information Security Manual (NZISM)
+  - 'Sarbanes-Oxley Act: IT Security'
+  - Federal Risk and Authorization Management Program (FedRAMP H) - High Security
+    Baseline
+  - 'APRA Prudential Practice Guide (PPG): CPG 234 - Management of Security Risk in
+    Information and Information Technology'
+  - Technology Risk Management (TRM) Guidelines
+  - Federal Risk and Authorization Management Program (FedRAMP M) - Moderate Security
+    Baseline
+  - Federal Risk and Authorization Management Program (FedRAMP L) - Low Security Baseline
+  - Microsoft Cloud Security Benchmark
+  - IRS Publication 1075
+  - SWIFT Customer Security Controls Framework - Customer Security Programme v2024
+  - Cloud Controls Matrix (CCM)
+  - IRDAI Guidelines On Information and Cyber Security for Insurers
+  - General Data Protection Regulation (GDPR)
+  - CIS Controls Version 8
+  - US Gramm Leach Bliley Act (GLBA)
+  - NERC Critical Infrastructure Protection (CIP)
+  - NCSC Basic Cyber Security Controls (BCSC)
+  - CIS Controls Version 8.1
+  - The NIST Cybersecurity Framework (CSF)
+  - 'Monetary Authority of Singapore (MAS) - Notice 834: Cyber Hygiene Practices'
+  - ANSSI 40 Essential Measures for a Healthy Network
+  - NIST 800-53 (Special Publication)
+  - Australian Signals Directorate Information Security Manual (ISM)
+  - NIST Special Publication 800-171
+  - 2017 Trust Services Criteria for Security, Availability, Processing Integrity,
+    Confidentiality, and Privacy (SOC 2)
+  - US Cybersecurity Maturity Model Certification (CMMC) 2.0 Level 2
+  - Minimum Acceptable Risk Standards for Exchanges (MARS-E)
+  - Reserve Bank of India (RBI) - Baseline Cyber Security and Resilience Requirements
+    (Annex 1)
+  - The Australian Signals Directorate - The Essential 8 Strategies (ASD 8)
+  - Health Insurance Portability and Accountability (HIPAA) Security Rule 45 CFR Parts
+    160/164, Subparts A/C:1996
+  - ISO/IEC 27001:2022
+  - US Cybersecurity Maturity Model Certification (CMMC) 2.0 Level 1
+  - California Consumer Privacy Act of 2018 (SB-1121)
+- rule_id: QUALYS-GCP-CID-52001
+  cid: '52001'
+  title: Ensure that there are only GCP-managed service account keys for each service
+    account
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52001_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52002
+  cid: '52002'
+  title: Ensure Project has no Service Account with Admin Privileges
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ANY
+  conditions:
+  - field_path: $.properties.rolePermissions
+    operator: iam_ast_wildcard
+    value: service_or_full_wildcard
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52003
+  cid: '52003'
+  title: Ensure that IAM users are not assigned Service Account User role at project
+    level
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52003_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52004
+  cid: '52004'
+  title: Ensure user-managed/external keys for service accounts are rotated every
+    90 days or less
+  provider: GCP
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52005
+  cid: '52005'
+  title: Ensure KMS encryption keys are rotated within a period of 90 days
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52006
+  cid: '52006'
+  title: Ensure that Separation of duties is enforced while assigning KMS related
+    roles
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52006_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52007
+  cid: '52007'
+  title: Ensure that IAM users are not assigned Service Account Token Creator role
+    at project level
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52007_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52008
+  cid: '52008'
+  title: Ensure that Cloud Audit Logging is configured properly across all services
+    and all users from a project
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52009
+  cid: '52009'
+  title: Ensure that sinks are configured for all log entries
+  provider: GCP
+  service: LOGGING
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52010
+  cid: '52010'
+  title: Ensure that object versioning is enabled on buckets
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.versioning.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52011
+  cid: '52011'
+  title: Ensure log metric filter and alerts exists for Project Ownership assignments/changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52012
+  cid: '52012'
+  title: Ensure log metric filter and alerts exists for Audit Configuration Changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52013
+  cid: '52013'
+  title: Ensure log metric filter and alerts exists for Custom Role changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52014
+  cid: '52014'
+  title: Ensure log metric filter and alerts exists for VPC Network Firewall rule
+    changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52015
+  cid: '52015'
+  title: Ensure log metric filter and alerts exists for VPC network route changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52016
+  cid: '52016'
+  title: Ensure log metric filter and alerts exists for VPC network changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52017
+  cid: '52017'
+  title: Ensure log metric filter and alerts exists for Cloud Storage IAM permission
+    changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52018
+  cid: '52018'
+  title: Ensure log metric filter and alerts exists for SQL instance configuration
+    changes
+  provider: GCP
+  service: LOGGING
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_audit_log
+  match_logic: ALL
+  conditions:
+  - field_path: $.status
+    operator: neq
+    value: ACTIVE
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52019
+  cid: '52019'
+  title: Ensure the default network does not exist in a project
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52019_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52020
+  cid: '52020'
+  title: Ensure that IP forwarding is not enabled on Instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52020_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52021
+  cid: '52021'
+  title: Ensure that SSH access is restricted from the internet
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.allowed[*].ports
+    operator: in
+    value:
+    - '22'
+    - 22
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52022
+  cid: '52022'
+  title: Ensure that RDP access is restricted from the internet
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.allowed[*].ports
+    operator: in
+    value:
+    - '3389'
+    - 3389
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52023
+  cid: '52023'
+  title: Ensure Private Google Access is enabled for all subnetwork in VPC Network
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52023_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52024
+  cid: '52024'
+  title: Ensure VPC Flow logs is enabled for every subnet in VPC Network
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.FlowLogsEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52025
+  cid: '52025'
+  title: Ensure that instances are not configured to use the default service account
+    with full access to all Cloud APIs
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52025_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52026
+  cid: '52026'
+  title: Ensure Block Project-wide SSH keys enabled for VM instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.allowed[*].ports
+    operator: in
+    value:
+    - '22'
+    - 22
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52027
+  cid: '52027'
+  title: Ensure oslogin is enabled for a Project
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.metadata.items[?(@.key=='enable-oslogin')].value
+    operator: neq
+    value: 'TRUE'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52028
+  cid: '52028'
+  title: Ensure connecting to serial ports is not enabled for VM Instance
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52028_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52029
+  cid: '52029'
+  title: Ensure VM disks for critical VMs are encrypted with Customer-Supplied Encryption
+    Keys (CSEK)
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52030
+  cid: '52030'
+  title: Ensure that Cloud Storage bucket is not anonymously or publicly accessible
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52031
+  cid: '52031'
+  title: Ensure that logging is enabled for Cloud storage buckets
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52032
+  cid: '52032'
+  title: Ensure that Cloud SQL - Mysql database instance requires all incoming connections
+    to use SSL
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.ipConfiguration.requireSsl
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52033
+  cid: '52033'
+  title: Ensure that Cloud SQL - Mysql database Instances are not open to the world
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.sourceRanges
+    operator: in
+    value:
+    - 0.0.0.0/0
+    - ::/0
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52034
+  cid: '52034'
+  title: Ensure legacy networks do not exist for a project
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52034_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52035
+  cid: '52035'
+  title: Ensure that MySQL Database Instance does not allows root login from any Host
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.userIdentity.type
+    operator: eq
+    value: Root
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52036
+  cid: '52036'
+  title: Ensure that Cloud Storage buckets have uniform bucket-level access enabled
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.uniformBucketLevelAccess.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52037
+  cid: '52037'
+  title: Ensure that GCP Kubernetes cluster intra-node visibility is enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52037_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52038
+  cid: '52038'
+  title: Ensure Legacy Authorization is set to Disabled on Kubernetes Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.legacyAbac.enabled
+    operator: eq
+    value: true
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52039
+  cid: '52039'
+  title: Ensure Kubernetes web UI / Dashboard is disabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52039_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52040
+  cid: '52040'
+  title: Ensure Automatic node repair is enabled for Kubernetes Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52040_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52041
+  cid: '52041'
+  title: Ensure Automatic node upgrades is enabled on Kubernetes Engine Clusters nodes
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.management.autoUpgrade
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52042
+  cid: '52042'
+  title: Ensure that GCP Kubernetes Engine Clusters have HTTP load balancing enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52042_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52043
+  cid: '52043'
+  title: Ensure Network policy is enabled on Kubernetes Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.networkPolicy.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52044
+  cid: '52044'
+  title: Ensure that GCP Kubernetes Engine Clusters have Alpha cluster feature disabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52044_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52045
+  cid: '52045'
+  title: Ensure Kubernetes Cluster is created with Alias IP ranges enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52045_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52047
+  cid: '52047'
+  title: Ensure Kubernetes Cluster is created with Private cluster enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.networkPolicy.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52048
+  cid: '52048'
+  title: Ensure Private Google Access is set on Kubernetes Engine Cluster Subnets
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52048_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52049
+  cid: '52049'
+  title: Ensure default Service account is not used for Project access in Kubernetes
+    Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52049_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52050
+  cid: '52050'
+  title: Ensure Kubernetes Clusters created with limited service account Access scopes
+    for Project access
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52050_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52051
+  cid: '52051'
+  title: Ensure Stackdriver Kubernetes Engine Monitoring is set to Enabled on Kubernetes
+    Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52051_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52052
+  cid: '52052'
+  title: Ensure that Application-Layer secret encryption is enabled for Kubernetes
+    cluster
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52053
+  cid: '52053'
+  title: Ensure that Master authorized network is enabled for Kubernetes cluster
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52053_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52054
+  cid: '52054'
+  title: Ensure that Default service account is not used for the cloud function
+  provider: GCP
+  service: CLOUD_FUNCTION
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52054_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52055
+  cid: '52055'
+  title: Ensure that Runtime used in cloud function is not deprecated or decommissioned
+  provider: GCP
+  service: CLOUD_FUNCTION
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52055_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52056
+  cid: '52056'
+  title: Ensure that Cloud function is not anonymously or publicly accessible
+  provider: GCP
+  service: CLOUD_FUNCTION
+  execution_type: Build & Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52057
+  cid: '52057'
+  title: Ensure that there are no harmful object life cycle rules are created on Storage
+    Buckets
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52057_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52058
+  cid: '52058'
+  title: Ensure that object retention policy is set on storage buckets
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52059
+  cid: '52059'
+  title: Ensure log_connections database flag for Cloud SQL - PostgreSQL instance
+    is set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52060
+  cid: '52060'
+  title: Ensure log_disconnections database flag for Cloud SQL - PostgreSQL instance
+    is set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52061
+  cid: '52061'
+  title: Ensure log_duration database flag for Cloud SQL - PostgreSQL instance is
+    set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52062
+  cid: '52062'
+  title: Ensure log_error_verbosity database flag for Cloud SQL - PostgreSQL instance
+    is set to DEFAULT or stricter
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52063
+  cid: '52063'
+  title: Ensure log_statement database flag for Cloud SQL - PostgreSQL instance is
+    set to ddl or stricter
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52064
+  cid: '52064'
+  title: Ensure log_hostname database flag for Cloud SQL - PostgreSQL instance is
+    set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52065
+  cid: '52065'
+  title: Ensure that Cloud SQL - PostgreSQL database instance requires all incoming
+    connections to use SSL
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.ipConfiguration.requireSsl
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52066
+  cid: '52066'
+  title: Ensure that Cloud SQL - PostgreSQL database Instances are not open to the
+    world
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.sourceRanges
+    operator: in
+    value:
+    - 0.0.0.0/0
+    - ::/0
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52067
+  cid: '52067'
+  title: Ensure that Cloud SQL - SQL Server database instance requires all incoming
+    connections to use SSL
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.ipConfiguration.requireSsl
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52068
+  cid: '52068'
+  title: Ensure that Cloud SQL - SQL Server database Instances are not open to the
+    world
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.sourceRanges
+    operator: in
+    value:
+    - 0.0.0.0/0
+    - ::/0
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52069
+  cid: '52069'
+  title: Ensure log_lock_waits database flag for Cloud SQL - PostgreSQL instance is
+    set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52070
+  cid: '52070'
+  title: Ensure log_temp_files database flag for Cloud SQL - PostgreSQL instance is
+    set to 0 (on)
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52071
+  cid: '52071'
+  title: Ensure log_min_error_statement database flag for Cloud SQL - PostgreSQL instance
+    is set to Error or stricter
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52072
+  cid: '52072'
+  title: Ensure log_min_messages database flag for Cloud SQL - PostgreSQL instance
+    is set to Error or stricter
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52073
+  cid: '52073'
+  title: Ensure log_min_duration_statement database flag for Cloud SQL - PostgreSQL
+    instance is set to -1(disabled)
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52074
+  cid: '52074'
+  title: Ensure log_checkpoints database flag for Cloud SQL - PostgreSQL instance
+    is set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52075
+  cid: '52075'
+  title: Ensure skip_show_database database flag for Cloud SQL - Mysql instance is
+    set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52076
+  cid: '52076'
+  title: Ensure local_infile database flag for Cloud SQL - Mysql instance is set to
+    off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52077
+  cid: '52077'
+  title: Ensure external scripts enabled database flag for Cloud SQL - SQL Server
+    instance is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52078
+  cid: '52078'
+  title: Ensure cross db ownership chaining database flag for Cloud SQL - SQL Server
+    instance is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52079
+  cid: '52079'
+  title: Ensure that Google Kubernetes Engine (GKE) clusters have workload identity
+    enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52079_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52080
+  cid: '52080'
+  title: Ensure user options database flag for Cloud SQL - SQL Server instance is
+    not configured
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52081
+  cid: '52081'
+  title: Ensure access database flag for Cloud SQL - SQL Server instance is set to
+    off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52082
+  cid: '52082'
+  title: Ensure 3625 (trace flag) database flag for Cloud SQL - SQL Server instance
+    is set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52083
+  cid: '52083'
+  title: Ensure contained database authentication database flag for Cloud SQL - SQL
+    Server instance is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52084
+  cid: '52084'
+  title: Ensure Cloud SQL - MySql Instance do not have public IP addresses
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52085
+  cid: '52085'
+  title: Ensure Cloud SQL - SQL server Instance do not have public IP addresses
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52086
+  cid: '52086'
+  title: Ensure Cloud SQL - PostgreSQL Instance do not have public IP addresses
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52087
+  cid: '52087'
+  title: Ensure Cloud SQL - MySql instance is configured with automated backups
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52088
+  cid: '52088'
+  title: Ensure Cloud SQL - SQL server is configured with automated backups
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52089
+  cid: '52089'
+  title: Ensure Cloud SQL - PostgreSQL instance is configured with automated backups
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52090
+  cid: '52090'
+  title: Ensure that Cloud KMS cryptokeys are not anonymously or publicly accessible
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52091
+  cid: '52091'
+  title: Ensure Compute instances are launched with Shielded VM enabled
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.shieldedInstanceConfig.enableSecureBoot
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52092
+  cid: '52092'
+  title: Ensure oslogin is enabled for VM instance
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.metadata.items[?(@.key=='enable-oslogin')].value
+    operator: neq
+    value: 'TRUE'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52093
+  cid: '52093'
+  title: Ensure that instances are not configured to use default service account
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52093_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52094
+  cid: '52094'
+  title: Ensure that Compute instances do not have public IP addresses
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52095
+  cid: '52095'
+  title: Ensure that BigQuery Dataset is encrypted with Customer-managed key
+  provider: GCP
+  service: BIGQUERY
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52096
+  cid: '52096'
+  title: Ensure that BigQuery Table is encrypted with Customer-managed key
+  provider: GCP
+  service: BIGQUERY
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52097
+  cid: '52097'
+  title: Ensure default trace enabled database flag for Cloud SQL - SQL Server instance
+    is set to on
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52098
+  cid: '52098'
+  title: Ensure that BigQuery datasets are not anonymously or publicly accessible
+  provider: GCP
+  service: BIGQUERY
+  execution_type: Build & Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52099
+  cid: '52099'
+  title: Ensure that retention policies on Log Buckets are configured using bucket
+    lock
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52100
+  cid: '52100'
+  title: Ensure that DNSSEC is enabled for Cloud DNS
+  provider: GCP
+  service: NETWORK_SERVICES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52100_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52101
+  cid: '52101'
+  title: Ensure Binary Authorization is set to Enabled on Kubernetes Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52101_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52102
+  cid: '52102'
+  title: Ensure Container-Optimized OS (cos) is used for Kubernetes Engine Clusters
+    Node image
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52102_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52103
+  cid: '52103'
+  title: Ensure GCP Kubernetes Engine Clusters are not using the default network
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52103_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52104
+  cid: '52104'
+  title: Ensure that network traffic egress metering is enabled on Kubernetes Engine
+    Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52104_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52105
+  cid: '52105'
+  title: Ensure that legacy compute engine metadata endpoint for GCP Kubernetes Engine
+    Cluster Node is disabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52105_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52106
+  cid: '52106'
+  title: Ensure that Cloud SQL - Mysql database instance Binary logs configuration
+    is enabled
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52106_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52107
+  cid: '52107'
+  title: Ensure that Cloud SQL - PostgreSQL database instance Point-in-time recovery
+    is enabled
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52107_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52108
+  cid: '52108'
+  title: Ensure that GCP Storage bucket is encrypted using customer-managed key
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52109
+  cid: '52109'
+  title: Ensure that GCP Cloud DNS zones is not using RSASHA1 algorithm for DNSSEC
+    key-signing
+  provider: GCP
+  service: NETWORK_SERVICES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52109_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52110
+  cid: '52110'
+  title: Ensure that GCP Cloud DNS zones is not using RSASHA1 algorithm for DNSSEC
+    zone-signing
+  provider: GCP
+  service: NETWORK_SERVICES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52110_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52111
+  cid: '52111'
+  title: Ensure that Compute instances have Confidential Computing enabled
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52111_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52112
+  cid: '52112'
+  title: Ensure log_parser_stats database flag for Cloud SQL - PostgreSQL instance
+    is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52113
+  cid: '52113'
+  title: Ensure log_planner_stats database flag for Cloud SQL - PostgreSQL instance
+    is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52114
+  cid: '52114'
+  title: Ensure log_executor_stats database flag for Cloud SQL - PostgreSQL instance
+    is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52115
+  cid: '52115'
+  title: Ensure log_statement_stats database flag for Cloud SQL - PostgreSQL instance
+    is set to off
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52116
+  cid: '52116'
+  title: Ensure that Cloud DNS logging is enabled for all VPC networks
+  provider: GCP
+  service: VIRTUAL_NETWORK
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52117
+  cid: '52117'
+  title: Ensure that data at rest available on your GKE clusters is encrypted with
+    Customer-Managed Keys
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52118
+  cid: '52118'
+  title: Ensure that Pub/Sub topics are encrypted using Customer-Managed Keys (CMKs)
+  provider: GCP
+  service: PUB_SUB
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52119
+  cid: '52119'
+  title: Ensure that MySQL database instances have the slow_query_log flag set to
+    On
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52119_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52120
+  cid: '52120'
+  title: Ensure that On Host Maintenance configuration setting is set to Migrate for
+    all VM instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52120_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52121
+  cid: '52121'
+  title: Ensure that production MySQL database instances are configured to automatically
+    fail over to another zone within the selected cloud region
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52121_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52122
+  cid: '52122'
+  title: Ensure that MySQL database servers are using the latest major version of
+    MySQL database
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52122_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52123
+  cid: '52123'
+  title: Ensure no HTTPS or SSL proxy load balancers permit SSL policies with weak
+    cipher suites
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.ipConfiguration.requireSsl
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52124
+  cid: '52124'
+  title: Ensure a client certificate is used by clients to authenticate to Kubernetes
+    Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.properties.clientCertEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52125
+  cid: '52125'
+  title: Ensure GKE Control Plane is not public
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52125_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52126
+  cid: '52126'
+  title: Ensure GKE basic auth is disabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52126_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52127
+  cid: '52127'
+  title: Ensure Kubernetes Clusters are configured with Labels
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52127_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52128
+  cid: '52128'
+  title: Ensure that PostgreSQL database instances have the appropriate configuration
+    set for the max_connections flag
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52128_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52129
+  cid: '52129'
+  title: Ensure that your GKE clusters nodes are shielded to protect against impersonation
+    attacks
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.shieldedInstanceConfig.enableSecureBoot
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52130
+  cid: '52130'
+  title: Ensure that Integrity Monitoring is enabled for your Google Kubernetes Engine
+    (GKE) cluster nodes
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52130_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52131
+  cid: '52131'
+  title: Ensure that Google Kubernetes Engine (GKE) clusters have sandbox enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52131_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52132
+  cid: '52132'
+  title: Ensure there are no API keys associated with your Google Cloud Platform (GCP)
+    project
+  provider: GCP
+  service: APIS_SERVICES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52132_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52133
+  cid: '52133'
+  title: Ensure no roles that enable to impersonate and manage all service accounts
+    are used at a folder level
+  provider: GCP
+  service: IAM
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52133_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52134
+  cid: '52134'
+  title: Ensure no roles that enable to impersonate and manage all service accounts
+    are used at an organization level
+  provider: GCP
+  service: IAM
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52134_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52135
+  cid: '52135'
+  title: Ensure Default Service account is not used at a project level
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52135_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52136
+  cid: '52136'
+  title: Ensure default service account is not used at an organization level
+  provider: GCP
+  service: IAM
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52136_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52137
+  cid: '52137'
+  title: Ensure Default Service account is not used at a folder level
+  provider: GCP
+  service: IAM
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52137_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52138
+  cid: '52138'
+  title: Ensure no roles that enable to impersonate and manage all service accounts
+    are used at a project level
+  provider: GCP
+  service: IAM
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52138_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52139
+  cid: '52139'
+  title: Ensure Dataproc Clusters are not using Default VPC
+  provider: GCP
+  service: DATAPROC
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52139_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52140
+  cid: '52140'
+  title: Ensure that Bucket should not log to itself
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52140_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52141
+  cid: '52141'
+  title: Ensure that Kubernetes RBAC users are managed with Google Groups for GKE
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52141_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52142
+  cid: '52142'
+  title: Ensure that the Secure Boot feature is enabled for your Google Kubernetes
+    Engine (GKE) cluster nodes
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.shieldedInstanceConfig.enableSecureBoot
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52143
+  cid: '52143'
+  title: Ensure the GKE Metadata Server is Enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52143_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52144
+  cid: '52144'
+  title: Ensure the GKE Release Channel is set
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52144_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52146
+  cid: '52146'
+  title: Ensure that MySQL instances are encrypted with Customer-Managed Keys (CMKs)
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52147
+  cid: '52147'
+  title: Ensure Image Vulnerability Scanning is enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52147_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52148
+  cid: '52148'
+  title: Ensure user connections database flag for Cloud SQL - SQL Server instance
+    is set to appropriate value
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.databaseFlags[*].value
+    operator: neq
+    value: 'on'
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52149
+  cid: '52149'
+  title: Ensure that Cloud SQL PostgreSQL instance certificates are rotated (renewed)
+    before their expiration
+  provider: GCP
+  service: SQL
+  execution_type: Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52150
+  cid: '52150'
+  title: Ensure that Cloud SQL MySQL instance certificates are rotated (renewed) before
+    their expiration
+  provider: GCP
+  service: SQL
+  execution_type: Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52151
+  cid: '52151'
+  title: Ensure that Cloud SQL SQL Server instance certificates are rotated (renewed)
+    before their expiration
+  provider: GCP
+  service: SQL
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52152
+  cid: '52152'
+  title: Ensure that production PostgreSQL database instances are configured to automatically
+    fail over to another zone within the selected cloud region
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52152_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52153
+  cid: '52153'
+  title: Ensure that production SQL Server database instances are configured to automatically
+    fail over to another zone within the selected cloud region
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52153_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52154
+  cid: '52154'
+  title: Ensure that PostgreSQL instances are encrypted with Customer-Managed Keys
+    (CMKs)
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52155
+  cid: '52155'
+  title: Ensure that SQL Server instances are encrypted with Customer-Managed Keys
+    (CMKs)
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52156
+  cid: '52156'
+  title: Ensure that Google Cloud Storage objects are using a lifecycle configuration
+    for cost management
+  provider: GCP
+  service: STORAGE
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52156_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52157
+  cid: '52157'
+  title: Ensure that the Auto-Delete feature is disabled for the disks attached to
+    your VM instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52157_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52158
+  cid: '52158'
+  title: Ensure that your production Google Cloud virtual machine instances are not
+    preemptible
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52158_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52159
+  cid: '52159'
+  title: Ensure that deletion protection is enabled for your Google Cloud virtual
+    machine (VM) instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.DeletionProtection
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52160
+  cid: '52160'
+  title: Ensure that your virtual machine (VM) instance disks are encrypted using
+    Customer-Managed Keys (CMKs)
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52161
+  cid: '52161'
+  title: Ensure that your Dataproc clusters are encrypted using Customer-Managed Keys
+    (CMKs)
+  provider: GCP
+  service: DATAPROC
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52162
+  cid: '52162'
+  title: Ensure that automatic restart is enabled for VM instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build & Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52162_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52165
+  cid: '52165'
+  title: Ensure VM disks for critical VMs are encrypted with Customer Supplied Encryption
+    Keys (CSEK)
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52166
+  cid: '52166'
+  title: Ensure Stackdriver Logging is set to Enabled on Kubernetes Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52167
+  cid: '52167'
+  title: Ensure Stackdriver Monitoring is set to Enabled on Kubernetes Engine Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Build Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52167_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52168
+  cid: '52168'
+  title: Ensure that Cloud Armor prevents message lookup in Log4j2
+  provider: GCP
+  service: NETWORK_SECURITY
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52168_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52169
+  cid: '52169'
+  title: Ensure that automatic storage increase is enabled for your Cloud SQL database
+    instances
+  provider: GCP
+  service: SQL
+  execution_type: Build & Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52169_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  - GCP Infrastructure as Code Security Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52170
+  cid: '52170'
+  title: Ensure there is a dead-letter topic configured for each Pub/Sub subscription
+  provider: GCP
+  service: PUB_SUB
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52170_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52171
+  cid: '52171'
+  title: Ensure that your Google Cloud instance groups are using autohealing to proactively
+    replace failing instances
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52171_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52172
+  cid: '52172'
+  title: Ensure that API keys are restricted to only those APIs that application needs
+    access to
+  provider: GCP
+  service: APIS_SERVICES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52172_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52173
+  cid: '52173'
+  title: Ensure there are no unrestricted API keys available within your Google Cloud
+    Platform (GCP) project
+  provider: GCP
+  service: APIS_SERVICES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52173_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52174
+  cid: '52174'
+  title: Ensure that logging is enabled for Google Cloud global load balancing backend
+    services
+  provider: GCP
+  service: NETWORK_SERVICES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52175
+  cid: '52175'
+  title: Ensure Cloud Asset Inventory Is Enabled
+  provider: GCP
+  service: APIS_SERVICES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52175_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52176
+  cid: '52176'
+  title: Ensure that cloudsql.enable_pgaudit database flag for each Cloud Sql Postgresql
+    Instance is set to on for Centralized Logging
+  provider: GCP
+  service: SQL
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52177
+  cid: '52177'
+  title: Ensure API Keys are rotated every 90 days
+  provider: GCP
+  service: APIS_SERVICES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.apiKeyAgeDays
+    operator: age_days_gte
+    value: 90
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52178
+  cid: '52178'
+  title: Ensure Cloud SQL - PostgreSQL Instance IP assignment is set to private
+  provider: GCP
+  service: SQL
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52178_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud SQL Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52179
+  cid: '52179'
+  title: Ensure that Separation of duties is enforced while assigning Service Account
+    Related Roles
+  provider: GCP
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52179_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52180
+  cid: '52180'
+  title: Ensure Big Table Instance Clusters are encrypted with Customer Managed Encryption
+    Keys
+  provider: GCP
+  service: BIGTABLE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52181
+  cid: '52181'
+  title: Ensure Spanner Instance Databases are encrypted with Customer Managed Encryption
+    Keys
+  provider: GCP
+  service: SPANNER
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52182
+  cid: '52182'
+  title: Ensure that IP forwarding is not enabled on Instance Templates
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52182_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52183
+  cid: '52183'
+  title: Ensure to Remove Persistent Disk Snapshots older than 90 Days to incur less
+    charges
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.settings.backupConfiguration.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52184
+  cid: '52184'
+  title: Ensure No Custom Disk Images are Publicly Accessible
+  provider: GCP
+  service: COMPUTE_ENGINE
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52185
+  cid: '52185'
+  title: Ensure GCP Artifact Registry Repositories are not Publicly Accessible
+  provider: GCP
+  service: ARTIFACT_REGISTRY
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52186
+  cid: '52186'
+  title: Ensure No Cloud Run Service is Publicly Accessible
+  provider: GCP
+  service: CLOUD_RUN
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52187
+  cid: '52187'
+  title: Ensure KMS encryption keys are rotated within a period of 90 days
+  provider: GCP
+  service: IAM
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52189
+  cid: '52189'
+  title: Ensure GKE Standard Clusters are not running using the Compute Engine default
+    service account
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52189_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52190
+  cid: '52190'
+  title: Ensure Kubernetes Secrets are encrypted using keys managed in Cloud KMS
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52192
+  cid: '52192'
+  title: Ensure Control Plane Authorized Networks is Enabled
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52192_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52194
+  cid: '52194'
+  title: Ensure clusters are created with Private Nodes
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52194_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52195
+  cid: '52195'
+  title: Enable Customer-Managed Encryption Keys (CMEK) for Boot Disks
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.encryption.defaultKmsKeyName
+    operator: exists
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52196
+  cid: '52196'
+  title: Ensure Logging and Cloud Monitoring is Enabled for GKE Standard Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.logging.enabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52197
+  cid: '52197'
+  title: Ensure authentication using Client Certificates is Disabled for GKE Standard
+    Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.properties.clientCertEnabled
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52198
+  cid: '52198'
+  title: Ensure that Alpha clusters are not used for production workloads
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52198_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52199
+  cid: '52199'
+  title: Consider GKE Sandbox for running untrusted workloads for GKE Standard Clusters
+  provider: GCP
+  service: KUBERNETES
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52199_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  - GCP Cloud Functions Best Practices Policy
+  - GCP Kubernetes Engine Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52200
+  cid: '52200'
+  title: Ensure Vertex AI Workbench instances have integrity monitoring enabled
+  provider: GCP
+  service: WORKBENCH
+  execution_type: Run Time
+  criticality: MEDIUM
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52200_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52201
+  cid: '52201'
+  title: Ensure Vertex AI Workbench instances have Secure Boot enabled
+  provider: GCP
+  service: WORKBENCH
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.shieldedInstanceConfig.enableSecureBoot
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52202
+  cid: '52202'
+  title: Ensure Vertex AI Colab Enterprise Runtime Template should have internet access
+    disabled
+  provider: GCP
+  service: COLAB_ENTERPRISE
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52202_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52203
+  cid: '52203'
+  title: Ensure Vertex AI Colab Enterprise Runtime Template should have idle shutdown
+    enabled
+  provider: GCP
+  service: COLAB_ENTERPRISE
+  execution_type: Run Time
+  criticality: LOW
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52203_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52204
+  cid: '52204'
+  title: Ensure Vertex AI Workbench instances have Vtpm enabled
+  provider: GCP
+  service: WORKBENCH
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52204_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52205
+  cid: '52205'
+  title: Ensure Vertex AI Endpoints are not publicly accessible
+  provider: GCP
+  service: VERTEX_AI
+  execution_type: Run Time
+  criticality: CRITICAL
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.iamConfiguration.publicAccessPrevention
+    operator: neq
+    value: enforced
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52206
+  cid: '52206'
+  title: Ensure Vertex AI Endpoints use Customer-Managed Encryption Keys
+  provider: GCP
+  service: VERTEX_AI
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.databaseEncryption.state
+    operator: neq
+    value: ENCRYPTED
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP Best Practices Policy
+  mandates: *id001
+- rule_id: QUALYS-GCP-CID-52207
+  cid: '52207'
+  title: Ensure Vertex AI Workbench instances should have public internet access disabled
+  provider: GCP
+  service: WORKBENCH
+  execution_type: Run Time
+  criticality: HIGH
+  target_source: gcp_asset_inventory
+  match_logic: ALL
+  conditions:
+  - field_path: $.controls.cid_52207_compliant
+    operator: eq
+    value: false
+  policies:
+  - CIS Google Cloud Platform Foundation Benchmark
+  - GCP AI Service Best Practices Policy
+  - GCP Best Practices Policy
+  mandates: *id001

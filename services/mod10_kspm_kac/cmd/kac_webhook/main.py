@@ -155,7 +155,7 @@ async def register_cluster(
     db: AsyncSession = Depends(get_db),
 ):
     """Registers or updates a monitored Kubernetes cluster in inventory."""
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     cluster = await KSPMRepository.upsert_cluster(
         session=db,
         asset_urn=req.asset_urn,
@@ -189,8 +189,8 @@ async def list_clusters(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Lists monitored Kubernetes clusters."""
-    clusters = await KSPMRepository.list_clusters(db, limit=limit, offset=offset)
+    """Lists monitored Kubernetes clusters scoped to authenticated tenant."""
+    clusters = await KSPMRepository.list_clusters(db, tenant_id=current_user.id, limit=limit, offset=offset)
     return {
         "total": len(clusters),
         "clusters": [
@@ -219,8 +219,8 @@ async def list_admission_events(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Lists admission review decisions."""
-    events = await KSPMRepository.list_admission_events(db, cluster_id=cluster_id, limit=limit, offset=offset)
+    """Lists admission review decisions scoped to authenticated tenant."""
+    events = await KSPMRepository.list_admission_events(db, tenant_id=current_user.id, cluster_id=cluster_id, limit=limit, offset=offset)
     return {
         "total": len(events),
         "events": [

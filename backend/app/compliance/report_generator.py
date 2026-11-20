@@ -584,10 +584,10 @@ def _build_appendix() -> list:
         )
     )
     privacy_text = (
-        "LogRaven maintains strict data privacy boundaries. Raw AWS identifiers (account IDs, ARNs, IP addresses, "
-        "usernames) are collected and stored in your PostgreSQL database only. Before any AI analysis, all PII is "
-        "stripped and replaced with aggregated statistics (counts, booleans, policy summaries). This sanitized "
-        "summary is sent to our AI engine for control assessment. Raw identifiers never leave your infrastructure."
+        "LogRaven maintains strict data privacy boundaries. Raw cloud identifiers (account IDs, ARNs, IP addresses, "
+        "usernames) are processed within your secure boundary only. All compliance controls are evaluated using "
+        "LogRaven's 100% deterministic rule-based evaluation engine. Telemetry is evaluated directly against "
+        "formal benchmark specifications without external model variance."
     )
     story.append(Paragraph(privacy_text, normal_style))
     story.append(Spacer(1, 0.3 * cm))
@@ -599,9 +599,9 @@ def _build_appendix() -> list:
         )
     )
     disclaimer_text = (
-        "This report is AI-assisted. All findings should be reviewed by a qualified security professional "
-        "before submission to a certification body. LogRaven and its operators assume no liability for any errors, "
-        "omissions, or interpretations contained herein. This report is provided as-is for informational purposes."
+        "This report is generated using deterministic compliance rule evaluation. All findings should be reviewed "
+        "by a qualified security professional before submission to a certification body. LogRaven and its operators "
+        "assume no liability for any errors, omissions, or interpretations contained herein."
     )
     story.append(Paragraph(disclaimer_text, normal_style))
     story.append(Spacer(1, 0.5 * cm))

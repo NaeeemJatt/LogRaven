@@ -194,13 +194,22 @@ async def approve_jit_access(
     current_user: User = Depends(get_current_user),
 ):
     """Approves and activates a JIT lease, minting ephemeral STS session token."""
+    if getattr(current_user, "tier", "free") == "free":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="JIT access approval requires pro, team, or enterprise administrative privileges.",
+        )
+
     try:
         activated = _lease_scheduler.approve_and_activate_lease(
             lease_id=req.lease_id,
             approver_email=current_user.email,
         )
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        err_msg = str(e)
+        if "Self-approval forbidden" in err_msg:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=err_msg)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=err_msg)
 
     return {
         "status": "ACTIVE",

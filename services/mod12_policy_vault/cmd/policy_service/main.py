@@ -167,7 +167,7 @@ async def create_suppression(
     db: AsyncSession = Depends(get_db),
 ):
     """Creates a new scoped suppression rule."""
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     rule = await PolicyVaultRepository.create_suppression_rule(
         session=db,
         name=req.name,
@@ -212,7 +212,7 @@ async def create_vault_package_endpoint(
     merkle_root = verify_res.get("merkle_root", "")
     manifest = verify_res.get("manifest", {})
 
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     record = await PolicyVaultRepository.record_vault_package(
         session=db,
         package_name=req.package_name,
@@ -258,7 +258,7 @@ async def create_custom_rule(
         conditions=req.visual_ast.get("conditions", []),
         message=req.message or req.description,
     )
-    tenant_id = getattr(current_user, "tenant_id", None)
+    tenant_id = current_user.id
     rule = await PolicyVaultRepository.create_custom_rule(
         session=db,
         rule_id=req.rule_id,
@@ -288,7 +288,7 @@ async def list_custom_rules(
     db: AsyncSession = Depends(get_db),
 ):
     """Lists custom visual Rego rules."""
-    rules = await PolicyVaultRepository.list_custom_rules(db, limit=limit, offset=offset)
+    rules = await PolicyVaultRepository.list_custom_rules(db, tenant_id=current_user.id, limit=limit, offset=offset)
     return {
         "total": len(rules),
         "rules": [

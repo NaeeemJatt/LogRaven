@@ -30,7 +30,7 @@ type TestStatus = 'idle' | 'testing' | 'success' | 'error'
 const FRAMEWORK_OPTIONS = [
   { id: 'soc2', label: 'SOC 2 Type II' },
   { id: 'iso27001', label: 'ISO / IEC 27001' },
-  { id: 'cis_aws', label: 'CIS AWS Foundations', provider: 'aws' },
+  { id: 'cis_aws', label: 'CIS AWS', provider: 'aws' },
   { id: 'cis_gcp', label: 'CIS GCP Benchmark', provider: 'gcp' },
   { id: 'cis_azure', label: 'CIS Azure Benchmark', provider: 'azure' },
   { id: 'hipaa', label: 'HIPAA Security' },

@@ -189,6 +189,9 @@ def sanitize_for_ai(
     return sanitized
 
 
+sanitize_evidence = sanitize_for_ai
+
+
 if __name__ == "__main__":
     sample_cloudtrail = {
         "total_count": 2,

@@ -53,7 +53,13 @@ class Framework:
         return None
 
 
+import csv
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 REGISTRY: dict[str, Framework] = {}
+POLICY_REGISTRY: dict[str, dict[str, Any]] = {}
+MANDATE_REGISTRY: dict[str, dict[str, Any]] = {}
 
 
 def register(framework: Framework) -> None:
@@ -74,3 +80,72 @@ def list_frameworks() -> list[Framework]:
 
 def is_registered(framework_id: str) -> bool:
     return framework_id in REGISTRY
+
+
+# ── Policy & Mandate Catalog Registries (FR-DET-07) ───────────────────────────
+
+def load_policies_and_mandates_catalog(catalog_dir: Optional[Path | str] = None) -> None:
+    """Load the 29 Policies and 38 Mandates from the canonical CSV catalog."""
+    cat_dir = Path(catalog_dir) if catalog_dir else Path(__file__).resolve().parent.parent.parent / "data" / "csv_catalog"
+    pol_path = cat_dir / "policies.csv"
+    mand_path = cat_dir / "mandates.csv"
+
+    if pol_path.is_file():
+        with open(pol_path, "r", encoding="utf-8", errors="replace") as f:
+            rows = list(csv.reader(f))
+        for idx, r in enumerate(rows[:10]):
+            if r and r[0].strip().upper() == "POLICY TITLE":
+                headers = [c.strip() for c in r]
+                for data_row in rows[idx + 1:]:
+                    if len(data_row) == len(headers) and any(c.strip() for c in data_row):
+                        entry = dict(zip(headers, [c.strip() for c in data_row]))
+                        POLICY_REGISTRY[entry["POLICY TITLE"]] = entry
+                break
+
+    if mand_path.is_file():
+        with open(mand_path, "r", encoding="utf-8", errors="replace") as f:
+            rows = list(csv.reader(f))
+        for idx, r in enumerate(rows[:10]):
+            if r and r[0].strip().upper() == "NAME":
+                headers = [c.strip() for c in r]
+                for data_row in rows[idx + 1:]:
+                    if len(data_row) == len(headers) and any(c.strip() for c in data_row):
+                        entry = dict(zip(headers, [c.strip() for c in data_row]))
+                        MANDATE_REGISTRY[entry["NAME"]] = entry
+                break
+
+
+def get_policy(title: str) -> Optional[dict[str, Any]]:
+    if not POLICY_REGISTRY:
+        load_policies_and_mandates_catalog()
+    if title in POLICY_REGISTRY:
+        return POLICY_REGISTRY[title]
+    tl = title.lower()
+    for pol_title, data in POLICY_REGISTRY.items():
+        if tl in pol_title.lower():
+            return data
+    return None
+
+
+def get_mandate(name: str) -> Optional[dict[str, Any]]:
+    if not MANDATE_REGISTRY:
+        load_policies_and_mandates_catalog()
+    if name in MANDATE_REGISTRY:
+        return MANDATE_REGISTRY[name]
+    nl = name.lower()
+    for mand_name, data in MANDATE_REGISTRY.items():
+        if nl in mand_name.lower():
+            return data
+    return None
+
+
+def list_policies() -> list[dict[str, Any]]:
+    if not POLICY_REGISTRY:
+        load_policies_and_mandates_catalog()
+    return list(POLICY_REGISTRY.values())
+
+
+def list_mandates() -> list[dict[str, Any]]:
+    if not MANDATE_REGISTRY:
+        load_policies_and_mandates_catalog()
+    return list(MANDATE_REGISTRY.values())

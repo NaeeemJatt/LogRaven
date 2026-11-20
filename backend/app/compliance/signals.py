@@ -9,7 +9,8 @@
 
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
 # Canonical signal catalog: key -> human-readable description.
 # Keep this in sync with the collectors (sanitizer + collectors/aws_extended).
@@ -128,3 +129,20 @@ def build_evidence_signals(sanitized: dict[str, Any]) -> dict[str, Any]:
 def select_signals(all_signals: dict[str, Any], keys: tuple[str, ...]) -> dict[str, Any]:
     """Return only the signals relevant to a control (preserving UNKNOWN)."""
     return {key: all_signals.get(key) for key in keys}
+
+
+# ── Deterministic Non-AI Evidence Signal ─────────────────────────────────────
+
+@dataclass
+class EvidenceSignal:
+    """Standardized deterministic evidence verdict per control and resource."""
+    cid: str
+    title: str
+    provider: str
+    service: str
+    criticality: str
+    status: str  # "PASS" | "FAIL"
+    passed_resources: List[str] = field(default_factory=list)
+    failing_resources: List[str] = field(default_factory=list)
+    log_alerts: List[Dict[str, Any]] = field(default_factory=list)
+

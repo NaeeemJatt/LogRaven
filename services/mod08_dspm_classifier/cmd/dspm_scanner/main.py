@@ -186,5 +186,10 @@ async def list_dspm_assets(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Lists scanned data assets."""
-    return await DSPMRepository.list_assets(session=db, limit=limit, offset=offset)
+    """Lists scanned data assets scoped to authenticated tenant."""
+    return await DSPMRepository.list_assets(
+        session=db,
+        tenant_id=current_user.id if current_user else None,
+        limit=limit,
+        offset=offset,
+    )

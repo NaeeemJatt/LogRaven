@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Check, Loader2, WifiOff, Radio, Clock, X, Plug, Database, BrainCircuit, FileArchive, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Check, Loader2, WifiOff, Radio, Clock, X, Plug, Database, ShieldCheck, FileArchive, RefreshCw } from 'lucide-react'
 import type { AuditStatusResponse } from '../../types/audit'
 import { getAuditStatus } from '../../api/compliance'
 
@@ -19,10 +19,10 @@ interface AuditProgressProps {
 }
 
 const STEPS = [
-  { label: 'Connect',  detail: 'AWS account', icon: Plug },
-  { label: 'Collect',  detail: 'CloudTrail evidence', icon: Database },
-  { label: 'Analyze',  detail: 'Controls with AI', icon: BrainCircuit },
-  { label: 'Package',  detail: 'Evidence pack', icon: FileArchive },
+  { label: 'Connect',  detail: 'Cloud account', icon: Plug },
+  { label: 'Collect',  detail: 'Telemetry & evidence', icon: Database },
+  { label: 'Evaluate', detail: 'Rule-based engine', icon: ShieldCheck },
+  { label: 'Package',  detail: 'Audit report & evidence', icon: FileArchive },
 ]
 
 function checkedCount(percent: number): number {
@@ -36,11 +36,11 @@ function checkedCount(percent: number): number {
 function stepLabel(step: string | null | undefined, percent: number): string {
   if (step === 'connecting') return 'Connecting to cloud account...'
   if (step === 'collecting') return 'Collecting evidence signals...'
-  if (step === 'sanitizing') return 'Sanitizing evidence & redacting PII...'
-  if (step === 'grading' || step === 'mapping') return 'Evaluating framework controls with AI...'
+  if (step === 'sanitizing') return 'Normalizing telemetry & redacting sensitive data...'
+  if (step === 'grading' || step === 'mapping') return 'Evaluating framework controls against deterministic rules...'
   if (step === 'packaging' || step === 'saving') return 'Packaging reports & evidence...'
   if (percent >= 85) return 'Packaging reports & evidence...'
-  if (percent >= 50) return 'Evaluating framework controls with AI...'
+  if (percent >= 50) return 'Evaluating framework controls against deterministic rules...'
   if (percent >= 20) return 'Collecting evidence signals...'
   if (percent >= 10) return 'Connecting to cloud account...'
   return 'Connecting to cloud account...'

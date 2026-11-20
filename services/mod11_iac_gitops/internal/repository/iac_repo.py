@@ -123,30 +123,39 @@ class IaCRepository:
     async def get_repo_by_name(
         session: AsyncSession,
         repo_full_name: str,
+        tenant_id: Optional[uuid.UUID] = None,
     ) -> Optional[GitRepository]:
-        """Finds repository by owner/repo name."""
+        """Finds repository by owner/repo name scoped to tenant."""
         query = select(GitRepository).where(GitRepository.repo_full_name == repo_full_name)
+        if tenant_id:
+            query = query.where(GitRepository.tenant_id == tenant_id)
         res = await session.execute(query)
         return res.scalar_one_or_none()
 
     @staticmethod
     async def list_repositories(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[GitRepository]:
-        """Lists connected repositories."""
+        """Lists connected repositories scoped to tenant."""
         query = select(GitRepository).order_by(desc(GitRepository.created_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(GitRepository.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
 
     @staticmethod
     async def list_prs(
         session: AsyncSession,
+        tenant_id: Optional[uuid.UUID] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> List[GitOpsRemediationPR]:
-        """Lists GitOps PRs."""
+        """Lists GitOps PRs scoped to tenant."""
         query = select(GitOpsRemediationPR).order_by(desc(GitOpsRemediationPR.created_at)).limit(limit).offset(offset)
+        if tenant_id:
+            query = query.where(GitOpsRemediationPR.tenant_id == tenant_id)
         res = await session.execute(query)
         return list(res.scalars().all())
