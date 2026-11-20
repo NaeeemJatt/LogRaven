@@ -39,8 +39,8 @@ services:
 
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: backend/Dockerfile.prod
     container_name: lograven_backend
     restart: unless-stopped
     env_file:
@@ -62,8 +62,8 @@ services:
 
   celery_worker:
     build:
-      context: ./backend
-      dockerfile: Dockerfile.prod
+      context: .
+      dockerfile: backend/Dockerfile.prod
     container_name: lograven_celery
     restart: unless-stopped
     command: worker
