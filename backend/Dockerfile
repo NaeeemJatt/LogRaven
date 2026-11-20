@@ -1,6 +1,6 @@
 # LogRaven — Production Dockerfile (with PyArmor obfuscation)
 # Stage 1: Obfuscate source with PyArmor
-FROM python:3.11-slim as builder
+FROM python:3.11-slim-bookworm as builder
 
 WORKDIR /src
 RUN pip install pyarmor
@@ -8,7 +8,7 @@ COPY app/ /src/app/
 RUN pyarmor gen --recursive -O /dist /src/app
 
 # Stage 2: Runtime image with obfuscated code only
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 

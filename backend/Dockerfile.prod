@@ -8,7 +8,7 @@
 # Unlike the PyArmor-obfuscated client Dockerfile, this image ships plain
 # source: easier debugging, real stack traces, smaller build.
 
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
